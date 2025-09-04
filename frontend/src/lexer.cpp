@@ -60,8 +60,12 @@ Token Lexer::nextToken() {
 
 Token Lexer::peekToken() {
   size_t oldPos = _position;
+  size_t oldLine = _line;
+  size_t oldCol = _column;
   Token t = nextToken();
   _position = oldPos;
+  _line = oldLine;
+  _column = oldCol;
 
   return t;
 }
@@ -117,10 +121,8 @@ Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
 
 Token Lexer::readNumber(std::pair<size_t, size_t> start) {
   std::string value;
-  char ch = get();
-  while (isdigit(ch)) {
-    value += ch;
-    ch = get();
+  while (!eof() && isdigit(peek())) {
+    value += get();
   }
   return Token{Token::Type::NUMBER, value, start.first, start.second};
 }
@@ -129,13 +131,11 @@ Token Lexer::readString(std::pair<size_t, size_t> start) {
   get(); // consume the opening quote
 
   std::string value;
-  char ch = get();
-  while (ch != '"') {
-    value += ch;
-    ch = get();
+  while (!eof() && peek() != '"') {
+    value += get();
   }
-
-  get(); // consume the closing quote
+  if (!eof())
+    get(); // consume the closing quote
   return Token{Token::Type::STRING, value, start.first, start.second};
 }
 
