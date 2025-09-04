@@ -2,6 +2,8 @@
 
 using namespace picceler;
 
-Parser::Parser(const std::string &source) : _lexer(source) {}
+Parser::Parser() : _lexer() {}
+
+void Parser::setSource(const std::string &source) { _lexer.setSource(source); }
 
 std::vector<Token> Parser::getTokens() { return _lexer.tokenizeAll(); }

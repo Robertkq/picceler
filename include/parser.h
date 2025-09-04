@@ -6,7 +6,10 @@ namespace picceler {
 
 class Parser {
 public:
-  Parser(const std::string &source);
+  Parser();
+
+  void setSource(const std::string &source);
+
   std::vector<Token> getTokens();
 
 private:

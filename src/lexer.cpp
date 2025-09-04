@@ -23,14 +23,22 @@ std::string Token::toString() const {
   }
 }
 
-Lexer::Lexer(const std::string &source)
-    : _file(source), _buffer(), _position(0), _line(1), _column(1) {
+Lexer::Lexer() : _file(), _buffer(), _position(0), _line(1), _column(1) {}
+
+void Lexer::setSource(const std::string &source) {
+  if (_file.is_open()) {
+    _file.close();
+  }
+  _file.open(source);
   if (!_file.is_open()) {
     throw std::runtime_error("Could not open source file: " + source);
   }
   _buffer.assign((std::istreambuf_iterator<char>(_file)),
                  std::istreambuf_iterator<char>());
   _file.close();
+  _position = 0;
+  _line = 1;
+  _column = 1;
 }
 
 Token Lexer::nextToken() {
@@ -71,7 +79,6 @@ Token Lexer::peekToken() {
 }
 
 void Lexer::skipWhitespace() {
-  char ch;
   while (!eof() && isspace(peek())) {
     get();
   }

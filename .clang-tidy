@@ -1,6 +1,10 @@
 Checks: >
   -*,
-  readability-identifier-naming
+  readability-identifier-naming,
+  modernize-*,
+  performance-*,
+  bugprone-*,
+  cppcoreguidelines-*
 
 CheckOptions:
   - key:             readability-identifier-naming.ClassCase

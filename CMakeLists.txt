@@ -10,10 +10,6 @@ option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 
-if (ENABLE_TESTS)
-  # add_subdirectory(tests)
-endif()
-
 if (ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES clang-tidy)
     if(CLANG_TIDY_EXE)
@@ -24,14 +20,16 @@ if (ENABLE_CLANG_TIDY)
     endif()
 endif()
 
-add_subdirectory(frontend)
-add_subdirectory(middleend)
-add_subdirectory(backend)
+file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 set(COMPILER_NAME "picceler")
 
+if (ENABLE_TESTS)
+  add_subdirectory(tests)
+endif()
+
 add_executable(${COMPILER_NAME}
-    ${CMAKE_CURRENT_SOURCE_DIR}/frontend/src/main.cpp
+    ${SOURCES}
 )
-target_include_directories(${COMPILER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/frontend/include)
-target_link_libraries(${COMPILER_NAME} PRIVATE frontend_lib CLI11::CLI11 spdlog::spdlog)
+target_include_directories(${COMPILER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(${COMPILER_NAME} PRIVATE CLI11::CLI11 spdlog::spdlog)

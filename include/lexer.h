@@ -34,6 +34,10 @@ struct Token {
     UNKNOWN
   };
 
+  /**
+   * @brief Converts the token type to a string representation.
+   * @return The string representation of the token type.
+   */
   std::string toString() const;
 
   Type _type;
@@ -49,10 +53,15 @@ struct Token {
 class Lexer {
 public:
   /**
-   * @brief Constructs a Lexer for the given source string.
+   * @brief Constructs a Lexer
+   */
+  Lexer();
+
+  /**
+   * @brief Sets the source file for the lexer.
    * @param source The source file to read from.
    */
-  Lexer(const std::string &source);
+  void setSource(const std::string &source);
 
   /**
    * @brief Returns the next token from the input.
@@ -143,6 +152,12 @@ private:
   size_t _column;
 };
 
+/**
+ * @brief Outputs a token to the given output stream.
+ * @param os The output stream.
+ * @param token The token to output.
+ * @return The output stream.
+ */
 std::ostream &operator<<(std::ostream &os, const Token &token);
 
 } // namespace picceler
