@@ -7,5 +7,5 @@ int main(int argc, char **argv) {
   picceler::App app;
   CLI11_PARSE(app.getCliApp(), argc, argv);
 
-  app.test();
+  app.run();
 }

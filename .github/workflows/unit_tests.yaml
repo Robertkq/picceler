@@ -18,13 +18,13 @@ jobs:
           git clone https://github.com/CLIUtils/CLI11.git
           cd CLI11
           cmake -S . -B build
-          sudo cmake --build build --target install
+          sudo cmake --build build --target install --parallel
 
       - name: Configure project
         run: cmake -S . -B build
 
       - name: Build project
-        run: cmake --build build --target tests
+        run: cmake --build build --target tests --parallel
 
       - name: Run unit
         run: |
