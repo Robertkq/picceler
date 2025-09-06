@@ -12,7 +12,7 @@ namespace picceler {
 class App {
 public:
   App();
-  void test();
+  void run();
 
   CLI::App &getCliApp() { return _cliApp; }
 
