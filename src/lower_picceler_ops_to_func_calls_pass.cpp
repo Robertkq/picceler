@@ -11,6 +11,50 @@
 
 namespace picceler {
 
+struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
+  using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(LoadImageOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    return mlir::success();
+  }
+};
+
+struct BlurImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
+  using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(LoadImageOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    return mlir::success();
+  }
+};
+
+struct ShowImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
+  using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(LoadImageOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    return mlir::success();
+  }
+};
+
+struct SaveImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
+  using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(LoadImageOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    return mlir::success();
+  }
+};
+
 void LowerPiccelerOpsToFuncCallsPass::runOnOperation() {
   spdlog::trace("Running LowerPiccelerOpsToFuncCallsPass");
   mlir::ModuleOp module = getOperation();

@@ -15,7 +15,6 @@ def Picceler_LoadImageOp : Op<picceler, "load_image", []> {
   let summary = "Load an image from a file";
   let arguments = (ins Picceler_StringType:$filename);
   let results = (outs Picceler_ImageType:$result);
-  let assemblyFormat = "$filename attr-dict `:` type($result)";
 }
 
 def Picceler_SaveImageOp : Op<picceler, "save_image", []> {
