@@ -20,15 +20,6 @@ mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
     emitStatement(stmt.get());
   }
 
-  spdlog::info("Generated initial MLIR in {}", _initialOutputFile);
-  std::error_code ec;
-  llvm::raw_fd_ostream out(_initialOutputFile, ec);
-  if (ec) {
-    spdlog::error("Could not open {}: {}", _initialOutputFile, ec.message());
-  } else {
-    module.print(out);
-  }
-
   return module;
 }
 
