@@ -106,4 +106,11 @@ target_link_libraries(${COMPILER_NAME} PRIVATE
     MLIRTransforms
     MLIRPass
     MLIRDialect
+    MLIROptLib
+    MLIRAnalysis
+    LLVMCore
+    LLVMSupport
+    MLIRLLVMCommonConversion
+    MLIRConvertToLLVMPass
+    MLIRFuncToLLVM
 )

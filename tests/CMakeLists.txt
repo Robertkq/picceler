@@ -30,6 +30,13 @@ target_link_libraries(tests PRIVATE
     MLIRTransforms
     MLIRPass
     MLIRDialect
+    MLIROptLib
+    MLIRAnalysis
+    LLVMCore
+    LLVMSupport
+    MLIRLLVMCommonConversion
+    MLIRConvertToLLVMPass
+    MLIRFuncToLLVM
 )
 
 add_custom_command(

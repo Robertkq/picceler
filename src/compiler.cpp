@@ -2,6 +2,8 @@
 #include <spdlog/cfg/env.h>
 #include <spdlog/spdlog.h>
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+
 namespace picceler {
 
 Compiler::Compiler()
@@ -12,6 +14,7 @@ Compiler::Compiler()
   _context.loadDialect<picceler>();
   _context.loadDialect<mlir::func::FuncDialect>();
   _context.loadDialect<mlir::arith::ArithDialect>();
+  _context.loadDialect<mlir::LLVM::LLVMDialect>();
   for (auto *dialect : _context.getLoadedDialects()) {
     llvm::outs() << dialect->getNamespace() << "\n";
   }
@@ -22,6 +25,7 @@ mlir::DialectRegistry Compiler::initRegistry() {
   registry.insert<picceler>();
   registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::arith::ArithDialect>();
+  registry.insert<mlir::LLVM::LLVMDialect>();
   return registry;
 }
 
