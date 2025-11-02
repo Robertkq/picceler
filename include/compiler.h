@@ -19,9 +19,16 @@
 
 namespace picceler {
 
+/**
+ * @brief Compiler class that orchestrates the compilation process.
+ */
 class Compiler {
 public:
   Compiler();
+
+  /**
+   * @brief Runs the compilation process.
+   */
   void run();
 
   CLI::App &getCliApp() { return _cliApp; }

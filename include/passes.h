@@ -5,6 +5,9 @@
 
 namespace picceler {
 
+/**
+ * @brief Pass that lowers Picceler operations to function calls.
+ */
 class LowerPiccelerOpsToFuncCallsPass
     : public mlir::PassWrapper<LowerPiccelerOpsToFuncCallsPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
@@ -18,6 +21,9 @@ public:
   }
 };
 
+/**
+ * @brief Pass that converts Picceler types to LLVM IR types.
+ */
 class PiccelerTypesToLLVMIRPass
     : public mlir::PassWrapper<PiccelerTypesToLLVMIRPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
