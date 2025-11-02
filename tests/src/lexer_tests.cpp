@@ -1,6 +1,24 @@
 #include "lexer.h"
 #include <gtest/gtest.h>
 
+class Cristi {
+public:
+  Cristi() = default;
+  ~Cristi() = default;
+
+  std::string &getName();
+
+  std::string name;
+};
+
+inline std::string &Cristi::getName() { return name; }
+
+TEST(Random, yep) {
+  Cristi t;
+  t.getName() = "hello";
+  EXPECT_EQ(t.getName(), "hello");
+}
+
 class LexerTest : public ::testing::Test {
 protected:
   void SetUp() override {}

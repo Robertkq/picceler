@@ -9,10 +9,35 @@ add_executable(tests ${TEST_SOURCES} ${SOURCES})
 find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(GTest REQUIRED)
+find_package(MLIR REQUIRED CONFIG)
+find_package(LLVM REQUIRED CONFIG)
 
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include)
-target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(tests PRIVATE CLI11::CLI11 spdlog::spdlog GTest::GTest)
+target_include_directories(tests PRIVATE
+ ${CMAKE_CURRENT_SOURCE_DIR}/../include
+ ${CMAKE_CURRENT_BINARY_DIR}/..
+ ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(tests PRIVATE
+    CLI11::CLI11
+    spdlog::spdlog
+    GTest::GTest
+    MLIRIR
+    MLIRFuncDialect
+    MLIRArithDialect
+    MLIRParser
+    MLIRSupport
+    MLIRTransforms
+    MLIRPass
+    MLIRDialect
+    MLIROptLib
+    MLIRAnalysis
+    LLVMCore
+    LLVMSupport
+    MLIRLLVMCommonConversion
+    MLIRConvertToLLVMPass
+    MLIRFuncToLLVM
+)
 
 add_custom_command(
     TARGET tests POST_BUILD
