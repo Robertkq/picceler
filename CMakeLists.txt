@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 option(ENABLE_TESTS "Enable testing" ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
+option(ENABLE_DOCS "Enable documentation generation" OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -21,6 +22,21 @@ if (ENABLE_CLANG_TIDY)
         set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=readability-identifier-naming")
     else()
         message(WARNING "clang-tidy option enabled but clang-tidy executable not found!")
+    endif()
+endif()
+
+if (ENABLE_DOCS)
+    find_package(Doxygen REQUIRED)
+    if(DOXYGEN_FOUND)
+        message(STATUS "Doxygen found: ${DOXYGEN_EXECUTABLE}")
+        configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+        add_custom_target(doc_doxygen ALL
+            COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMENT "Generating API documentation with Doxygen"
+            VERBATIM)
+    else()
+        message(WARNING "Doxygen option enabled but Doxygen executable not found!")
     endif()
 endif()
 

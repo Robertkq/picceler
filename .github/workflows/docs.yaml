@@ -1,0 +1,56 @@
+name: Publish Docs
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+      || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/robertkq/picceler-ci:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure project (enable docs)
+        run: cmake -S . -B build -DENABLE_DOCS=ON
+
+      - name: Build docs
+        run: cmake --build build --target doc_doxygen --parallel
+
+      - name: Ensure docs output exists
+        run: |
+          if [ -d ./docs ]; then
+            echo "./docs/ exists"
+          else
+            echo "No docs directory found" >&2
+            ls -la
+            exit 1
+          fi
+          ls -la docs
+
+      - name: Upload static files as artifact
+        id: upload
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

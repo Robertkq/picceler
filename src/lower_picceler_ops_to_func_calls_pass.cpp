@@ -11,6 +11,17 @@
 
 namespace picceler {
 
+/**
+ * @brief Ensures that a runtime function is declared in the module.
+ * If the function does not exist, it is created.
+ * @param module The MLIR module to check.
+ * @param name The name of the function.
+ * @param inputs The input types of the function.
+ * @param results The result types of the function.
+ * @param rewriter The pattern rewriter to use for creating the function.
+ * @param loc The location to use for the function.
+ * @return The function operation.
+ */
 mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module,
                                      mlir::StringRef name,
                                      llvm::ArrayRef<mlir::Type> inputs,
@@ -29,6 +40,9 @@ mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module,
   return func;
 }
 
+/**
+ * @brief Pattern to lower LoadImageOp to a function call.
+ */
 struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
   using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
 
@@ -55,6 +69,9 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
   }
 };
 
+/**
+ * @brief Pattern to lower ShowImageOp to a function call.
+ */
 struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
   using mlir::OpRewritePattern<ShowImageOp>::OpRewritePattern;
 
@@ -81,6 +98,9 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
   }
 };
 
+/**
+ * @brief Pattern to lower SaveImageOp to a function call.
+ */
 struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
   using mlir::OpRewritePattern<SaveImageOp>::OpRewritePattern;
 
@@ -110,6 +130,9 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
   }
 };
 
+/**
+ * @brief Pattern to lower BlurOp to a function call.
+ */
 struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
   using mlir::OpRewritePattern<BlurOp>::OpRewritePattern;
 

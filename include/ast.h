@@ -13,7 +13,7 @@ struct ASTNode {
   virtual std::string toString() const = 0;
 };
 
-/*
+/**
  * @brief AST node for the entire module.
  */
 
@@ -22,7 +22,7 @@ struct ModuleNode : public ASTNode {
   std::string toString() const override;
 };
 
-/*
+/**
  * @brief AST node for variable references.
  */
 struct VariableNode : public ASTNode {
@@ -30,7 +30,7 @@ struct VariableNode : public ASTNode {
   std::string toString() const override;
 };
 
-/*
+/**
  * @brief AST node for string literals.
  */
 struct StringNode : public ASTNode {
@@ -38,7 +38,7 @@ struct StringNode : public ASTNode {
   std::string toString() const override;
 };
 
-/*
+/**
  * @brief AST node for numeric literals.
  */
 struct NumberNode : public ASTNode {
@@ -46,7 +46,7 @@ struct NumberNode : public ASTNode {
   std::string toString() const override;
 };
 
-/*
+/**
  * @brief AST node for assignment statements.
  */
 struct AssignmentNode : public ASTNode {
@@ -55,7 +55,7 @@ struct AssignmentNode : public ASTNode {
   std::string toString() const override;
 };
 
-/*
+/**
  * @brief AST node for function calls.
  */
 struct CallNode : public ASTNode {
