@@ -20,7 +20,7 @@ public:
    */
   IRPassManager(mlir::MLIRContext *context);
 
-  /*
+  /**
    * @brief Runs the pass manager on the given MLIR module.
    * @param module The MLIR module to run the passes on.
    */
