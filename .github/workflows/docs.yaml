@@ -18,9 +18,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Doxygen
-        run: apt-get install doxygen
-
       - name: Configure project (enable docs)
         run: cmake -S . -B build -DENABLE_DOCS=ON
 

@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     software-properties-common \
     ccache \
+    doxygen \
     && apt-get clean
 
 # ====== Install LLVM / Clang 18 ======
