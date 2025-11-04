@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - 'documentation/*'   
   workflow_dispatch:
 
 permissions:
@@ -29,20 +32,20 @@ jobs:
 
       - name: Ensure docs output exists
         run: |
-          if [ -d ./docs ]; then
-            echo "./docs/ exists"
+          if [ -d ./docs/html ]; then
+            echo "./docs/html/ exists"
           else
-            echo "No docs directory found" >&2
-            ls -la
+            echo "No docs/html directory found" >&2
+            ls -la ./docs
             exit 1
           fi
-          ls -la docs
+          ls -la ./docs/html
 
       - name: Upload static files as artifact
         id: upload
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./docs
+          path: ./docs/html 
 
   deploy:
     needs: build
