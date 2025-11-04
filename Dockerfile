@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
     lsb-release \
     software-properties-common \
     ccache \
+    doxygen \
     && apt-get clean
 
 # ====== Install LLVM / Clang 18 ======
@@ -41,13 +42,21 @@ RUN apt-get install -y \
     lldb-18 \
     && apt-get clean
 
+# Update g++/GCC to version 13
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+    apt-get update && \
+    apt-get install -y g++-13 gcc-13
+
 
 # Set system default compilers to clang-18
 RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang-18 100 && \
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-18 100 && \
     update-alternatives --install /usr/bin/clang clang /usr/bin/clang-18 100 && \
     update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-18 100 && \
-    update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-18 100
+    update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-18 100 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
 
 # Export CC/CXX for future builds (CI convenience)
 ENV CC=clang-18
