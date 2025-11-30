@@ -37,4 +37,17 @@ public:
   }
 };
 
+class PiccelerConstOpsToLLVMIRPass
+    : public mlir::PassWrapper<PiccelerConstOpsToLLVMIRPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+public:
+  void runOnOperation() override;
+  mlir::StringRef getArgument() const override;
+  mlir::StringRef getDescription() const override;
+  static void registerPass();
+  static std::unique_ptr<mlir::Pass> create() {
+    return std::make_unique<PiccelerConstOpsToLLVMIRPass>();
+  }
+};
+
 } // namespace picceler
