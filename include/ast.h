@@ -1,7 +1,11 @@
 #pragma once
 
+#include <vector>
+#include <string>
+#include <cstddef>
+#include <memory>
+
 #include "lexer.h"
-#include <format>
 
 namespace picceler {
 
@@ -9,7 +13,14 @@ namespace picceler {
  * @brief Abstract Syntax Tree (AST) node base class.
  */
 struct ASTNode {
+  ASTNode() = default;
   virtual ~ASTNode() = default;
+
+  ASTNode(const ASTNode &) = delete;
+  ASTNode &operator=(const ASTNode &) = delete;
+  ASTNode(ASTNode &&) = default;
+  ASTNode &operator=(ASTNode &&) = default;
+
   virtual std::string toString() const = 0;
 };
 

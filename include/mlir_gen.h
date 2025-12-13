@@ -1,15 +1,19 @@
 #pragma once
 
+#include <unordered_map>
+#include <string>
+#include <vector>
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Pass/Pass.h"
+
 #include "dialect.h"
 #include "parser.h"
-
-#include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/IR/Builders.h>
-#include <mlir/IR/BuiltinOps.h>
-#include <mlir/IR/Dialect.h>
-#include <mlir/Pass/PassManager.h>
-#include <mlir/Pass/Pass.h>
 
 namespace picceler {
 

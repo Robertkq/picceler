@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <spdlog/spdlog.h>
-
 #include <cstdint>
 #include <fstream>
 #include <ostream>

@@ -1,5 +1,4 @@
 #include "dialect.h"
-
 #include "types.h"
 
 #define GET_TYPEDEF_CLASSES

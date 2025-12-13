@@ -1,27 +1,26 @@
-#include "runtime.h"
 #include <iostream>
+
+#include "runtime.h"
 
 extern "C" {
 
-void *picceler_load_image(const char *filename) {
-  std::cout << "picceler_load_image called with filename: " << filename
+void *piccelerLoadImage(const char *filename) {
+  std::cout << "piccelerLoadImage called with filename: " << filename
             << std::endl;
-  // Return a dummy pointer
-  return reinterpret_cast<void *>(0x1234);
+  return nullptr;
 }
 
-void *picceler_blur_image(void *image, const char *mode) {
-  std::cout << "picceler_blur_image called with mode: " << mode << std::endl;
-  // Return the same dummy pointer
+void *piccelerBlurImage(void *image, const char *mode) {
+  std::cout << "piccelerBlurImage called with mode: " << mode << std::endl;
   return image;
 }
 
-void picceler_show_image(void *image) {
-  std::cout << "picceler_show_image called" << std::endl;
+void piccelerShowImage(void *image) {
+  std::cout << "piccelerShowImage called" << std::endl;
 }
 
-void picceler_save_image(void *image, const char *filename) {
-  std::cout << "picceler_save_image called with filename: " << filename
+void piccelerSaveImage(void *image, const char *filename) {
+  std::cout << "piccelerSaveImage called with filename: " << filename
             << std::endl;
 }
 }

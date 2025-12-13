@@ -1,13 +1,13 @@
-#include <spdlog/spdlog.h>
-
 #include "passes.h"
+
+#include "spdlog/spdlog.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/SymbolTable.h"
+
 #include "ops.h"
 #include "types.h"
-
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/Transforms/GreedyPatternRewriteDriver.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/IR/SymbolTable.h>
 
 namespace picceler {
 
@@ -57,7 +57,7 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
     auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "picceler_load_image", {stringType},
+    auto func = ensureRuntimeFunc(module, "piccelerLoadImage", {stringType},
                                   {imageType}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
     args.push_back(op.getFilename());
@@ -83,11 +83,10 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
     auto ctx = rewriter.getContext();
     auto loc = op.getLoc();
 
-    auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "picceler_show_image", {imageType},
-                                  {}, rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerShowImage", {imageType}, {},
+                                  rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
     args.push_back(op.getInput());
 
@@ -115,7 +114,7 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
     auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "picceler_save_image",
+    auto func = ensureRuntimeFunc(module, "piccelerSaveImage",
                                   {imageType, stringType}, {}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
     args.push_back(op.getInput());
@@ -147,8 +146,8 @@ struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
     auto imageType = ImageType::get(ctx);
 
     auto func =
-        ensureRuntimeFunc(module, "picceler_blur_image",
-                          {imageType, stringType}, {imageType}, rewriter, loc);
+        ensureRuntimeFunc(module, "piccelerBlurImage", {imageType, stringType},
+                          {imageType}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
     args.push_back(op.getInput());
     args.push_back(op.getMode());

@@ -1,13 +1,14 @@
 #include "compiler.h"
-#include <spdlog/cfg/env.h>
-#include <spdlog/spdlog.h>
 
+#include <cstdlib>
+
+#include "spdlog/cfg/env.h"
+#include "spdlog/spdlog.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
-
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FileSystem.h"
@@ -19,7 +20,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Target/TargetOptions.h"
-#include <cstdlib>
 
 namespace picceler {
 
@@ -54,7 +54,7 @@ bool Compiler::run() {
   auto tokens = _parser.getTokens();
   size_t index = 0;
   for (const auto &token : tokens) {
-    spdlog::info("Token[{}]: {}", index++, token.toString());
+    spdlog::debug("Token[{}]: {}", index++, token.toString());
   }
   spdlog::info("Finished tokenizing source file");
   spdlog::info("Resetting lexer");
@@ -108,8 +108,8 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule,
 
   llvm::TargetOptions opt;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(targetTriple, "generic", "", opt,
-                                  std::nullopt));
+      target->createTargetMachine(llvm::Triple(targetTriple), "generic", "",
+                                  opt, std::nullopt));
 
   llvmModule->setDataLayout(targetMachine->createDataLayout());
   llvmModule->setTargetTriple(llvm::Triple(targetTriple));
@@ -139,7 +139,7 @@ bool Compiler::linkWithLLD(const std::string &objFile,
   // Build the link command using clang++ with -no-pie to avoid PIE relocations
   std::string cmd =
       "clang++ " + objFile + " " + runtimeLib + " -o " + outputExe + " -no-pie";
-  spdlog::info("Linking with command: {}", cmd);
+  spdlog::debug("Linking with command: {}", cmd);
 
   int ret = std::system(cmd.c_str());
   if (ret == 0) {

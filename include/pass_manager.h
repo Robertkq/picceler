@@ -1,8 +1,10 @@
 #pragma once
 
-#include <mlir/Pass/PassManager.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/FileSystem.h>
+#include <memory>
+
+#include "mlir/Pass/PassManager.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FileSystem.h"
 
 #include "passes.h"
 
