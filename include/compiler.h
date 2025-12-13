@@ -12,6 +12,8 @@
 #include <mlir/Pass/PassManager.h>
 #include <mlir/Pass/Pass.h>
 
+#include "llvm/IR/Module.h"
+
 #include "dialect.h"
 #include "mlir_gen.h"
 #include "parser.h"
@@ -29,13 +31,17 @@ public:
   /**
    * @brief Runs the compilation process.
    */
-  void run();
+  bool run();
 
   CLI::App &getCliApp() { return _cliApp; }
 
 private:
   mlir::MLIRContext &getContext() { return _context; }
   mlir::DialectRegistry initRegistry();
+
+  bool emitObjectFile(llvm::Module *llvmModule, const std::string &objFilename);
+  bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib,
+                   const std::string &outputExe);
 
 private:
   CLI::App _cliApp;

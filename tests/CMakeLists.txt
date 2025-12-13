@@ -37,6 +37,15 @@ target_link_libraries(tests PRIVATE
     MLIRLLVMCommonConversion
     MLIRConvertToLLVMPass
     MLIRFuncToLLVM
+    MLIRTargetLLVMIRExport
+    MLIRLLVMToLLVMIRTranslation
+    MLIRBuiltinToLLVMIRTranslation
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Info
+    LLVMX86TargetMCA
+    LLVMX86AsmParser
+    LLVMX86Disassembler
 )
 
 add_custom_command(

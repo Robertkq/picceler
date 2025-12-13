@@ -4,6 +4,7 @@
 #include "types.h"
 #include <unordered_set>
 #include <llvm/Support/raw_ostream.h>
+#include <mlir/Dialect/Func/IR/FuncOps.h>
 
 namespace picceler {
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
@@ -12,13 +13,23 @@ MLIRGen::MLIRGen(mlir::MLIRContext *context)
 
 mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
-  _builder.setInsertionPointToStart(module.getBody());
+  // Create a top-level main function to own all generated ops.
+  auto funcType = _builder.getFunctionType({}, {});
+  auto mainFunc = _builder.create<mlir::func::FuncOp>(_builder.getUnknownLoc(),
+                                                      "main", funcType);
+  auto *entryBlock = mainFunc.addEntryBlock();
+  _builder.setInsertionPointToStart(entryBlock);
   _variableTable = builtinVariables();
   _functionTable = builtinFunctions();
 
   for (auto &stmt : root->statements) {
     emitStatement(stmt.get());
   }
+
+  // Terminate the function.
+  _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
+
+  module.push_back(mainFunc);
 
   return module;
 }

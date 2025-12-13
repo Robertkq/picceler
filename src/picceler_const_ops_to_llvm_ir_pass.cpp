@@ -17,8 +17,9 @@ namespace picceler {
 struct StringConstToCall : public mlir::OpRewritePattern<StringConstOp> {
   using OpRewritePattern::OpRewritePattern;
 
-  mlir::LogicalResult matchAndRewrite(
-      StringConstOp op, mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult
+  matchAndRewrite(StringConstOp op,
+                  mlir::PatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     if (!module)
@@ -44,21 +45,22 @@ struct StringConstToCall : public mlir::OpRewritePattern<StringConstOp> {
     auto arrayType = mlir::LLVM::LLVMArrayType::get(i8Type, bytes.size());
     auto ptrType = mlir::LLVM::LLVMPointerType::get(ctx);
 
-    // Insert global at the start of the module
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(module.getBody());
+    // Insert global at the start of the module (only the global, not
+    // addressof/GEP)
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module.getBody());
 
-    // Create the global string constant
-    auto global = rewriter.create<mlir::LLVM::GlobalOp>(
-        loc, arrayType, /*isConstant=*/true,
-        mlir::LLVM::Linkage::Internal, name,
-        rewriter.getStringAttr(bytes));
+      // Create the global string constant
+      rewriter.create<mlir::LLVM::GlobalOp>(loc, arrayType, /*isConstant=*/true,
+                                            mlir::LLVM::Linkage::Internal, name,
+                                            rewriter.getStringAttr(bytes));
+    }
 
-    // Create the address-of op
+    // Now create addressof and GEP at the use site (inside the function, where
+    // op lives)
     mlir::Value globalPtr =
-        rewriter.create<mlir::LLVM::AddressOfOp>(loc,
-        mlir::LLVM::LLVMPointerType::get(ctx), global.getSymName());
-
+        rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrType, name);
 
     // Compute GEP to first element (i8* pointer)
     mlir::Value zero = rewriter.create<mlir::LLVM::ConstantOp>(

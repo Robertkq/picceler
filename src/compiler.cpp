@@ -3,6 +3,23 @@
 #include <spdlog/spdlog.h>
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Target/LLVMIR/Export.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+
+#include "llvm/IR/Module.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Target/TargetOptions.h"
+#include <cstdlib>
 
 namespace picceler {
 
@@ -26,10 +43,12 @@ mlir::DialectRegistry Compiler::initRegistry() {
   registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::arith::ArithDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
+  mlir::registerBuiltinDialectTranslation(registry);
+  mlir::registerLLVMDialectTranslation(registry);
   return registry;
 }
 
-void Compiler::run() {
+bool Compiler::run() {
   _parser.setSource(_inputFile);
   spdlog::info("Tokenizing source file: {}", _inputFile);
   auto tokens = _parser.getTokens();
@@ -49,6 +68,87 @@ void Compiler::run() {
   spdlog::info("Running pass manager");
   _passManager.run(module);
   spdlog::info("Finished running pass manager");
+
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
+
+  if (!llvmModule) {
+    spdlog::error("Failed to translate MLIR module to LLVM IR");
+    return false;
+  }
+
+  auto success = emitObjectFile(llvmModule.get(), "picceler.o");
+  if (!success) {
+    spdlog::error("Failed to emit an object file");
+    return false;
+  }
+
+  success = linkWithLLD("picceler.o", "lib/libpicceler_runtime.a", "myApp");
+  if (!success) {
+    spdlog::error("Failed to link an executable");
+    return false;
+  }
+
+  return true;
+}
+
+bool Compiler::emitObjectFile(llvm::Module *llvmModule,
+                              const std::string &objFilename) {
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+
+  std::string error;
+  auto targetTriple = llvm::sys::getDefaultTargetTriple();
+  const llvm::Target *target =
+      llvm::TargetRegistry::lookupTarget(targetTriple, error);
+  if (!target) {
+    spdlog::error("Target not found: {}", error);
+    return false;
+  }
+
+  llvm::TargetOptions opt;
+  std::unique_ptr<llvm::TargetMachine> targetMachine(
+      target->createTargetMachine(targetTriple, "generic", "", opt,
+                                  std::nullopt));
+
+  llvmModule->setDataLayout(targetMachine->createDataLayout());
+  llvmModule->setTargetTriple(llvm::Triple(targetTriple));
+
+  std::error_code EC;
+  llvm::raw_fd_ostream dest(objFilename, EC, llvm::sys::fs::OF_None);
+  if (EC) {
+    spdlog::error("Could not open file: {}", EC.message());
+    return false;
+  }
+
+  llvm::legacy::PassManager pass;
+  if (targetMachine->addPassesToEmitFile(pass, dest, nullptr,
+                                         llvm::CodeGenFileType::ObjectFile)) {
+    spdlog::error("TargetMachine can't emit a file of this type");
+    return false;
+  }
+
+  pass.run(*llvmModule);
+  dest.flush();
+  return true;
+}
+
+bool Compiler::linkWithLLD(const std::string &objFile,
+                           const std::string &runtimeLib,
+                           const std::string &outputExe) {
+  // Build the link command using clang++ with -no-pie to avoid PIE relocations
+  std::string cmd =
+      "clang++ " + objFile + " " + runtimeLib + " -o " + outputExe + " -no-pie";
+  spdlog::info("Linking with command: {}", cmd);
+
+  int ret = std::system(cmd.c_str());
+  if (ret == 0) {
+    spdlog::info("Successfully linked executable: {}", outputExe);
+    return true;
+  } else {
+    spdlog::error("Linking failed with exit code: {}", ret);
+    return false;
+  }
 }
 
 } // namespace picceler
