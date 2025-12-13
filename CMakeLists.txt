@@ -44,6 +44,9 @@ file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 set(COMPILER_NAME "picceler")
 
+# Add the runtime library subdirectory
+add_subdirectory(lib)
+
 if (ENABLE_TESTS)
   add_subdirectory(tests)
 endif()
@@ -114,6 +117,7 @@ target_include_directories(${COMPILER_NAME} PRIVATE
 target_link_libraries(${COMPILER_NAME} PRIVATE
     CLI11::CLI11
     spdlog::spdlog
+    picceler_runtime
     MLIRIR
     MLIRFuncDialect
     MLIRArithDialect
@@ -124,9 +128,22 @@ target_link_libraries(${COMPILER_NAME} PRIVATE
     MLIRDialect
     MLIROptLib
     MLIRAnalysis
-    LLVMCore
-    LLVMSupport
     MLIRLLVMCommonConversion
     MLIRConvertToLLVMPass
     MLIRFuncToLLVM
+    MLIRTargetLLVMIRExport
+    MLIRLLVMToLLVMIRTranslation
+    MLIRBuiltinToLLVMIRTranslation
+    LLVMSelectionDAG
+    LLVMX86CodeGen
+    LLVMX86Desc
+    LLVMX86Info
+    LLVMX86TargetMCA
+    LLVMX86AsmParser
+    LLVMX86Disassembler
+    LLVMTarget
+    LLVMTargetParser
+    LLVMMC
+    LLVMCore
+    LLVMSupport
 )

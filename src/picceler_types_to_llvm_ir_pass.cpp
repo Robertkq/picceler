@@ -25,11 +25,11 @@ void PiccelerTypesToLLVMIRPass::runOnOperation() {
   mlir::LLVMTypeConverter converter(ctx);
 
   converter.addConversion([ctx](picceler::StringType) -> mlir::Type {
-      return mlir::LLVM::LLVMPointerType::get(ctx, 8);
+    return mlir::LLVM::LLVMPointerType::get(ctx);
   });
 
   converter.addConversion([&](picceler::ImageType) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(ctx, 8);
+    return mlir::LLVM::LLVMPointerType::get(ctx);
   });
 
   mlir::RewritePatternSet patterns(ctx);

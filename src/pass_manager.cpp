@@ -1,4 +1,5 @@
 #include "pass_manager.h"
+#include "mlir/Transforms/Passes.h"
 
 namespace picceler {
 
@@ -31,11 +32,18 @@ void IRPassManager::run(mlir::ModuleOp module) {
 void IRPassManager::registerPasses() {
   LowerPiccelerOpsToFuncCallsPass::registerPass();
   PiccelerTypesToLLVMIRPass::registerPass();
+  PiccelerConstOpsToLLVMIRPass::registerPass();
 }
 
 void IRPassManager::addPasses() {
+  // 1) Lower custom ops to func calls in the source dialect.
   _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create());
+  // 2) Convert functions/types to LLVM.
   _passManager.addPass(PiccelerTypesToLLVMIRPass::create());
+  // 3) Lower remaining const ops to LLVM globals now that types match.
+  _passManager.addPass(PiccelerConstOpsToLLVMIRPass::create());
+  // 4) Clean up trivial casts and folds.
+  _passManager.addPass(mlir::createCanonicalizerPass());
 }
 
 } // namespace picceler
