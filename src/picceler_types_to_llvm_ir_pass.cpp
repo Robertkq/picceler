@@ -1,9 +1,10 @@
-#include <spdlog/spdlog.h>
-
 #include "passes.h"
-#include "ops.h"
-#include "types.h"
 
+#include "spdlog/spdlog.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -11,10 +12,8 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 
-#include <mlir/IR/PatternMatch.h>
-#include <mlir/Transforms/GreedyPatternRewriteDriver.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
-#include <mlir/IR/SymbolTable.h>
+#include "ops.h"
+#include "types.h"
 
 namespace picceler {
 

@@ -1,5 +1,9 @@
 #include "parser.h"
+
 #include <iostream>
+#include <format>
+
+#include "spdlog/spdlog.h"
 
 using namespace picceler;
 

@@ -1,5 +1,8 @@
 #include "lexer.h"
+
 #include <iostream>
+
+#include "spdlog/spdlog.h"
 
 namespace picceler {
 

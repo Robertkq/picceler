@@ -4,10 +4,19 @@
 extern "C" {
 #endif
 
-void *picceler_load_image(const char *filename);
-void *picceler_blur_image(void *image, const char *mode);
-void picceler_show_image(void *image);
-void picceler_save_image(void *image, const char *filename);
+/**
+ * Wrapper C-style functions for proper picceler runtime implementation in C++
+ * \{
+ */
+
+void *piccelerLoadImage(const char *filename);
+void *piccelerBlurImage(void *image, const char *mode);
+void piccelerShowImage(void *image);
+void piccelerSaveImage(void *image, const char *filename);
+
+/**
+ * \}
+ */
 
 #ifdef __cplusplus
 }

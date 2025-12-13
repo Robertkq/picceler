@@ -1,10 +1,14 @@
-#include "dialect.h"
 #include "mlir_gen.h"
+
+#include <unordered_set>
+
+#include "spdlog/spdlog.h"
+#include "llvm/Support/raw_ostream.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+
+#include "dialect.h"
 #include "ops.h"
 #include "types.h"
-#include <unordered_set>
-#include <llvm/Support/raw_ostream.h>
-#include <mlir/Dialect/Func/IR/FuncOps.h>
 
 namespace picceler {
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
@@ -63,13 +67,13 @@ mlir::Value MLIRGen::emitExpression(ASTNode *node) {
  * rhs - expression
  */
 mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
-  spdlog::info("Emitting MLIR for assignment: {}", node->toString());
+  spdlog::debug("Emitting MLIR for assignment: {}", node->toString());
   auto rhs = emitExpression(node->rhs.get());
   _variableTable[node->lhs->name] = rhs; // Bind 'img' to %0
   return rhs;
 }
 mlir::Value MLIRGen::emitCall(CallNode *node) {
-  spdlog::info("Emitting MLIR for call: {}", node->toString());
+  spdlog::debug("Emitting MLIR for call: {}", node->toString());
   if (isBuiltinFunction(node)) {
     std::vector<mlir::Value> args;
     for (auto &arg : node->arguments) {
@@ -86,7 +90,7 @@ mlir::Value MLIRGen::emitCall(CallNode *node) {
 }
 
 mlir::Value MLIRGen::emitVariable(VariableNode *node) {
-  spdlog::info("Emitting MLIR for variable: {}", node->toString());
+  spdlog::debug("Emitting MLIR for variable: {}", node->toString());
   auto it = _variableTable.find(node->name);
   if (it != _variableTable.end()) {
     return it->second;
@@ -95,7 +99,7 @@ mlir::Value MLIRGen::emitVariable(VariableNode *node) {
 }
 
 mlir::Value MLIRGen::emitString(StringNode *node) {
-  spdlog::info("Emitting MLIR for string: {}", node->toString());
+  spdlog::debug("Emitting MLIR for string: {}", node->toString());
   auto stringType = _builder.getType<StringType>();
   auto valueAttr = mlir::StringAttr::get(_context, node->value);
   return _builder.create<StringConstOp>(_builder.getUnknownLoc(), stringType,
@@ -103,7 +107,7 @@ mlir::Value MLIRGen::emitString(StringNode *node) {
 }
 
 mlir::Value MLIRGen::emitNumber(NumberNode *node) {
-  spdlog::info("Emitting MLIR for number: {}", node->toString());
+  spdlog::debug("Emitting MLIR for number: {}", node->toString());
   return _builder.create<mlir::arith::ConstantOp>(
       _builder.getUnknownLoc(),
       mlir::IntegerAttr::get(mlir::IntegerType::get(_context, 64),
@@ -112,7 +116,7 @@ mlir::Value MLIRGen::emitNumber(NumberNode *node) {
 
 bool MLIRGen::isBuiltinFunction(CallNode *node) {
   static const std::unordered_set<std::string> builtinFunctions = {
-      "load_image", "save_image", "blur", "show_image", "zzzzzzzzzzzz"};
+      "load_image", "save_image", "blur", "show_image"};
   return builtinFunctions.find(node->callee) != builtinFunctions.end();
 }
 
@@ -133,18 +137,16 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node,
                                           inputImage, blurAmount);
     return callOp.getResult();
   } else if (name == "save_image") {
-    auto imageType = _builder.getType<ImageType>();
     auto &inputImage = args[0];
     auto &filename = args[1];
-    auto callOp = _builder.create<SaveImageOp>(_builder.getUnknownLoc(),
-                                               inputImage, filename);
-    return nullptr;
+    _builder.create<SaveImageOp>(_builder.getUnknownLoc(), inputImage,
+                                 filename);
+    return {};
   } else if (name == "show_image") {
-    auto imageType = _builder.getType<ImageType>();
     auto &inputImage = args[0];
-    auto callOp =
-        _builder.create<ShowImageOp>(_builder.getUnknownLoc(), inputImage);
-    return nullptr;
+    _builder.create<ShowImageOp>(_builder.getUnknownLoc(), inputImage);
+    return {};
+
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
   }

@@ -1,3 +1,5 @@
+#include <format>
+
 #include "ast.h"
 
 namespace picceler {

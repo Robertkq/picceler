@@ -16,10 +16,11 @@ find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 
 if (ENABLE_CLANG_TIDY)
-    find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-18)
     if(CLANG_TIDY_EXE)
         message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-checks=readability-identifier-naming")
+        # Pass the C++ standard explicitly so clang-tidy parses system headers consistently.
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++20")
     else()
         message(WARNING "clang-tidy option enabled but clang-tidy executable not found!")
     endif()
@@ -46,10 +47,6 @@ set(COMPILER_NAME "picceler")
 
 # Add the runtime library subdirectory
 add_subdirectory(lib)
-
-if (ENABLE_TESTS)
-  add_subdirectory(tests)
-endif()
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(MLIR REQUIRED CONFIG)
@@ -91,33 +88,10 @@ mlir_tablegen(piccelerOps.h.inc -gen-op-decls -dialect=picceler -I${PICCELER_TD_
 mlir_tablegen(piccelerOps.cpp.inc -gen-op-defs -dialect=picceler -I${PICCELER_TD_DIR})
 add_public_tablegen_target(PiccelerOpsIncGen)
 
-
-
-add_executable(${COMPILER_NAME} 
-    ${SOURCES}
-)
-
-add_dependencies(${COMPILER_NAME}
-  PiccelerDialectIncGen
-  PiccelerTypesIncGen
-  PiccelerOpsIncGen
-)
-add_dependencies(tests
-  PiccelerDialectIncGen
-  PiccelerTypesIncGen
-  PiccelerOpsIncGen
-)
-
-target_include_directories(${COMPILER_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${LLVM_INCLUDE_DIRS}
-    ${MLIR_INCLUDE_DIRS}
-)
-target_link_libraries(${COMPILER_NAME} PRIVATE
+# Define common libraries to link against
+set(PICCELER_LINK_LIBS
     CLI11::CLI11
     spdlog::spdlog
-    picceler_runtime
     MLIRIR
     MLIRFuncDialect
     MLIRArithDialect
@@ -146,4 +120,34 @@ target_link_libraries(${COMPILER_NAME} PRIVATE
     LLVMMC
     LLVMCore
     LLVMSupport
+)
+
+if (ENABLE_TESTS)
+  add_subdirectory(tests)
+endif()
+
+add_executable(${COMPILER_NAME} 
+    ${SOURCES}
+)
+
+add_dependencies(${COMPILER_NAME}
+  PiccelerDialectIncGen
+  PiccelerTypesIncGen
+  PiccelerOpsIncGen
+)
+add_dependencies(tests
+  PiccelerDialectIncGen
+  PiccelerTypesIncGen
+  PiccelerOpsIncGen
+)
+
+target_include_directories(${COMPILER_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
+)
+target_link_libraries(${COMPILER_NAME} PRIVATE
+    picceler_runtime
+    ${PICCELER_LINK_LIBS}
 )
