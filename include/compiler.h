@@ -21,6 +21,12 @@
 
 namespace picceler {
 
+class CLIOptions {
+public:
+  std::string inputFile;
+  std::string outputFile;
+};
+
 /**
  * @brief Compiler class that orchestrates the compilation process.
  */
@@ -34,6 +40,7 @@ public:
   bool run();
 
   CLI::App &getCliApp() { return _cliApp; }
+  const CLIOptions &getCliOptions() const { return _cliOptions; }
 
 private:
   mlir::MLIRContext &getContext() { return _context; }
@@ -45,7 +52,7 @@ private:
 
 private:
   CLI::App _cliApp;
-  std::string _inputFile;
+  CLIOptions _cliOptions;
   Parser _parser;
 
   mlir::MLIRContext _context;

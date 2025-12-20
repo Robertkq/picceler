@@ -24,10 +24,16 @@
 namespace picceler {
 
 Compiler::Compiler()
-    : _cliApp("picceler compiler"), _inputFile(), _parser(),
+    : _cliApp("picceler compiler"), _cliOptions(), _parser(),
       _context(initRegistry()), _mlirGen(&_context), _passManager(&_context) {
   spdlog::cfg::load_env_levels();
-  _cliApp.add_option("-i,--input", _inputFile, "Input source file")->required();
+  _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")
+      ->required()
+      ->check(CLI::ExistingFile);
+  _cliApp
+      .add_option("-o,--output", _cliOptions.outputFile,
+                  "Output executable file")
+      ->default_val("a.out");
   _context.loadDialect<picceler>();
   _context.loadDialect<mlir::func::FuncDialect>();
   _context.loadDialect<mlir::arith::ArithDialect>();
@@ -49,8 +55,12 @@ mlir::DialectRegistry Compiler::initRegistry() {
 }
 
 bool Compiler::run() {
-  _parser.setSource(_inputFile);
-  spdlog::info("Tokenizing source file: {}", _inputFile);
+  auto &cliOptions = getCliOptions();
+  const auto &inputFile = _cliOptions.inputFile;
+  const auto &outputFile = _cliOptions.outputFile;
+
+  _parser.setSource(inputFile);
+  spdlog::info("Tokenizing source file: {}", inputFile);
   auto tokens = _parser.getTokens();
   size_t index = 0;
   for (const auto &token : tokens) {
@@ -58,7 +68,7 @@ bool Compiler::run() {
   }
   spdlog::info("Finished tokenizing source file");
   spdlog::info("Resetting lexer");
-  _parser.setSource(_inputFile);
+  _parser.setSource(inputFile);
   auto ast = _parser.parse();
   _parser.printAST(ast);
 
@@ -83,7 +93,7 @@ bool Compiler::run() {
     return false;
   }
 
-  success = linkWithLLD("picceler.o", "lib/libpicceler_runtime.a", "myApp");
+  success = linkWithLLD("picceler.o", "lib/libpicceler_runtime.a", outputFile);
   if (!success) {
     spdlog::error("Failed to link an executable");
     return false;
