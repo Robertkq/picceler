@@ -147,8 +147,8 @@ bool Compiler::linkWithLLD(const std::string &objFile,
                            const std::string &runtimeLib,
                            const std::string &outputExe) {
   // Build the link command using clang++ with -no-pie to avoid PIE relocations
-  std::string cmd =
-      "clang++ " + objFile + " " + runtimeLib + " -o " + outputExe + " -no-pie";
+  std::string cmd = "clang++ " + objFile + " " + runtimeLib + " -o " +
+                    outputExe + " -no-pie $(pkg-config --libs opencv4)";
   spdlog::debug("Linking with command: {}", cmd);
 
   int ret = std::system(cmd.c_str());
