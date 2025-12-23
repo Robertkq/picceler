@@ -2,13 +2,28 @@
 
 #include <memory>
 
+#include "spdlog/spdlog.h"
+
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FileSystem.h"
+#include "mlir/Pass/PassInstrumentation.h"
 
 #include "passes.h"
 
 namespace picceler {
+
+struct PassLogger : public mlir::PassInstrumentation {
+  void runBeforePass(mlir::Pass *pass, mlir::Operation *op) override {
+    spdlog::info("Started pass: {}", pass->getName().str());
+  }
+  void runAfterPass(mlir::Pass *pass, mlir::Operation *op) override {
+    spdlog::info("Finished pass: {}", pass->getName().str());
+  }
+  void runAfterPassFailed(mlir::Pass *pass, mlir::Operation *op) override {
+    spdlog::error("Failed pass: {}", pass->getName().str());
+  }
+};
 
 /**
  * @brief Wrapper around MLIR PassManager to manage and run passes.

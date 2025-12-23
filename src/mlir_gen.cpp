@@ -74,19 +74,12 @@ mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
 }
 mlir::Value MLIRGen::emitCall(CallNode *node) {
   spdlog::debug("Emitting MLIR for call: {}", node->toString());
-  if (isBuiltinFunction(node)) {
-    std::vector<mlir::Value> args;
-    for (auto &arg : node->arguments) {
-      args.push_back(emitExpression(arg.get()));
-    }
-    auto op = emitBuiltinCall(node, args);
-    return op;
-  } else {
-    throw std::runtime_error("User defined function: " + node->callee +
-                             " not supported! only builtin");
+  std::vector<mlir::Value> args;
+  for (auto &arg : node->arguments) {
+    args.push_back(emitExpression(arg.get()));
   }
-
-  throw std::runtime_error("Undefined function: " + node->callee);
+  auto op = emitBuiltinCall(node, args);
+  return op;
 }
 
 mlir::Value MLIRGen::emitVariable(VariableNode *node) {
@@ -112,12 +105,6 @@ mlir::Value MLIRGen::emitNumber(NumberNode *node) {
       _builder.getUnknownLoc(),
       mlir::IntegerAttr::get(mlir::IntegerType::get(_context, 64),
                              node->value));
-}
-
-bool MLIRGen::isBuiltinFunction(CallNode *node) {
-  static const std::unordered_set<std::string> builtinFunctions = {
-      "load_image", "save_image", "blur", "show_image"};
-  return builtinFunctions.find(node->callee) != builtinFunctions.end();
 }
 
 mlir::Value MLIRGen::emitBuiltinCall(CallNode *node,
@@ -147,6 +134,18 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node,
     _builder.create<ShowImageOp>(_builder.getUnknownLoc(), inputImage);
     return {};
 
+  } else if (name == "brightness") {
+    auto &inputImage = args[0];
+    auto &brightnessValue = args[1];
+    auto callOp = _builder.create<BrightnessOp>(_builder.getUnknownLoc(),
+                                                inputImage.getType(),
+                                                inputImage, brightnessValue);
+    return callOp.getResult();
+  } else if (name == "invert") {
+    auto &inputImage = args[0];
+    auto callOp = _builder.create<InvertOp>(_builder.getUnknownLoc(),
+                                            inputImage.getType(), inputImage);
+    return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
   }

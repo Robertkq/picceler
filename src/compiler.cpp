@@ -5,6 +5,9 @@
 #include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -37,6 +40,9 @@ Compiler::Compiler()
   _context.loadDialect<picceler>();
   _context.loadDialect<mlir::func::FuncDialect>();
   _context.loadDialect<mlir::arith::ArithDialect>();
+  _context.loadDialect<mlir::affine::AffineDialect>();
+  _context.loadDialect<mlir::memref::MemRefDialect>();
+  _context.loadDialect<mlir::scf::SCFDialect>();
   _context.loadDialect<mlir::LLVM::LLVMDialect>();
   for (auto *dialect : _context.getLoadedDialects()) {
     llvm::outs() << dialect->getNamespace() << "\n";
@@ -48,6 +54,9 @@ mlir::DialectRegistry Compiler::initRegistry() {
   registry.insert<picceler>();
   registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::arith::ArithDialect>();
+  registry.insert<mlir::affine::AffineDialect>();
+  registry.insert<mlir::memref::MemRefDialect>();
+  registry.insert<mlir::scf::SCFDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
@@ -75,6 +84,7 @@ bool Compiler::run() {
   spdlog::info("Generating initial MLIR");
   auto module = _mlirGen.generate(ast.get());
   spdlog::info("Finished generating initial MLIR");
+  module->dump();
   spdlog::info("Running pass manager");
   _passManager.run(module);
   spdlog::info("Finished running pass manager");

@@ -7,7 +7,10 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -33,27 +36,19 @@ void PiccelerTypesToLLVMIRPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(ctx);
   mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
+  mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
 
   mlir::ConversionTarget target(*ctx);
   target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<mlir::arith::ArithDialect>();
+  target.addLegalDialect<mlir::affine::AffineDialect>();
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalOp<picceler::StringConstOp>();
+  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
 
-  if (failed(applyFullConversion(module, target, std::move(patterns)))) {
+  if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
     signalPassFailure();
   }
-}
-
-mlir::StringRef PiccelerTypesToLLVMIRPass::getArgument() const {
-  return "picceler-types-to-llvmir";
-}
-
-mlir::StringRef PiccelerTypesToLLVMIRPass::getDescription() const {
-  return "Convert Picceler types to LLVM IR types";
-}
-
-void PiccelerTypesToLLVMIRPass::registerPass() {
-  mlir::PassRegistration<PiccelerTypesToLLVMIRPass>();
 }
 
 } // namespace picceler

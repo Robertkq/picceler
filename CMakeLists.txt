@@ -95,6 +95,11 @@ set(PICCELER_LINK_LIBS
     MLIRIR
     MLIRFuncDialect
     MLIRArithDialect
+    MLIRAffineDialect
+    MLIRSCFDialect
+    MLIRReconcileUnrealizedCasts
+    MLIRSCFToControlFlow
+    MLIRAffineToStandard
     MLIRParser
     MLIRSupport
     MLIRTransforms

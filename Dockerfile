@@ -47,6 +47,12 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
     apt-get update && \
     apt-get install -y g++-13 gcc-13
 
+# ====== Install OpenCV ======
+RUN apt-get update && apt-get install -y \
+    libopencv-dev \
+    pkg-config \
+    && apt-get clean
+
 
 # Set system default compilers to clang-18
 RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang-18 100 && \

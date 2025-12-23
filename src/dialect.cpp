@@ -8,7 +8,8 @@ namespace picceler {
 
 void picceler::initialize() {
   addTypes<ImageType, StringType>();
-  addOperations<StringConstOp, LoadImageOp, ShowImageOp, SaveImageOp, BlurOp>();
+  addOperations<StringConstOp, LoadImageOp, ShowImageOp, SaveImageOp, BlurOp,
+                BrightnessOp, InvertOp>();
 }
 
 } // namespace picceler

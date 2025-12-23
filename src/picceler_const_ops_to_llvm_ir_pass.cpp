@@ -87,16 +87,4 @@ void PiccelerConstOpsToLLVMIRPass::runOnOperation() {
   }
 }
 
-mlir::StringRef PiccelerConstOpsToLLVMIRPass::getArgument() const {
-  return "picceler-const-ops-to-llvm";
-}
-
-mlir::StringRef PiccelerConstOpsToLLVMIRPass::getDescription() const {
-  return "Convert Picceler const ops to LLVM IR ops";
-}
-
-void PiccelerConstOpsToLLVMIRPass::registerPass() {
-  mlir::PassRegistration<PiccelerConstOpsToLLVMIRPass>();
-}
-
 } // namespace picceler

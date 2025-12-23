@@ -124,8 +124,6 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
     rewriter.replaceOp(op, call.getResults());
 
     return mlir::success();
-
-    return mlir::success();
   }
 };
 
@@ -173,18 +171,6 @@ void LowerPiccelerOpsToFuncCallsPass::runOnOperation() {
   if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
     signalPassFailure();
   }
-}
-
-mlir::StringRef LowerPiccelerOpsToFuncCallsPass::getArgument() const {
-  return "lower-picceler-ops-to-func-calls";
-}
-
-mlir::StringRef LowerPiccelerOpsToFuncCallsPass::getDescription() const {
-  return "Lower Picceler operations to function calls";
-}
-
-void LowerPiccelerOpsToFuncCallsPass::registerPass() {
-  mlir::PassRegistration<LowerPiccelerOpsToFuncCallsPass>();
 }
 
 } // namespace picceler

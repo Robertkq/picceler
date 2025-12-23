@@ -29,6 +29,18 @@ def Picceler_ShowImageOp : Op<picceler, "show_image", []> {
   let results = (outs);
 }
 
+def Picceler_BrightnessOp : Op<picceler, "brightness", []> {
+  let summary = "Adjust the brightness of an image";
+  let arguments = (ins Picceler_ImageType:$input, I64:$value);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_InvertOp : Op<picceler, "invert", []> {
+  let summary = "Invert the pixels of an image";
+  let arguments = (ins Picceler_ImageType:$input);
+  let results = (outs Picceler_ImageType:$result);
+}
+
 def Picceler_BlurOp : Op<picceler, "blur", []> {
   let summary = "Apply blur to an image";
   let arguments = (ins Picceler_ImageType:$input, Picceler_StringType:$mode);
