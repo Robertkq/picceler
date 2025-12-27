@@ -48,7 +48,12 @@ void showImage(const Image &image) {
   cv::cvtColor(rgbaMat, bgrMat, cv::COLOR_RGBA2BGR);
   cv::namedWindow("Image", cv::WINDOW_NORMAL);
   cv::imshow("Image", bgrMat);
-  cv::waitKey(0);
+  while (cv::getWindowProperty("Image", cv::WND_PROP_VISIBLE) >= 1) {
+    if (cv::waitKey(100) >= 0)
+      break;
+  }
+  cv::destroyWindow("Image");
+  cv::waitKey(1);
 }
 
 } // namespace picceler

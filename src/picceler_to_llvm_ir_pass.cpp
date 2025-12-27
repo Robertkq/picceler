@@ -5,7 +5,15 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Transforms/DialectConversion.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/StringExtras.h"
 
 #include "ops.h"
@@ -13,12 +21,12 @@
 
 namespace picceler {
 
-struct StringConstToCall : public mlir::OpRewritePattern<StringConstOp> {
-  using OpRewritePattern::OpRewritePattern;
+struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(StringConstOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  matchAndRewrite(StringConstOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     if (!module)
@@ -74,17 +82,46 @@ struct StringConstToCall : public mlir::OpRewritePattern<StringConstOp> {
   }
 };
 
-void PiccelerConstOpsToLLVMIRPass::runOnOperation() {
-  spdlog::trace("Running PiccelerConstOpsToLLVMIRPass");
+void PiccelerToLLVMConversionPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
+  mlir::MLIRContext *ctx = &getContext();
 
-  mlir::RewritePatternSet patterns(&getContext());
+  mlir::LLVMTypeConverter converter(ctx);
 
-  patterns.add<StringConstToCall>(&getContext());
+  converter.addConversion([ctx](picceler::StringType) -> mlir::Type {
+    return mlir::LLVM::LLVMPointerType::get(ctx);
+  });
 
-  if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
+  converter.addConversion([&](picceler::ImageType) -> mlir::Type {
+    return mlir::LLVM::LLVMPointerType::get(ctx);
+  });
+
+  mlir::RewritePatternSet patterns(ctx);
+
+  mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
+
+  patterns.add<StringConstConverter>(converter, ctx);
+
+  mlir::ConversionTarget target(*ctx);
+  target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<mlir::arith::ArithDialect>();
+  target.addLegalDialect<mlir::affine::AffineDialect>();
+
+  target.addLegalOp<mlir::ModuleOp>();
+  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+
+  target.addIllegalOp<picceler::StringConstOp>();
+
+  target.addDynamicallyLegalOp<mlir::func::FuncOp>([&](mlir::func::FuncOp op) {
+    return converter.isSignatureLegal(op.getFunctionType());
+  });
+  target.addDynamicallyLegalOp<mlir::func::CallOp>(
+      [&](mlir::func::CallOp op) { return converter.isLegal(op); });
+  target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
+      [&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
+
+  if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
     signalPassFailure();
   }
 }
-
 } // namespace picceler

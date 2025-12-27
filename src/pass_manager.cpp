@@ -42,19 +42,30 @@ void IRPassManager::run(mlir::ModuleOp module) {
 void IRPassManager::registerPasses() {
   PiccelerToAffinePass::registerPass();
   LowerPiccelerOpsToFuncCallsPass::registerPass();
-  PiccelerTypesToLLVMIRPass::registerPass();
-  PiccelerConstOpsToLLVMIRPass::registerPass();
+  PiccelerToLLVMConversionPass::registerPass();
 }
 
 void IRPassManager::addPasses() {
+  addHighLevelOptimizationPasses();
+  addAffineLoweringPasses();
+  addRuntimeLoweringPasses();
+  addBackendLoweringPasses();
+}
+
+void IRPassManager::addHighLevelOptimizationPasses() {}
+
+void IRPassManager::addAffineLoweringPasses() {
   _passManager.addPass(mlir::createCanonicalizerPass());
   _passManager.addPass(PiccelerToAffinePass::create());
+}
+void IRPassManager::addRuntimeLoweringPasses() {
+
   _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create());
-  _passManager.addPass(PiccelerTypesToLLVMIRPass::create());
-  _passManager.addPass(PiccelerConstOpsToLLVMIRPass::create());
+}
+void IRPassManager::addBackendLoweringPasses() {
+  _passManager.addPass(PiccelerToLLVMConversionPass::create());
   _passManager.addPass(mlir::createReconcileUnrealizedCastsPass());
   _passManager.addPass(mlir::createCanonicalizerPass());
-
   _passManager.addPass(mlir::createLowerAffinePass());
   _passManager.addPass(mlir::createSCFToControlFlowPass());
   _passManager.addPass(mlir::createArithToLLVMConversionPass());

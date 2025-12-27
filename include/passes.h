@@ -32,44 +32,32 @@ public:
 /**
  * @brief Pass that converts Picceler types to LLVM IR types.
  */
-class PiccelerTypesToLLVMIRPass
-    : public mlir::PassWrapper<PiccelerTypesToLLVMIRPass,
+/**
+ * @brief Unified pass that converts Picceler types, constants, and functions to
+ * LLVM IR. This is the final lowering step for the Picceler dialect.
+ */
+class PiccelerToLLVMConversionPass
+    : public mlir::PassWrapper<PiccelerToLLVMConversionPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
 public:
   void runOnOperation() override;
   mlir::StringRef getArgument() const override {
-    return "convert-picceler-types-to-llvm-ir";
+    return "convert-picceler-to-llvm";
   }
   mlir::StringRef getDescription() const override {
-    return "Convert Picceler types to LLVM IR types";
+    return "Convert Picceler dialect types and residual ops to LLVM dialect";
   }
   static void registerPass() {
-    mlir::PassRegistration<PiccelerTypesToLLVMIRPass>();
+    mlir::PassRegistration<PiccelerToLLVMConversionPass>();
   }
   static std::unique_ptr<mlir::Pass> create() {
-    return std::make_unique<PiccelerTypesToLLVMIRPass>();
+    return std::make_unique<PiccelerToLLVMConversionPass>();
   }
 };
 
-class PiccelerConstOpsToLLVMIRPass
-    : public mlir::PassWrapper<PiccelerConstOpsToLLVMIRPass,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-public:
-  void runOnOperation() override;
-  mlir::StringRef getArgument() const override {
-    return "convert-picceler-const-ops-to-llvm-ir";
-  }
-  mlir::StringRef getDescription() const override {
-    return "Convert Picceler constant operations to LLVM IR";
-  }
-  static void registerPass() {
-    mlir::PassRegistration<PiccelerConstOpsToLLVMIRPass>();
-  }
-  static std::unique_ptr<mlir::Pass> create() {
-    return std::make_unique<PiccelerConstOpsToLLVMIRPass>();
-  }
-};
-
+/**
+ * @brief Pass that converts Picceler operations to Affine dialect.
+ */
 class PiccelerToAffinePass
     : public mlir::PassWrapper<PiccelerToAffinePass,
                                mlir::OperationPass<mlir::ModuleOp>> {

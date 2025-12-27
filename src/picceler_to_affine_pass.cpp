@@ -106,11 +106,6 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
   }
 };
 
-/**
- * This pass converts most computational picceler operations to Affine dialect
- * operations. Some of the ops not converted are: image load/store, and string
- * constants.
- */
 void PiccelerToAffinePass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext *ctx = &getContext();

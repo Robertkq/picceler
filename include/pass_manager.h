@@ -55,6 +55,16 @@ private:
    */
   void addPasses();
 
+  /**
+   * @brief The following functions describe the phases of compilation
+   * and groups passes accordingly.
+   */
+
+  void addHighLevelOptimizationPasses();
+  void addAffineLoweringPasses();
+  void addRuntimeLoweringPasses();
+  void addBackendLoweringPasses();
+
 private:
   std::unique_ptr<llvm::raw_fd_ostream> _outStream;
   mlir::PassManager _passManager;
