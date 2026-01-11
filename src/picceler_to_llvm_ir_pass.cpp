@@ -16,6 +16,7 @@
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include "dialect.h"
 #include "ops.h"
 #include "types.h"
 
@@ -110,6 +111,7 @@ void PiccelerToLLVMConversionPass::runOnOperation() {
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalOp<mlir::UnrealizedConversionCastOp>();
 
+  target.addIllegalDialect<picceler::PiccelerDialect>();
   target.addIllegalOp<picceler::StringConstOp>();
 
   target.addDynamicallyLegalOp<mlir::func::FuncOp>([&](mlir::func::FuncOp op) {

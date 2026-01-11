@@ -37,7 +37,7 @@ Compiler::Compiler()
       .add_option("-o,--output", _cliOptions.outputFile,
                   "Output executable file")
       ->default_val("a.out");
-  _context.loadDialect<picceler>();
+  _context.loadDialect<PiccelerDialect>();
   _context.loadDialect<mlir::func::FuncDialect>();
   _context.loadDialect<mlir::arith::ArithDialect>();
   _context.loadDialect<mlir::affine::AffineDialect>();
@@ -51,7 +51,7 @@ Compiler::Compiler()
 
 mlir::DialectRegistry Compiler::initRegistry() {
   mlir::DialectRegistry registry;
-  registry.insert<picceler>();
+  registry.insert<PiccelerDialect>();
   registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::arith::ArithDialect>();
   registry.insert<mlir::affine::AffineDialect>();

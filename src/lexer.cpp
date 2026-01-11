@@ -66,6 +66,7 @@ Token Lexer::nextToken() {
     return readSymbol({_line, _column});
   }
 
+  get(); // consume unknown character
   return Token{Token::Type::UNKNOWN, "", _line, _column};
 }
 
@@ -117,7 +118,7 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string _symbols = "=():,";
+  static const std::string _symbols = "=():,[]";
   return _symbols.find(ch) != std::string::npos;
 }
 
@@ -131,8 +132,24 @@ Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
 
 Token Lexer::readNumber(std::pair<size_t, size_t> start) {
   std::string value;
-  while (!eof() && isdigit(peek())) {
-    value += get();
+  bool hasDot = false;
+
+  while (!eof()) {
+    char ch = peek();
+    if (isdigit(ch)) {
+      value += get();
+    } else if (ch == '.') {
+      if (hasDot) {
+        throw std::runtime_error("Invalid number format at line " +
+                                 std::to_string(start.first) + ", column " +
+                                 std::to_string(start.second));
+        break;
+      }
+      hasDot = true;
+      value += get();
+    } else {
+      break;
+    }
   }
   return Token{Token::Type::NUMBER, value, start.first, start.second};
 }

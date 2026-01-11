@@ -9,13 +9,13 @@
 
 include "mlir/IR/DialectBase.td"
 
-def picceler : Dialect {
+def PiccelerDialect : Dialect {
     let summary = "Main dialect for the Picceler language";
     let description = [{
         This dialect defines the core operations and types for the Picceler language.
     }];
     let name = "picceler";
-    let cppNamespace = "::picceler";
+    let cppNamespace = "picceler";
     let useDefaultTypePrinterParser = 1;
 }
 

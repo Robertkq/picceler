@@ -35,4 +35,21 @@ std::string CallNode::toString() const {
   return std::format("Call:[{}({})]", callee, args);
 }
 
+std::string KernelNode::toString() const {
+  std::string repr = std::format("Kernel({}x{}):[", rows.size(),
+                                 rows.empty() ? 0 : rows[0].size());
+  for (const auto &row : rows) {
+    repr += " [";
+    for (size_t i = 0; i < row.size(); ++i) {
+      repr += std::to_string(row[i]);
+      if (i < row.size() - 1) {
+        repr += ", ";
+      }
+    }
+    repr += "], ";
+  }
+  repr += "]";
+  return repr;
+}
+
 } // namespace picceler
