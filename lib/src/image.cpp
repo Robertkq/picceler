@@ -4,6 +4,25 @@
 
 namespace picceler {
 
+void internalDebugImage(const picceler::Image &image,
+                        const std::string &caller) {
+  std::cout << "[Runtime Debug from " << caller << "]\n"
+            << "  Addr of struct: " << &image << "\n"
+            << "  Width:    " << image._width << "\n"
+            << "  Height:   " << image._height << "\n"
+            << "  Data Ptr: " << (void *)image._data << std::endl;
+
+  if (image._data != nullptr && image._width > 0 && image._height > 0) {
+    std::cout << "  First 4 bytes (RGBA): " << (int)image._data[0] << " "
+              << (int)image._data[1] << " " << (int)image._data[2] << " "
+              << (int)image._data[3] << std::endl;
+  } else {
+    std::cout << "  WARNING: Image metadata or pointer is INVALID!"
+              << std::endl;
+  }
+  std::cout << "--------------------------------------" << std::endl;
+}
+
 Image *loadImage(const std::string &filename) {
   Image *img = new Image();
   cv::Mat loaded = cv::imread(filename);
@@ -29,7 +48,7 @@ Image *loadImage(const std::string &filename) {
 }
 
 void saveImage(const Image &image, const std::string &filename) {
-
+  internalDebugImage(image, "saveImage");
   cv::Mat rgbaMat(image._height, image._width, CV_8UC4, image._data);
 
   cv::Mat bgrMat;
@@ -42,6 +61,7 @@ void saveImage(const Image &image, const std::string &filename) {
 }
 
 void showImage(const Image &image) {
+  internalDebugImage(image, "showImage");
   cv::Mat rgbaMat(image._height, image._width, CV_8UC4, image._data);
 
   cv::Mat bgrMat;

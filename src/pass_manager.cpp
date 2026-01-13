@@ -11,23 +11,17 @@
 
 namespace picceler {
 
-IRPassManager::IRPassManager(mlir::MLIRContext *context)
-    : _passManager(context) {
+IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context) {
   std::error_code ec;
-  _outStream = std::make_unique<llvm::raw_fd_ostream>("output.mlir", ec,
-                                                      llvm::sys::fs::OF_Text);
+  _outStream = std::make_unique<llvm::raw_fd_ostream>("output.mlir", ec, llvm::sys::fs::OF_Text);
   if (ec) {
     throw std::runtime_error("Could not open output.mlir: " + ec.message());
   }
   _outStream->SetUnbuffered();
   _passManager.enableVerifier();
-  _passManager.enableIRPrinting(
-      [](mlir::Pass *, mlir::Operation *) { return false; },
-      [](mlir::Pass *, mlir::Operation *) { return true; }, false, false, false,
-      *_outStream);
-  _passManager.enableIRPrintingToFileTree(
-      nullptr, [](mlir::Pass *, mlir::Operation *) { return true; }, false,
-      false);
+  _passManager.enableIRPrinting([](mlir::Pass *, mlir::Operation *) { return false; },
+                                [](mlir::Pass *, mlir::Operation *) { return true; }, false, false, false, *_outStream);
+  _passManager.enableIRPrintingToFileTree(nullptr, [](mlir::Pass *, mlir::Operation *) { return true; }, false, false);
   _passManager.addInstrumentation(std::make_unique<PassLogger>());
   registerPasses();
   addPasses();
@@ -58,15 +52,13 @@ void IRPassManager::addAffineLoweringPasses() {
   _passManager.addPass(mlir::createCanonicalizerPass());
   _passManager.addPass(PiccelerToAffinePass::create());
 }
-void IRPassManager::addRuntimeLoweringPasses() {
-
-  _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create());
-}
+void IRPassManager::addRuntimeLoweringPasses() { _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create()); }
 void IRPassManager::addBackendLoweringPasses() {
   _passManager.addPass(PiccelerToLLVMConversionPass::create());
   _passManager.addPass(mlir::createReconcileUnrealizedCastsPass());
   _passManager.addPass(mlir::createCanonicalizerPass());
   _passManager.addPass(mlir::createLowerAffinePass());
+  _passManager.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
   _passManager.addPass(mlir::createSCFToControlFlowPass());
   _passManager.addPass(mlir::createArithToLLVMConversionPass());
   _passManager.addPass(mlir::createConvertControlFlowToLLVMPass());

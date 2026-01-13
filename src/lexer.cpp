@@ -36,8 +36,7 @@ void Lexer::setSource(const std::string &source) {
   if (!_file.is_open()) {
     throw std::runtime_error("Could not open source file: " + source);
   }
-  _buffer.assign((std::istreambuf_iterator<char>(_file)),
-                 std::istreambuf_iterator<char>());
+  _buffer.assign((std::istreambuf_iterator<char>(_file)), std::istreambuf_iterator<char>());
   _file.close();
   _position = 0;
   _line = 1;
@@ -56,7 +55,7 @@ Token Lexer::nextToken() {
   if (isIdentifier(ch)) {
     return readIdentifier({_line, _column});
   }
-  if (isdigit(ch)) {
+  if (isdigit(ch) || ch == '-') {
     return readNumber({_line, _column});
   }
   if (ch == '"') {
@@ -133,6 +132,9 @@ Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
 Token Lexer::readNumber(std::pair<size_t, size_t> start) {
   std::string value;
   bool hasDot = false;
+  if (peek() == '-') {
+    value += get();
+  }
 
   while (!eof()) {
     char ch = peek();
@@ -140,8 +142,7 @@ Token Lexer::readNumber(std::pair<size_t, size_t> start) {
       value += get();
     } else if (ch == '.') {
       if (hasDot) {
-        throw std::runtime_error("Invalid number format at line " +
-                                 std::to_string(start.first) + ", column " +
+        throw std::runtime_error("Invalid number format at line " + std::to_string(start.first) + ", column " +
                                  std::to_string(start.second));
         break;
       }
@@ -168,13 +169,12 @@ Token Lexer::readString(std::pair<size_t, size_t> start) {
 
 Token Lexer::readSymbol(std::pair<size_t, size_t> start) {
   char ch = get();
-  return Token{Token::Type::SYMBOL, std::string(1, ch), start.first,
-               start.second};
+  return Token{Token::Type::SYMBOL, std::string(1, ch), start.first, start.second};
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &token) {
-  os << "Token(Type: " << token.toString() << ", Value: " << token._value
-     << ", Line: " << token._line << ", Column: " << token._column << ")";
+  os << "Token(Type: " << token.toString() << ", Value: " << token._value << ", Line: " << token._line
+     << ", Column: " << token._column << ")";
   return os;
 }
 
