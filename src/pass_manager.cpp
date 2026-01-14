@@ -34,6 +34,7 @@ void IRPassManager::run(mlir::ModuleOp module) {
 }
 
 void IRPassManager::registerPasses() {
+  PiccelerKernelToMemrefPass::registerPass();
   PiccelerToAffinePass::registerPass();
   LowerPiccelerOpsToFuncCallsPass::registerPass();
   PiccelerToLLVMConversionPass::registerPass();
@@ -41,8 +42,8 @@ void IRPassManager::registerPasses() {
 
 void IRPassManager::addPasses() {
   addHighLevelOptimizationPasses();
-  addAffineLoweringPasses();
   addRuntimeLoweringPasses();
+  addAffineLoweringPasses();
   addBackendLoweringPasses();
 }
 
@@ -50,6 +51,7 @@ void IRPassManager::addHighLevelOptimizationPasses() {}
 
 void IRPassManager::addAffineLoweringPasses() {
   _passManager.addPass(mlir::createCanonicalizerPass());
+  _passManager.addPass(PiccelerKernelToMemrefPass::create());
   _passManager.addPass(PiccelerToAffinePass::create());
 }
 void IRPassManager::addRuntimeLoweringPasses() { _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create()); }

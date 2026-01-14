@@ -207,6 +207,11 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
   mlir::LogicalResult matchAndRewrite(ConvolutionOp op, ConvolutionOpAdaptor adaptor,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
 
+    op.getInput();
+    op.getKernel();
+    adaptor.getInput();
+    adaptor.getKernel();
+
     auto indexType = rewriter.getIndexType();
     auto i8Type = rewriter.getI8Type();
     // auto f32Type = rewriter.getF32Type();
