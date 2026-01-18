@@ -206,12 +206,6 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
 
   mlir::LogicalResult matchAndRewrite(ConvolutionOp op, ConvolutionOpAdaptor adaptor,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
-
-    op.getInput();
-    op.getKernel();
-    adaptor.getInput();
-    adaptor.getKernel();
-
     auto indexType = rewriter.getIndexType();
     auto i8Type = rewriter.getI8Type();
     // auto f32Type = rewriter.getF32Type();
@@ -222,41 +216,44 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
     mlir::Location loc = op.getLoc();
 
     mlir::Value input = adaptor.getInput();
-    mlir::Value kernel = adaptor.getKernel();
-    auto kernelOp = kernel.getDefiningOp<KernelConstOp>();
-    auto kernelType = mlir::dyn_cast<picceler::KernelType>(kernel.getType());
-    if (!kernelType) {
-      op->emitError("Input operand for kernel is not of KernelType");
+    mlir::Value kStack = adaptor.getKernel();
+
+    auto kMemTy = mlir::dyn_cast<mlir::MemRefType>(kStack.getType());
+    if (!kMemTy) {
+      if (auto def = kStack.getDefiningOp()) {
+        def->emitError("kernel operand must be lowered to a memref by PiccelerKernelToMemrefPass before ConvolutionToAffine");
+      } else {
+        op.emitError("kernel operand must be a memref");
+      }
+      return mlir::failure();
     }
 
+    int64_t rows = 0, cols = 0;
+    if (kMemTy.getRank() == 2) {
+      rows = kMemTy.getShape()[0];
+      cols = kMemTy.getShape()[1];
+    } else if (kMemTy.getRank() == 1) {
+      // fallback: try to infer square kernel if possible
+      int64_t kSize = kMemTy.getShape()[0];
+        if (kSize <= 0) {
+          op.emitError("kernel memref has dynamic or non-positive size; prefer explicit 2D memref<rows x cols x f64>");
+          return mlir::failure();
+        }
+        int64_t s = (int64_t)std::llround(std::sqrt((double)kSize));
+        if (s * s == kSize) {
+          rows = cols = s;
+        } else {
+          op.emitError("kernel memref is 1D and rows/cols cannot be inferred; prefer 2D memref<rows x cols x f64>");
+          return mlir::failure();
+        }
+    } else {
+      op.emitError("expected kernel memref of rank 1 or 2");
+      return mlir::failure();
+    }
     auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     if (input.getType() != ptrType) {
       input = rewriter.create<mlir::UnrealizedConversionCastOp>(loc, ptrType, input).getResult(0);
     }
-
-    int64_t rows = kernelType.getRows();
-    int64_t cols = kernelType.getCols();
-    int64_t kSize = rows * cols;
-    auto kernelMemrefType = mlir::MemRefType::get({kSize}, f64Type);
-    auto kStack = rewriter.create<mlir::memref::AllocaOp>(loc, kernelMemrefType);
-
-    // 3. Extract and Thaw
-    auto kvaluesAttr = mlir::cast<mlir::DenseElementsAttr>(kernelOp.getValuesAttr());
-
-    int i = 0;
-    // We iterate as doubles now
-    for (double val : kvaluesAttr.getValues<double>()) {
-      auto cIdx = rewriter.create<mlir::arith::ConstantIndexOp>(loc, i++);
-
-      // ConstantFloatOp for F64
-      auto cVal =
-          rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type,
-                                                        llvm::APFloat(val)); // APFloat handles double automatically
-
-      rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cIdx});
-    }
-
-    rewriter.eraseOp(kernelOp);
 
     ImageAccessHelper inputImage(input, rewriter, loc);
     mlir::Value inputWidthI32 = inputImage.getWidth();
