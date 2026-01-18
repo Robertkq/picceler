@@ -430,8 +430,7 @@ void PiccelerToAffinePass::runOnOperation() {
 
   target.addLegalOp<mlir::UnrealizedConversionCastOp>();
   target.addLegalOp<LoadImageOp, SaveImageOp, ShowImageOp, StringConstOp, KernelConstOp>();
-  /*ConvolutionOp*/
-  target.addIllegalOp<BrightnessOp, InvertOp>();
+  target.addIllegalOp<BrightnessOp, InvertOp, ConvolutionOp>();
 
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<BrightnessToAffine>(typeConverter, ctx);
