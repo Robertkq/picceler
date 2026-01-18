@@ -48,6 +48,37 @@ void MLIRGen::emitStatement(ASTNode *node) {
   }
 }
 
+mlir::Value MLIRGen::emitKernel(KernelNode *node) {
+  spdlog::debug("Emitting MLIR for kernel: {}", node->toString());
+
+  int rows = node->rows.size();
+  int cols = rows > 0 ? node->rows[0].size() : 0;
+
+  if (rows == 0 || cols == 0) {
+    throw std::runtime_error("Empty kernel is not allowed");
+  }
+
+  std::vector<double> flatValues;
+  flatValues.reserve(rows * cols);
+  for (const auto &row : node->rows) {
+    flatValues.insert(flatValues.end(), row.begin(), row.end());
+  }
+
+  auto tensorType = mlir::RankedTensorType::get(
+      {static_cast<int64_t>(rows), static_cast<int64_t>(cols)},
+      _builder.getF64Type());
+
+  auto valuesAttr = mlir::DenseElementsAttr::get(
+      tensorType, llvm::ArrayRef<double>(flatValues));
+
+  auto resultType = KernelType::get(_context, rows, cols);
+
+  auto op = _builder.create<KernelConstOp>(_builder.getUnknownLoc(), resultType,
+                                           valuesAttr);
+
+  return op.getResult();
+}
+
 mlir::Value MLIRGen::emitExpression(ASTNode *node) {
   if (auto call = dynamic_cast<CallNode *>(node)) {
     return emitCall(call);
@@ -57,6 +88,8 @@ mlir::Value MLIRGen::emitExpression(ASTNode *node) {
     return emitString(str);
   } else if (auto num = dynamic_cast<NumberNode *>(node)) {
     return emitNumber(num);
+  } else if (auto kernel = dynamic_cast<KernelNode *>(node)) {
+    return emitKernel(kernel);
   } else {
     throw std::runtime_error("Unsupported expression type");
   }
@@ -145,6 +178,12 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node,
     auto &inputImage = args[0];
     auto callOp = _builder.create<InvertOp>(_builder.getUnknownLoc(),
                                             inputImage.getType(), inputImage);
+    return callOp.getResult();
+  } else if (name == "convolution") {
+    auto &inputImage = args[0];
+    auto &kernel = args[1];
+    auto callOp = _builder.create<ConvolutionOp>(
+        _builder.getUnknownLoc(), inputImage.getType(), inputImage, kernel);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);

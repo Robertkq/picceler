@@ -36,8 +36,7 @@ void Lexer::setSource(const std::string &source) {
   if (!_file.is_open()) {
     throw std::runtime_error("Could not open source file: " + source);
   }
-  _buffer.assign((std::istreambuf_iterator<char>(_file)),
-                 std::istreambuf_iterator<char>());
+  _buffer.assign((std::istreambuf_iterator<char>(_file)), std::istreambuf_iterator<char>());
   _file.close();
   _position = 0;
   _line = 1;
@@ -56,7 +55,7 @@ Token Lexer::nextToken() {
   if (isIdentifier(ch)) {
     return readIdentifier({_line, _column});
   }
-  if (isdigit(ch)) {
+  if (isdigit(ch) || ch == '-') {
     return readNumber({_line, _column});
   }
   if (ch == '"') {
@@ -66,6 +65,7 @@ Token Lexer::nextToken() {
     return readSymbol({_line, _column});
   }
 
+  get(); // consume unknown character
   return Token{Token::Type::UNKNOWN, "", _line, _column};
 }
 
@@ -117,7 +117,7 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string _symbols = "=():,";
+  static const std::string _symbols = "=():,[]";
   return _symbols.find(ch) != std::string::npos;
 }
 
@@ -131,8 +131,26 @@ Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
 
 Token Lexer::readNumber(std::pair<size_t, size_t> start) {
   std::string value;
-  while (!eof() && isdigit(peek())) {
+  bool hasDot = false;
+  if (peek() == '-') {
     value += get();
+  }
+
+  while (!eof()) {
+    char ch = peek();
+    if (isdigit(ch)) {
+      value += get();
+    } else if (ch == '.') {
+      if (hasDot) {
+        throw std::runtime_error("Invalid number format at line " + std::to_string(start.first) + ", column " +
+                                 std::to_string(start.second));
+        break;
+      }
+      hasDot = true;
+      value += get();
+    } else {
+      break;
+    }
   }
   return Token{Token::Type::NUMBER, value, start.first, start.second};
 }
@@ -151,13 +169,12 @@ Token Lexer::readString(std::pair<size_t, size_t> start) {
 
 Token Lexer::readSymbol(std::pair<size_t, size_t> start) {
   char ch = get();
-  return Token{Token::Type::SYMBOL, std::string(1, ch), start.first,
-               start.second};
+  return Token{Token::Type::SYMBOL, std::string(1, ch), start.first, start.second};
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &token) {
-  os << "Token(Type: " << token.toString() << ", Value: " << token._value
-     << ", Line: " << token._line << ", Column: " << token._column << ")";
+  os << "Token(Type: " << token.toString() << ", Value: " << token._value << ", Line: " << token._line
+     << ", Column: " << token._column << ")";
   return os;
 }
 

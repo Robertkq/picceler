@@ -75,4 +75,13 @@ struct CallNode : public ASTNode {
   std::string toString() const override;
 };
 
+/**
+ * @brief AST node for kernel definitions.
+ */
+
+struct KernelNode : public ASTNode {
+  std::vector<std::vector<double>> rows;
+  std::string toString() const override;
+};
+
 } // namespace picceler

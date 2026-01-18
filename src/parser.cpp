@@ -120,17 +120,19 @@ std::unique_ptr<ASTNode> Parser::parseExpression() {
   spdlog::debug("Parsing expression");
   auto token = _lexer.peekToken();
   if (token._type == Token::Type::IDENTIFIER) {
-    auto identifier = _lexer.nextToken();
+    auto currentToken = _lexer.nextToken();
     auto nextToken = _lexer.peekToken();
     if (nextToken._type == Token::Type::SYMBOL && nextToken._value == "(") {
-      return parseCall(identifier);
+      return parseCall(currentToken);
     } else {
-      return parseVariable(identifier);
+      return parseVariable(currentToken);
     }
   } else if (token._type == Token::Type::STRING) {
     return parseString();
   } else if (token._type == Token::Type::NUMBER) {
     return parseNumber();
+  } else if (token._type == Token::Type::SYMBOL && token._value == "[") {
+    return parseKernel();
   } else {
     spdlog::error("Unexpected token '{}' at {}:{}", token._value, token._line,
                   token._column);
@@ -148,6 +150,84 @@ std::unique_ptr<ASTNode> Parser::parseVariable(Token identifier) {
   auto varNode = std::make_unique<VariableNode>();
   varNode->name = identifier._value;
   return varNode;
+}
+
+std::unique_ptr<ASTNode> Parser::parseKernel() {
+  spdlog::debug("Parsing kernel");
+  auto lbracketToken = _lexer.nextToken(); // consume '['
+  if (lbracketToken._type != Token::Type::SYMBOL ||
+      lbracketToken._value != "[") {
+    spdlog::error("Expected '[' at {}:{}", lbracketToken._line,
+                  lbracketToken._column);
+    return nullptr;
+  }
+  auto kernelNode = std::make_unique<KernelNode>();
+
+  while (true) {
+    auto token = _lexer.peekToken();
+    if (token._type == Token::Type::SYMBOL && token._value == "]") {
+      _lexer.nextToken(); // consume ']'
+      break;
+    }
+
+    if (token._type == Token::Type::SYMBOL && token._value == "[") {
+      _lexer.nextToken(); // consume inner '['
+      std::vector<double> row;
+      while (true) {
+        auto innerToken = _lexer.peekToken();
+        if (innerToken._type == Token::Type::SYMBOL &&
+            innerToken._value == "]") {
+          _lexer.nextToken(); // consume inner ']'
+          break;
+        }
+
+        if (innerToken._type == Token::Type::NUMBER) {
+          auto numToken = _lexer.nextToken();
+          row.push_back(std::stod(numToken._value));
+        } else {
+          spdlog::error("Expected number in kernel at {}:{}", innerToken._line,
+                        innerToken._column);
+          return nullptr;
+        }
+
+        auto next = _lexer.peekToken();
+        if (next._type == Token::Type::SYMBOL && next._value == ",") {
+          _lexer.nextToken(); // consume comma
+        } else if (next._type != Token::Type::SYMBOL || next._value != "]") {
+          spdlog::error("Expected ',' or ']' in kernel row at {}:{}",
+                        next._line, next._column);
+          return nullptr;
+        }
+      }
+      kernelNode->rows.push_back(row);
+    } else {
+      spdlog::error("Expected '[' for kernel row at {}:{}", token._line,
+                    token._column);
+      return nullptr;
+    }
+
+    auto next = _lexer.peekToken();
+    if (next._type == Token::Type::SYMBOL && next._value == ",") {
+      _lexer.nextToken(); // consume comma between rows
+    } else if (next._type != Token::Type::SYMBOL || next._value != "]") {
+      spdlog::error("Expected ',' or ']' after kernel row at {}:{}", next._line,
+                    next._column);
+      return nullptr;
+    }
+  }
+
+  // Validate dimensions
+  if (!kernelNode->rows.empty()) {
+    size_t cols = kernelNode->rows[0].size();
+    for (const auto &row : kernelNode->rows) {
+      if (row.size() != cols) {
+        spdlog::error("All rows in kernel must have same length");
+        return nullptr;
+      }
+    }
+  }
+
+  return kernelNode;
 }
 
 std::unique_ptr<ASTNode> Parser::parseString() {

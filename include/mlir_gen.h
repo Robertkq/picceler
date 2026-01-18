@@ -43,6 +43,7 @@ private:
    * @brief Helper functions to emit specific AST node types.
    * \{
    */
+  mlir::Value emitKernel(KernelNode *node);
   mlir::Value emitExpression(ASTNode *node);
   mlir::Value emitAssignment(AssignmentNode *node);
   mlir::Value emitCall(CallNode *node);

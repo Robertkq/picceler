@@ -1,0 +1,10 @@
+img = load_image("/home/rober/Pictures/cat.png")
+kernel = [[-1, -1, -1],
+          [-1,  8, -1],
+          [-1, -1, -1]]
+convolution_img = convolution(img, kernel)
+show_image(img)
+
+show_image(convolution_img)
+save_image(convolution_img, "testme.png")
+

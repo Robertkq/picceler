@@ -109,6 +109,7 @@ set(PICCELER_LINK_LIBS
     MLIRAnalysis
     MLIRLLVMCommonConversion
     MLIRConvertToLLVMPass
+    MLIRMemRefToLLVM
     MLIRFuncToLLVM
     MLIRTargetLLVMIRExport
     MLIRLLVMToLLVMIRTranslation
