@@ -54,8 +54,7 @@ private:
   std::unique_ptr<ASTNode> parseExpression();
   std::unique_ptr<ASTNode> parseAssignment(Token identifier);
   std::unique_ptr<ASTNode> parseCall(Token identifier);
-  std::unique_ptr<ASTNode> parseVariable(Token identifier = Token{
-                                             Token::Type::UNKNOWN, "", 0, 0});
+  std::unique_ptr<ASTNode> parseVariable(Token identifier = Token{Token::Type::UNKNOWN, "", 0, 0});
   std::unique_ptr<ASTNode> parseKernel();
   std::unique_ptr<ASTNode> parseString();
   std::unique_ptr<ASTNode> parseNumber();

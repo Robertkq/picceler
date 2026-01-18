@@ -4,8 +4,7 @@
 
 namespace picceler {
 
-void internalDebugImage(const picceler::Image &image,
-                        const std::string &caller) {
+void internalDebugImage(const picceler::Image &image, const std::string &caller) {
   std::cout << "[Runtime Debug from " << caller << "]\n"
             << "  Addr of struct: " << &image << "\n"
             << "  Width:    " << image._width << "\n"
@@ -13,12 +12,10 @@ void internalDebugImage(const picceler::Image &image,
             << "  Data Ptr: " << (void *)image._data << std::endl;
 
   if (image._data != nullptr && image._width > 0 && image._height > 0) {
-    std::cout << "  First 4 bytes (RGBA): " << (int)image._data[0] << " "
-              << (int)image._data[1] << " " << (int)image._data[2] << " "
-              << (int)image._data[3] << std::endl;
+    std::cout << "  First 4 bytes (RGBA): " << (int)image._data[0] << " " << (int)image._data[1] << " "
+              << (int)image._data[2] << " " << (int)image._data[3] << std::endl;
   } else {
-    std::cout << "  WARNING: Image metadata or pointer is INVALID!"
-              << std::endl;
+    std::cout << "  WARNING: Image metadata or pointer is INVALID!" << std::endl;
   }
   std::cout << "--------------------------------------" << std::endl;
 }
@@ -40,9 +37,8 @@ Image *loadImage(const std::string &filename) {
   std::memcpy(img->_data, rgba.data, rgba.total() * rgba.elemSize());
 
   spdlog::info("Loaded image: {} ({}x{})", filename, img->_width, img->_height);
-  spdlog::info(
-      "OpenCV image details - cols: {}, rows: {}, channels: {}, total: {}",
-      rgba.cols, rgba.rows, rgba.channels(), rgba.total());
+  spdlog::info("OpenCV image details - cols: {}, rows: {}, channels: {}, total: {}", rgba.cols, rgba.rows,
+               rgba.channels(), rgba.total());
 
   return img;
 }

@@ -27,16 +27,11 @@
 namespace picceler {
 
 Compiler::Compiler()
-    : _cliApp("picceler compiler"), _cliOptions(), _parser(),
-      _context(initRegistry()), _mlirGen(&_context), _passManager(&_context) {
+    : _cliApp("picceler compiler"), _cliOptions(), _parser(), _context(initRegistry()), _mlirGen(&_context),
+      _passManager(&_context) {
   spdlog::cfg::load_env_levels();
-  _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")
-      ->required()
-      ->check(CLI::ExistingFile);
-  _cliApp
-      .add_option("-o,--output", _cliOptions.outputFile,
-                  "Output executable file")
-      ->default_val("a.out");
+  _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")->required()->check(CLI::ExistingFile);
+  _cliApp.add_option("-o,--output", _cliOptions.outputFile, "Output executable file")->default_val("a.out");
   _context.loadDialect<PiccelerDialect>();
   _context.loadDialect<mlir::func::FuncDialect>();
   _context.loadDialect<mlir::arith::ArithDialect>();
@@ -112,15 +107,13 @@ bool Compiler::run() {
   return true;
 }
 
-bool Compiler::emitObjectFile(llvm::Module *llvmModule,
-                              const std::string &objFilename) {
+bool Compiler::emitObjectFile(llvm::Module *llvmModule, const std::string &objFilename) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
 
   std::string error;
   auto targetTriple = llvm::sys::getDefaultTargetTriple();
-  const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(targetTriple, error);
+  const llvm::Target *target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
   if (!target) {
     spdlog::error("Target not found: {}", error);
     return false;
@@ -128,8 +121,7 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule,
 
   llvm::TargetOptions opt;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(llvm::Triple(targetTriple), "generic", "",
-                                  opt, std::nullopt));
+      target->createTargetMachine(llvm::Triple(targetTriple), "generic", "", opt, std::nullopt));
 
   llvmModule->setDataLayout(targetMachine->createDataLayout());
   llvmModule->setTargetTriple(llvm::Triple(targetTriple));
@@ -142,8 +134,7 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule,
   }
 
   llvm::legacy::PassManager pass;
-  if (targetMachine->addPassesToEmitFile(pass, dest, nullptr,
-                                         llvm::CodeGenFileType::ObjectFile)) {
+  if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
     spdlog::error("TargetMachine can't emit a file of this type");
     return false;
   }
@@ -153,12 +144,10 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule,
   return true;
 }
 
-bool Compiler::linkWithLLD(const std::string &objFile,
-                           const std::string &runtimeLib,
-                           const std::string &outputExe) {
+bool Compiler::linkWithLLD(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe) {
   // Build the link command using clang++ with -no-pie to avoid PIE relocations
-  std::string cmd = "clang++ " + objFile + " " + runtimeLib + " -o " +
-                    outputExe + " -no-pie $(pkg-config --libs opencv4)";
+  std::string cmd =
+      "clang++ " + objFile + " " + runtimeLib + " -o " + outputExe + " -no-pie $(pkg-config --libs opencv4)";
   spdlog::debug("Linking with command: {}", cmd);
 
   int ret = std::system(cmd.c_str());

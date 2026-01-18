@@ -31,8 +31,7 @@ std::unique_ptr<ModuleNode> Parser::parse() {
 std::unique_ptr<ASTNode> Parser::parseStatement() {
   auto token = _lexer.peekToken();
   if (token._type == Token::Type::IDENTIFIER) {
-    spdlog::debug("Parsing statement starting with identifier '{}'",
-                  token._value);
+    spdlog::debug("Parsing statement starting with identifier '{}'", token._value);
     auto identifier = _lexer.nextToken();
     auto nextToken = _lexer.peekToken();
     if (nextToken._type == Token::Type::SYMBOL) {
@@ -42,14 +41,12 @@ std::unique_ptr<ASTNode> Parser::parseStatement() {
         return parseCall(identifier);
       }
     }
-    spdlog::error("Unexpected token '{}' at {}:{}", nextToken._value,
-                  nextToken._line, nextToken._column);
+    spdlog::error("Unexpected token '{}' at {}:{}", nextToken._value, nextToken._line, nextToken._column);
     return nullptr;
   } else if (token._type == Token::Type::EOF_TOKEN) {
     return nullptr;
   } else {
-    spdlog::error("Unexpected token '{}' at {}:{}", token._value, token._line,
-                  token._column);
+    spdlog::error("Unexpected token '{}' at {}:{}", token._value, token._line, token._column);
     return nullptr;
   }
 }
@@ -58,19 +55,16 @@ std::unique_ptr<ASTNode> Parser::parseAssignment(Token identifier) {
   spdlog::debug("Parsing assignment for identifier '{}'", identifier._value);
   auto eqToken = _lexer.nextToken(); // consume '='
   if (eqToken._type != Token::Type::SYMBOL || eqToken._value != "=") {
-    spdlog::error("Expected '=' after identifier at {}:{}", eqToken._line,
-                  eqToken._column);
+    spdlog::error("Expected '=' after identifier at {}:{}", eqToken._line, eqToken._column);
     return nullptr;
   }
   auto expr = parseExpression();
   if (!expr) {
-    spdlog::error("Invalid expression in assignment at {}:{}", eqToken._line,
-                  eqToken._column);
+    spdlog::error("Invalid expression in assignment at {}:{}", eqToken._line, eqToken._column);
     return nullptr;
   }
   auto assignNode = std::make_unique<AssignmentNode>();
-  assignNode->lhs = std::unique_ptr<VariableNode>(
-      dynamic_cast<VariableNode *>(parseVariable(identifier).release()));
+  assignNode->lhs = std::unique_ptr<VariableNode>(dynamic_cast<VariableNode *>(parseVariable(identifier).release()));
   assignNode->rhs = std::move(expr);
   return assignNode;
 }
@@ -79,8 +73,7 @@ std::unique_ptr<ASTNode> Parser::parseCall(Token identifier) {
   spdlog::debug("Parsing function call for identifier '{}'", identifier._value);
   auto lparenToken = _lexer.nextToken(); // consume '('
   if (lparenToken._type != Token::Type::SYMBOL || lparenToken._value != "(") {
-    spdlog::error("Expected '(' after function name at {}:{}",
-                  lparenToken._line, lparenToken._column);
+    spdlog::error("Expected '(' after function name at {}:{}", lparenToken._line, lparenToken._column);
     return nullptr;
   }
   auto callNode = std::make_unique<CallNode>();
@@ -94,8 +87,7 @@ std::unique_ptr<ASTNode> Parser::parseCall(Token identifier) {
     }
     auto arg = parseExpression();
     if (!arg) {
-      spdlog::error("Invalid argument in function call at {}:{}",
-                    nextToken._line, nextToken._column);
+      spdlog::error("Invalid argument in function call at {}:{}", nextToken._line, nextToken._column);
       return nullptr;
     }
     callNode->arguments.push_back(std::move(arg));
@@ -103,12 +95,10 @@ std::unique_ptr<ASTNode> Parser::parseCall(Token identifier) {
     nextToken = _lexer.peekToken();
     if (nextToken._type == Token::Type::SYMBOL && nextToken._value == ",") {
       _lexer.nextToken(); // consume ','
-    } else if (nextToken._type == Token::Type::SYMBOL &&
-               nextToken._value == ")") {
+    } else if (nextToken._type == Token::Type::SYMBOL && nextToken._value == ")") {
       continue;
     } else {
-      spdlog::error("Expected ',' or ')' in function call at {}:{}",
-                    nextToken._line, nextToken._column);
+      spdlog::error("Expected ',' or ')' in function call at {}:{}", nextToken._line, nextToken._column);
       return nullptr;
     }
   }
@@ -134,8 +124,7 @@ std::unique_ptr<ASTNode> Parser::parseExpression() {
   } else if (token._type == Token::Type::SYMBOL && token._value == "[") {
     return parseKernel();
   } else {
-    spdlog::error("Unexpected token '{}' at {}:{}", token._value, token._line,
-                  token._column);
+    spdlog::error("Unexpected token '{}' at {}:{}", token._value, token._line, token._column);
     return nullptr;
   }
 }
@@ -155,10 +144,8 @@ std::unique_ptr<ASTNode> Parser::parseVariable(Token identifier) {
 std::unique_ptr<ASTNode> Parser::parseKernel() {
   spdlog::debug("Parsing kernel");
   auto lbracketToken = _lexer.nextToken(); // consume '['
-  if (lbracketToken._type != Token::Type::SYMBOL ||
-      lbracketToken._value != "[") {
-    spdlog::error("Expected '[' at {}:{}", lbracketToken._line,
-                  lbracketToken._column);
+  if (lbracketToken._type != Token::Type::SYMBOL || lbracketToken._value != "[") {
+    spdlog::error("Expected '[' at {}:{}", lbracketToken._line, lbracketToken._column);
     return nullptr;
   }
   auto kernelNode = std::make_unique<KernelNode>();
@@ -175,8 +162,7 @@ std::unique_ptr<ASTNode> Parser::parseKernel() {
       std::vector<double> row;
       while (true) {
         auto innerToken = _lexer.peekToken();
-        if (innerToken._type == Token::Type::SYMBOL &&
-            innerToken._value == "]") {
+        if (innerToken._type == Token::Type::SYMBOL && innerToken._value == "]") {
           _lexer.nextToken(); // consume inner ']'
           break;
         }
@@ -185,8 +171,7 @@ std::unique_ptr<ASTNode> Parser::parseKernel() {
           auto numToken = _lexer.nextToken();
           row.push_back(std::stod(numToken._value));
         } else {
-          spdlog::error("Expected number in kernel at {}:{}", innerToken._line,
-                        innerToken._column);
+          spdlog::error("Expected number in kernel at {}:{}", innerToken._line, innerToken._column);
           return nullptr;
         }
 
@@ -194,15 +179,13 @@ std::unique_ptr<ASTNode> Parser::parseKernel() {
         if (next._type == Token::Type::SYMBOL && next._value == ",") {
           _lexer.nextToken(); // consume comma
         } else if (next._type != Token::Type::SYMBOL || next._value != "]") {
-          spdlog::error("Expected ',' or ']' in kernel row at {}:{}",
-                        next._line, next._column);
+          spdlog::error("Expected ',' or ']' in kernel row at {}:{}", next._line, next._column);
           return nullptr;
         }
       }
       kernelNode->rows.push_back(row);
     } else {
-      spdlog::error("Expected '[' for kernel row at {}:{}", token._line,
-                    token._column);
+      spdlog::error("Expected '[' for kernel row at {}:{}", token._line, token._column);
       return nullptr;
     }
 
@@ -210,8 +193,7 @@ std::unique_ptr<ASTNode> Parser::parseKernel() {
     if (next._type == Token::Type::SYMBOL && next._value == ",") {
       _lexer.nextToken(); // consume comma between rows
     } else if (next._type != Token::Type::SYMBOL || next._value != "]") {
-      spdlog::error("Expected ',' or ']' after kernel row at {}:{}", next._line,
-                    next._column);
+      spdlog::error("Expected ',' or ']' after kernel row at {}:{}", next._line, next._column);
       return nullptr;
     }
   }

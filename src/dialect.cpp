@@ -11,8 +11,8 @@ namespace picceler {
 
 void PiccelerDialect::initialize() {
   addTypes<ImageType, StringType, KernelType>();
-  addOperations<StringConstOp, KernelConstOp, LoadImageOp, ShowImageOp,
-                SaveImageOp, BlurOp, BrightnessOp, InvertOp, ConvolutionOp>();
+  addOperations<StringConstOp, KernelConstOp, LoadImageOp, ShowImageOp, SaveImageOp, BlurOp, BrightnessOp, InvertOp,
+                ConvolutionOp>();
 }
 
 } // namespace picceler

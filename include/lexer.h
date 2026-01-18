@@ -23,14 +23,7 @@ namespace picceler {
  */
 struct Token {
   /** @brief The type of the token. */
-  enum class Type : size_t {
-    IDENTIFIER,
-    NUMBER,
-    STRING,
-    SYMBOL,
-    EOF_TOKEN,
-    UNKNOWN
-  };
+  enum class Type : size_t { IDENTIFIER, NUMBER, STRING, SYMBOL, EOF_TOKEN, UNKNOWN };
 
   /**
    * @brief Converts the token type to a string representation.

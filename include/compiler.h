@@ -47,8 +47,7 @@ private:
   mlir::DialectRegistry initRegistry();
 
   bool emitObjectFile(llvm::Module *llvmModule, const std::string &objFilename);
-  bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib,
-                   const std::string &outputExe);
+  bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe);
 
 private:
   CLI::App _cliApp;

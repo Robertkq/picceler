@@ -22,11 +22,8 @@ namespace picceler {
  * @param loc The location to use for the function.
  * @return The function operation.
  */
-mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module,
-                                     mlir::StringRef name,
-                                     llvm::ArrayRef<mlir::Type> inputs,
-                                     llvm::ArrayRef<mlir::Type> results,
-                                     mlir::PatternRewriter &rewriter,
+mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module, mlir::StringRef name, llvm::ArrayRef<mlir::Type> inputs,
+                                     llvm::ArrayRef<mlir::Type> results, mlir::PatternRewriter &rewriter,
                                      mlir::Location loc) {
   auto func = module.lookupSymbol<mlir::func::FuncOp>(name);
   if (func)
@@ -46,9 +43,7 @@ mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module,
 struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
   using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(LoadImageOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(LoadImageOp op, mlir::PatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -57,8 +52,7 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
     auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "piccelerLoadImage", {stringType},
-                                  {imageType}, rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerLoadImage", {stringType}, {imageType}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
     args.push_back(op.getFilename());
 
@@ -75,9 +69,7 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
 struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
   using mlir::OpRewritePattern<ShowImageOp>::OpRewritePattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(ShowImageOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(ShowImageOp op, mlir::PatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -85,8 +77,7 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
 
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "piccelerShowImage", {imageType}, {},
-                                  rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerShowImage", {imageType}, {}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
     args.push_back(op.getInput());
 
@@ -103,9 +94,7 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
 struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
   using mlir::OpRewritePattern<SaveImageOp>::OpRewritePattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(SaveImageOp op,
-                  mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(SaveImageOp op, mlir::PatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -114,8 +103,7 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
     auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func = ensureRuntimeFunc(module, "piccelerSaveImage",
-                                  {imageType, stringType}, {}, rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerSaveImage", {imageType, stringType}, {}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
     args.push_back(op.getInput());
     args.push_back(op.getFilename());
@@ -133,8 +121,7 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
 struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
   using mlir::OpRewritePattern<BlurOp>::OpRewritePattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(BlurOp op, mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(BlurOp op, mlir::PatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -143,9 +130,7 @@ struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
     auto stringType = StringType::get(ctx);
     auto imageType = ImageType::get(ctx);
 
-    auto func =
-        ensureRuntimeFunc(module, "piccelerBlurImage", {imageType, stringType},
-                          {imageType}, rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerBlurImage", {imageType, stringType}, {imageType}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
     args.push_back(op.getInput());
     args.push_back(op.getMode());

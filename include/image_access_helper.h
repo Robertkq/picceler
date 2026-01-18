@@ -22,8 +22,7 @@ struct ImageAccessHelper {
   mlir::OpBuilder &builder;
   mlir::Location loc;
 
-  ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l)
-      : structPtr(ptr), builder(b), loc(l) {}
+  ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l) : structPtr(ptr), builder(b), loc(l) {}
 
   /**
    * Defines the logical layout of the C++ struct for GEP offset calculations.
@@ -48,12 +47,11 @@ struct ImageAccessHelper {
     indices.push_back(0);
     indices.push_back(index);
 
-    return builder.create<mlir::LLVM::GEPOp>(
-        loc,
-        ptrType,    // Result is a pointer to the field
-        structType, // The layout we are indexing into
-        structPtr,  // The base opaque pointer
-        indices);
+    return builder.create<mlir::LLVM::GEPOp>(loc,
+                                             ptrType,    // Result is a pointer to the field
+                                             structType, // The layout we are indexing into
+                                             structPtr,  // The base opaque pointer
+                                             indices);
   }
 
   mlir::Value getWidth() {

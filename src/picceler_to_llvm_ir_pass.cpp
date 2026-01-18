@@ -25,9 +25,8 @@ namespace picceler {
 struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
   using OpConversionPattern::OpConversionPattern;
 
-  mlir::LogicalResult
-  matchAndRewrite(StringConstOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(StringConstOp op, OpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     if (!module)
@@ -60,22 +59,20 @@ struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
       rewriter.setInsertionPointToStart(module.getBody());
 
       // Create the global string constant
-      rewriter.create<mlir::LLVM::GlobalOp>(loc, arrayType, /*isConstant=*/true,
-                                            mlir::LLVM::Linkage::Internal, name,
+      rewriter.create<mlir::LLVM::GlobalOp>(loc, arrayType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal, name,
                                             rewriter.getStringAttr(bytes));
     }
 
     // Now create addressof and GEP at the use site (inside the function, where
     // op lives)
-    mlir::Value globalPtr =
-        rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrType, name);
+    mlir::Value globalPtr = rewriter.create<mlir::LLVM::AddressOfOp>(loc, ptrType, name);
 
     // Compute GEP to first element (i8* pointer)
-    mlir::Value zero = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
+    mlir::Value zero =
+        rewriter.create<mlir::LLVM::ConstantOp>(loc, rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
 
-    mlir::Value elementPtr = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, ptrType, arrayType, globalPtr, mlir::ValueRange{zero, zero});
+    mlir::Value elementPtr =
+        rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, arrayType, globalPtr, mlir::ValueRange{zero, zero});
 
     // Replace the original StringConstOp with this i8* value
     rewriter.replaceOp(op, elementPtr);
@@ -89,13 +86,9 @@ void PiccelerToLLVMConversionPass::runOnOperation() {
 
   mlir::LLVMTypeConverter converter(ctx);
 
-  converter.addConversion([ctx](picceler::StringType) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(ctx);
-  });
+  converter.addConversion([ctx](picceler::StringType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
 
-  converter.addConversion([&](picceler::ImageType) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(ctx);
-  });
+  converter.addConversion([&](picceler::ImageType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
 
   mlir::RewritePatternSet patterns(ctx);
 
@@ -114,13 +107,10 @@ void PiccelerToLLVMConversionPass::runOnOperation() {
   target.addIllegalDialect<picceler::PiccelerDialect>();
   target.addIllegalOp<picceler::StringConstOp>();
 
-  target.addDynamicallyLegalOp<mlir::func::FuncOp>([&](mlir::func::FuncOp op) {
-    return converter.isSignatureLegal(op.getFunctionType());
-  });
-  target.addDynamicallyLegalOp<mlir::func::CallOp>(
-      [&](mlir::func::CallOp op) { return converter.isLegal(op); });
-  target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
-      [&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
+  target.addDynamicallyLegalOp<mlir::func::FuncOp>(
+      [&](mlir::func::FuncOp op) { return converter.isSignatureLegal(op.getFunctionType()); });
+  target.addDynamicallyLegalOp<mlir::func::CallOp>([&](mlir::func::CallOp op) { return converter.isLegal(op); });
+  target.addDynamicallyLegalOp<mlir::func::ReturnOp>([&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
 
   if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
     signalPassFailure();

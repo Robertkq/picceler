@@ -11,9 +11,8 @@ llvm::LogicalResult KernelConstOp::verify() {
   auto actualSize = valuesAttr.size();
 
   if (expectedSize != actualSize) {
-    return emitOpError("number of values (")
-           << actualSize << ") does not match kernel (" << kernel.getRows()
-           << "x" << kernel.getCols() << " = " << expectedSize << ")";
+    return emitOpError("number of values (") << actualSize << ") does not match kernel (" << kernel.getRows() << "x"
+                                             << kernel.getCols() << " = " << expectedSize << ")";
   }
 
   return mlir::success();
