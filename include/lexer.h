@@ -14,6 +14,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <expected>
+
+#include "error.h"
 
 namespace picceler {
 
@@ -52,19 +55,19 @@ public:
    * @brief Sets the source file for the lexer.
    * @param source The source file to read from.
    */
-  void setSource(const std::string &source);
+  Result<void> setSource(const std::string &source);
 
   /**
    * @brief Returns the next token from the input.
    * @return The next token.
    */
-  Token nextToken();
+  Result<Token> nextToken();
 
   /**
    * @brief Returns the next token without advancing the input.
    * @return The next token.
    */
-  Token peekToken();
+  Result<Token> peekToken();
 
   /**
    * @brief Skips whitespace characters in the input.
@@ -75,7 +78,7 @@ public:
    * @brief Tokenizes the entire input.
    * @return A vector of all tokens.
    */
-  std::vector<Token> tokenizeAll();
+  Result<std::vector<Token>> tokenizeAll();
 
 private:
   /** @brief Checks if the end of the file has been reached.
@@ -112,28 +115,28 @@ private:
    * @param start The starting line and column of the token.
    * @return The identifier token.
    */
-  Token readIdentifier(std::pair<size_t, size_t> start);
+  Result<Token> readIdentifier(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a number token from the input.
    * @param start The starting line and column of the token.
    * @return The number token.
    */
-  Token readNumber(std::pair<size_t, size_t> start);
+  Result<Token> readNumber(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a string token from the input.
    * @param start The starting line and column of the token.
    * @return The string token.
    */
-  Token readString(std::pair<size_t, size_t> start);
+  Result<Token> readString(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a symbol token from the input.
    * @param start The starting line and column of the token.
    * @return The symbol token.
    */
-  Token readSymbol(std::pair<size_t, size_t> start);
+  Result<Token> readSymbol(std::pair<size_t, size_t> start);
 
 private:
   std::ifstream _file;

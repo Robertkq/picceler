@@ -4,6 +4,7 @@
 #include <format>
 
 #include "spdlog/spdlog.h"
+#include "error.h"
 
 using namespace picceler;
 
@@ -11,7 +12,7 @@ Parser::Parser() : _lexer() {}
 
 void Parser::setSource(const std::string &source) { _lexer.setSource(source); }
 
-std::vector<Token> Parser::getTokens() { return _lexer.tokenizeAll(); }
+Result<std::vector<Token>> Parser::getTokens() {}
 
 std::unique_ptr<ModuleNode> Parser::parse() {
   spdlog::info("Starting parsing process");
