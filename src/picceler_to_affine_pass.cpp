@@ -232,22 +232,8 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
     if (kMemTy.getRank() == 2) {
       rows = kMemTy.getShape()[0];
       cols = kMemTy.getShape()[1];
-    } else if (kMemTy.getRank() == 1) {
-      // fallback: try to infer square kernel if possible
-      int64_t kSize = kMemTy.getShape()[0];
-        if (kSize <= 0) {
-          op.emitError("kernel memref has dynamic or non-positive size; prefer explicit 2D memref<rows x cols x f64>");
-          return mlir::failure();
-        }
-        int64_t s = (int64_t)std::llround(std::sqrt((double)kSize));
-        if (s * s == kSize) {
-          rows = cols = s;
-        } else {
-          op.emitError("kernel memref is 1D and rows/cols cannot be inferred; prefer 2D memref<rows x cols x f64>");
-          return mlir::failure();
-        }
     } else {
-      op.emitError("expected kernel memref of rank 1 or 2");
+      op.emitError("expected kernel memref of rank 2");
       return mlir::failure();
     }
     auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
@@ -343,13 +329,8 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
 
     rewriter.setInsertionPointToStart(ifOp.thenBlock());
 
-    auto kColsIndex = rewriter.create<mlir::arith::ConstantIndexOp>(loc, cols);
-    auto kIndexMap = mlir::AffineMap::get(
-        2, 1, rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) + rewriter.getAffineDimExpr(1));
-    auto kIndex = rewriter.create<mlir::affine::AffineApplyOp>(loc, kIndexMap, mlir::ValueRange{kx, ky, kColsIndex});
-
-    // Load the weight from stack-allocated kernel memref
-    auto kWeight = rewriter.create<mlir::memref::LoadOp>(loc, kStack, mlir::ValueRange{kIndex});
+    // Load the weight from stack-allocated 2D kernel memref
+    auto kWeight = rewriter.create<mlir::memref::LoadOp>(loc, kStack, mlir::ValueRange{kx, ky});
 
     auto multiplyAndAccumulate = [&](int offset, mlir::Value sumAlloca, bool applyConvolution) {
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
@@ -449,8 +430,7 @@ void PiccelerToAffinePass::runOnOperation() {
 
   target.addLegalOp<mlir::UnrealizedConversionCastOp>();
   target.addLegalOp<LoadImageOp, SaveImageOp, ShowImageOp, StringConstOp, KernelConstOp>();
-  /*ConvolutionOp*/
-  target.addIllegalOp<BrightnessOp, InvertOp>();
+  target.addIllegalOp<BrightnessOp, InvertOp, ConvolutionOp>();
 
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<BrightnessToAffine>(typeConverter, ctx);
