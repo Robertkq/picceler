@@ -29,8 +29,8 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
     int64_t rows = kernelType.getRows();
     int64_t cols = kernelType.getCols();
 
-    // Create the memref type locally
-    auto memrefType = mlir::MemRefType::get({rows * cols}, f64Type);
+    // Create a 2D memref type to preserve kernel dimensions
+    auto memrefType = mlir::MemRefType::get({rows, cols}, f64Type);
 
     // Allocation
     auto allocaOp = rewriter.create<mlir::memref::AllocaOp>(loc, memrefType);
@@ -40,12 +40,16 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
     auto kvaluesAttr = mlir::dyn_cast_or_null<mlir::DenseElementsAttr>(op.getValuesAttr());
     if (!kvaluesAttr) return mlir::failure();
 
-    // Store constants
+    // Store constants in 2D layout
     int64_t i = 0;
     for (double val : kvaluesAttr.getValues<double>()) {
-      auto cIdx = rewriter.create<mlir::arith::ConstantIndexOp>(loc, i++);
+      int64_t row = i / cols;
+      int64_t col = i % cols;
+      auto cRowIdx = rewriter.create<mlir::arith::ConstantIndexOp>(loc, row);
+      auto cColIdx = rewriter.create<mlir::arith::ConstantIndexOp>(loc, col);
       auto cVal = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(val));
-      rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cIdx});
+      rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cRowIdx, cColIdx});
+      i++;
     }
 
     // Replace the old Op with the new MemRef
@@ -58,8 +62,9 @@ void PiccelerKernelToMemrefPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   patterns.add<KernelToMemref>(&getContext());
 
-  // Use the Greedy Rewriter instead of ConversionTarget
-  // This avoids the strict "Type Safety" checks that are causing your pass to fail.
+  // Apply this as a local pattern rewrite on existing operations using the
+  // Greedy Pattern Rewriter, rather than setting up a full conversion target
+  // and type-conversion pipeline for this simple, type-preserving transform.
   if (mlir::failed(mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
   }

@@ -50,7 +50,7 @@ def Picceler_InvertOp : Op<PiccelerDialect, "invert", []> {
 
 def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", []> {
   let summary = "Apply convolution to an image with a kernel";
-  let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
+  let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, MemRefOf<[F64]>]>:$kernel);
   let results = (outs Picceler_ImageType:$result);
 }
 
