@@ -11,20 +11,29 @@ protected:
 
 TEST_F(ParserTest, EmptyInput) {
   parser.setSource("tests/data/empty.pic");
-  auto ast = parser.parse();
+
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  auto ast = std::move(astRes.value());
+
   ASSERT_NE(ast, nullptr);
   EXPECT_EQ(ast->statements.size(), 0);
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
   parser.setSource("tests/data/load_image.pic");
+
   // file contents:
   // img = load_image("cat.jpg")
-  auto ast = parser.parse();
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  auto ast = std::move(astRes.value());
+
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements.size(), 1);
-  auto assignment =
-      dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
+  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
   ASSERT_NE(assignment, nullptr);
   EXPECT_EQ(assignment->lhs->name, "img");
   auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs.get());

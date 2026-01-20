@@ -10,17 +10,30 @@ protected:
 };
 
 TEST_F(LexerTest, EmptyInput) {
-  lexer.setSource("tests/data/empty.pic");
-  auto tokens = lexer.tokenizeAll();
+  auto res = lexer.setSource("tests/data/empty.pic");
+  if (!res)
+    FAIL() << res.error().message();
+
+  auto tokensRes = lexer.tokenizeAll();
+  if (!tokensRes)
+    FAIL() << tokensRes.error().message();
+  auto tokens = tokensRes.value();
+
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0]._type, picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
-  lexer.setSource("tests/data/load_image.pic");
+  auto res = lexer.setSource("tests/data/load_image.pic");
+  if (!res)
+    FAIL() << res.error().message();
+
   // file contents:
   // img = load_image("cat.jpg")
-  auto tokens = lexer.tokenizeAll();
+  auto tokensRes = lexer.tokenizeAll();
+  if (!tokensRes)
+    FAIL() << tokensRes.error().message();
+  auto tokens = tokensRes.value();
 
   ASSERT_GE(tokens.size(), 7); // img, =, load_image, (, "cat.jpg", ), EOF
 

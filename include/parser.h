@@ -29,13 +29,13 @@ public:
    * @brief Retrieves all tokens from the lexer.
    * @return A vector of all tokens.
    */
-  std::vector<Token> getTokens();
+  Result<std::vector<Token>> getTokens();
 
   /**
    * @brief Parses the tokens into an AST.
    * @return The root of the AST.
    */
-  std::unique_ptr<ModuleNode> parse();
+  Result<std::unique_ptr<ModuleNode>> parse();
 
   /**
    * @brief Prints the AST in a human-readable format.
@@ -50,14 +50,14 @@ private:
    * \name Parse helper functions
    * \{
    */
-  std::unique_ptr<ASTNode> parseStatement();
-  std::unique_ptr<ASTNode> parseExpression();
-  std::unique_ptr<ASTNode> parseAssignment(Token identifier);
-  std::unique_ptr<ASTNode> parseCall(Token identifier);
-  std::unique_ptr<ASTNode> parseVariable(Token identifier = Token{Token::Type::UNKNOWN, "", 0, 0});
-  std::unique_ptr<ASTNode> parseKernel();
-  std::unique_ptr<ASTNode> parseString();
-  std::unique_ptr<ASTNode> parseNumber();
+  Result<std::unique_ptr<ASTNode>> parseStatement();
+  Result<std::unique_ptr<ASTNode>> parseExpression();
+  Result<std::unique_ptr<ASTNode>> parseAssignment(Token identifier);
+  Result<std::unique_ptr<ASTNode>> parseCall(Token identifier);
+  Result<std::unique_ptr<ASTNode>> parseVariable(Token identifier = Token{Token::Type::UNKNOWN, "", 0, 0});
+  Result<std::unique_ptr<ASTNode>> parseKernel();
+  Result<std::unique_ptr<ASTNode>> parseString();
+  Result<std::unique_ptr<ASTNode>> parseNumber();
   /**
    * \}
    */

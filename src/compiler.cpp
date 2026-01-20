@@ -39,8 +39,9 @@ Compiler::Compiler()
   _context.loadDialect<mlir::memref::MemRefDialect>();
   _context.loadDialect<mlir::scf::SCFDialect>();
   _context.loadDialect<mlir::LLVM::LLVMDialect>();
+  spdlog::debug("Initialized MLIR Dialects:");
   for (auto *dialect : _context.getLoadedDialects()) {
-    llvm::outs() << dialect->getNamespace() << "\n";
+    spdlog::debug(" - {}", dialect->getNamespace());
   }
 }
 
@@ -66,18 +67,26 @@ bool Compiler::run() {
   _parser.setSource(inputFile);
   spdlog::info("Tokenizing source file: {}", inputFile);
   auto tokens = _parser.getTokens();
+  if (!tokens) {
+    spdlog::error("Failed to tokenize source file: {}", tokens.error().message());
+    return false;
+  }
   size_t index = 0;
-  for (const auto &token : tokens) {
+  for (const auto &token : tokens.value()) {
     spdlog::debug("Token[{}]: {}", index++, token.toString());
   }
   spdlog::info("Finished tokenizing source file");
   spdlog::info("Resetting lexer");
   _parser.setSource(inputFile);
   auto ast = _parser.parse();
-  _parser.printAST(ast);
+  if (!ast) {
+    spdlog::error("{}", ast.error().message());
+    return false;
+  }
+  _parser.printAST(ast.value());
 
   spdlog::info("Generating initial MLIR");
-  auto module = _mlirGen.generate(ast.get());
+  auto module = _mlirGen.generate(ast.value().get());
   spdlog::info("Finished generating initial MLIR");
   module->dump();
   spdlog::info("Running pass manager");

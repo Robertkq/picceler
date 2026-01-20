@@ -31,4 +31,5 @@ struct CompileError {
 };
 
 template <typename T> using Result = std::expected<T, CompileError>;
+
 } // namespace picceler
