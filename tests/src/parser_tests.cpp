@@ -9,6 +9,24 @@ protected:
   picceler::Parser parser;
 };
 
+TEST_F(ParserTest, BadKernelMissingCommaFails) {
+  parser.setSource("tests/data/bad_kernel_missing_comma.pic");
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
+TEST_F(ParserTest, BadKernelMissingBracketFails) {
+  parser.setSource("tests/data/bad_kernel_missing_bracket.pic");
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
+TEST_F(ParserTest, BadKernelBadNumberFails) {
+  parser.setSource("tests/data/bad_kernel_bad_number.pic");
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
 TEST_F(ParserTest, EmptyInput) {
   parser.setSource("tests/data/empty.pic");
 

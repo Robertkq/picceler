@@ -246,7 +246,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
       spdlog::error("{}", peekedtokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek token in kernel"});
     }
-    auto peekToken = *tokenResult;
+    auto peekToken = *peekedtokenResult;
 
     // End of kernel
     if (peekToken._type == Token::Type::SYMBOL && peekToken._value == "]") {
