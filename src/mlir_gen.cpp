@@ -154,7 +154,6 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &inputImage = args[0];
     _builder.create<ShowImageOp>(_builder.getUnknownLoc(), inputImage);
     return {};
-
   } else if (name == "brightness") {
     auto &inputImage = args[0];
     auto &brightnessValue = args[1];
@@ -169,6 +168,12 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &inputImage = args[0];
     auto &kernel = args[1];
     auto callOp = _builder.create<ConvolutionOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, kernel);
+    return callOp.getResult();
+  } else if (name == "sharpen") {
+    auto &inputImage = args[0];
+    auto &strenghtValue = args[1];
+    auto callOp =
+        _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);

@@ -60,5 +60,11 @@ def Picceler_BlurOp : Op<PiccelerDialect, "blur", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
+def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", []> {
+  let summary = "Adjust the sharpness of an image";
+  let arguments = (ins Picceler_ImageType:$input, I64:$value);
+  let results = (outs Picceler_ImageType:$result);
+}
+
 #endif
 
