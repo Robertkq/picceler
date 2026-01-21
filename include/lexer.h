@@ -14,6 +14,9 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <expected>
+
+#include "error.h"
 
 namespace picceler {
 
@@ -23,20 +26,21 @@ namespace picceler {
  */
 struct Token {
   /** @brief The type of the token. */
-  enum class Type : size_t {
-    IDENTIFIER,
-    NUMBER,
-    STRING,
-    SYMBOL,
-    EOF_TOKEN,
-    UNKNOWN
-  };
+  enum class Type : size_t { IDENTIFIER, NUMBER, STRING, SYMBOL, EOF_TOKEN, UNKNOWN };
 
   /**
    * @brief Converts the token type to a string representation.
    * @return The string representation of the token type.
    */
-  std::string toString() const;
+  std::string typeToString() const;
+
+  /**
+   * @brief Converts the token to a string representation.
+   * @return The string representation of the token.
+   */
+  std::string toString() const {
+    return std::format("Token(type: {}, value: '{}', line: {}, column: {})", typeToString(), _value, _line, _column);
+  }
 
   Type _type;
   std::string _value;
@@ -59,19 +63,19 @@ public:
    * @brief Sets the source file for the lexer.
    * @param source The source file to read from.
    */
-  void setSource(const std::string &source);
+  Result<void> setSource(const std::string &source);
 
   /**
    * @brief Returns the next token from the input.
    * @return The next token.
    */
-  Token nextToken();
+  Result<Token> nextToken();
 
   /**
    * @brief Returns the next token without advancing the input.
    * @return The next token.
    */
-  Token peekToken();
+  Result<Token> peekToken();
 
   /**
    * @brief Skips whitespace characters in the input.
@@ -82,7 +86,7 @@ public:
    * @brief Tokenizes the entire input.
    * @return A vector of all tokens.
    */
-  std::vector<Token> tokenizeAll();
+  Result<std::vector<Token>> tokenizeAll();
 
 private:
   /** @brief Checks if the end of the file has been reached.
@@ -119,28 +123,28 @@ private:
    * @param start The starting line and column of the token.
    * @return The identifier token.
    */
-  Token readIdentifier(std::pair<size_t, size_t> start);
+  Result<Token> readIdentifier(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a number token from the input.
    * @param start The starting line and column of the token.
    * @return The number token.
    */
-  Token readNumber(std::pair<size_t, size_t> start);
+  Result<Token> readNumber(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a string token from the input.
    * @param start The starting line and column of the token.
    * @return The string token.
    */
-  Token readString(std::pair<size_t, size_t> start);
+  Result<Token> readString(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a symbol token from the input.
    * @param start The starting line and column of the token.
    * @return The symbol token.
    */
-  Token readSymbol(std::pair<size_t, size_t> start);
+  Result<Token> readSymbol(std::pair<size_t, size_t> start);
 
 private:
   std::ifstream _file;

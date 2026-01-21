@@ -19,8 +19,7 @@ namespace picceler {
 struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
   using OpRewritePattern<KernelConstOp>::OpRewritePattern;
 
-  mlir::LogicalResult matchAndRewrite(KernelConstOp op,
-                                      mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(KernelConstOp op, mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto f64Type = rewriter.getF64Type();
 
@@ -38,7 +37,8 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
 
     // Get the values attribute
     auto kvaluesAttr = mlir::dyn_cast_or_null<mlir::DenseElementsAttr>(op.getValuesAttr());
-    if (!kvaluesAttr) return mlir::failure();
+    if (!kvaluesAttr)
+      return mlir::failure();
 
     // Store constants
     int64_t i = 0;
@@ -58,8 +58,6 @@ void PiccelerKernelToMemrefPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   patterns.add<KernelToMemref>(&getContext());
 
-  // Use the Greedy Rewriter instead of ConversionTarget
-  // This avoids the strict "Type Safety" checks that are causing your pass to fail.
   if (mlir::failed(mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
     signalPassFailure();
   }

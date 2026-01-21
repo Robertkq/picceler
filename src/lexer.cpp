@@ -1,12 +1,13 @@
 #include "lexer.h"
 
 #include <iostream>
+#include <format>
 
 #include "spdlog/spdlog.h"
 
 namespace picceler {
 
-std::string Token::toString() const {
+std::string Token::typeToString() const {
   switch (_type) {
   case Type::IDENTIFIER:
     return "IDENTIFIER";
@@ -28,22 +29,24 @@ std::string Token::toString() const {
 
 Lexer::Lexer() : _file(), _buffer(), _position(0), _line(1), _column(1) {}
 
-void Lexer::setSource(const std::string &source) {
+Result<void> Lexer::setSource(const std::string &source) {
   if (_file.is_open()) {
     _file.close();
   }
   _file.open(source);
   if (!_file.is_open()) {
-    throw std::runtime_error("Could not open source file: " + source);
+    return std::unexpected(CompileError(std::format("Cannot open source file {}", source)));
   }
   _buffer.assign((std::istreambuf_iterator<char>(_file)), std::istreambuf_iterator<char>());
   _file.close();
   _position = 0;
   _line = 1;
   _column = 1;
+
+  return {};
 }
 
-Token Lexer::nextToken() {
+Result<Token> Lexer::nextToken() {
   skipWhitespace();
 
   if (eof()) {
@@ -69,16 +72,15 @@ Token Lexer::nextToken() {
   return Token{Token::Type::UNKNOWN, "", _line, _column};
 }
 
-Token Lexer::peekToken() {
+Result<Token> Lexer::peekToken() {
   size_t oldPos = _position;
   size_t oldLine = _line;
   size_t oldCol = _column;
-  Token t = nextToken();
+  auto token = nextToken();
   _position = oldPos;
   _line = oldLine;
   _column = oldCol;
-
-  return t;
+  return token;
 }
 
 void Lexer::skipWhitespace() {
@@ -87,13 +89,18 @@ void Lexer::skipWhitespace() {
   }
 }
 
-std::vector<Token> Lexer::tokenizeAll() {
+Result<std::vector<Token>> Lexer::tokenizeAll() {
   std::vector<Token> tokens;
-  Token token;
+  Result<Token> token;
   do {
     token = nextToken();
-    tokens.push_back(token);
-  } while (token._type != Token::Type::EOF_TOKEN);
+    if (token) {
+      tokens.push_back(*token);
+    } else {
+      spdlog::error(token.error().message());
+      return std::unexpected(CompileError{"Failed to tokenize the entire source file"});
+    }
+  } while (token.value()._type != Token::Type::EOF_TOKEN);
   return tokens;
 }
 
@@ -121,7 +128,7 @@ bool Lexer::isSymbol(char ch) const {
   return _symbols.find(ch) != std::string::npos;
 }
 
-Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
+Result<Token> Lexer::readIdentifier(std::pair<size_t, size_t> start) {
   std::string value;
   while (!eof() && (isalnum(peek()) || peek() == '_')) {
     value += get();
@@ -129,7 +136,7 @@ Token Lexer::readIdentifier(std::pair<size_t, size_t> start) {
   return Token{Token::Type::IDENTIFIER, value, start.first, start.second};
 }
 
-Token Lexer::readNumber(std::pair<size_t, size_t> start) {
+Result<Token> Lexer::readNumber(std::pair<size_t, size_t> start) {
   std::string value;
   bool hasDot = false;
   if (peek() == '-') {
@@ -142,9 +149,8 @@ Token Lexer::readNumber(std::pair<size_t, size_t> start) {
       value += get();
     } else if (ch == '.') {
       if (hasDot) {
-        throw std::runtime_error("Invalid number format at line " + std::to_string(start.first) + ", column " +
-                                 std::to_string(start.second));
-        break;
+        return std::unexpected(
+            CompileError{"Invalid number format: multiple decimal points", start.first, start.second});
       }
       hasDot = true;
       value += get();
@@ -155,7 +161,7 @@ Token Lexer::readNumber(std::pair<size_t, size_t> start) {
   return Token{Token::Type::NUMBER, value, start.first, start.second};
 }
 
-Token Lexer::readString(std::pair<size_t, size_t> start) {
+Result<Token> Lexer::readString(std::pair<size_t, size_t> start) {
   get(); // consume the opening quote
 
   std::string value;
@@ -167,14 +173,13 @@ Token Lexer::readString(std::pair<size_t, size_t> start) {
   return Token{Token::Type::STRING, value, start.first, start.second};
 }
 
-Token Lexer::readSymbol(std::pair<size_t, size_t> start) {
+Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
   char ch = get();
   return Token{Token::Type::SYMBOL, std::string(1, ch), start.first, start.second};
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &token) {
-  os << "Token(Type: " << token.toString() << ", Value: " << token._value << ", Line: " << token._line
-     << ", Column: " << token._column << ")";
+  os << token.toString();
   return os;
 }
 

@@ -2,11 +2,15 @@ cmake_minimum_required(VERSION 3.20)
 
 project(picceler)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 option(ENABLE_TESTS "Enable testing" ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 option(ENABLE_DOCS "Enable documentation generation" OFF)
+
+if(NOT DEFINED CMAKE_EXPORT_COMPILE_COMMANDS)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json" FORCE)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
@@ -16,11 +20,10 @@ find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 
 if (ENABLE_CLANG_TIDY)
-    find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-18)
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy)
     if(CLANG_TIDY_EXE)
         message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-        # Pass the C++ standard explicitly so clang-tidy parses system headers consistently.
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++20")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++${CMAKE_CXX_STANDARD}")
     else()
         message(WARNING "clang-tidy option enabled but clang-tidy executable not found!")
     endif()

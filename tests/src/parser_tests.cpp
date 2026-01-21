@@ -9,22 +9,50 @@ protected:
   picceler::Parser parser;
 };
 
+TEST_F(ParserTest, BadKernelMissingCommaFails) {
+  parser.setSource("tests/data/bad_kernel_missing_comma.pic");
+  // setSource returns Result<void> but we don't assert here; parser.parse will fail
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
+TEST_F(ParserTest, BadKernelMissingBracketFails) {
+  parser.setSource("tests/data/bad_kernel_missing_bracket.pic");
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
+TEST_F(ParserTest, BadKernelBadNumberFails) {
+  parser.setSource("tests/data/bad_kernel_bad_number.pic");
+  auto ast = parser.parse();
+  EXPECT_FALSE(ast.has_value());
+}
+
 TEST_F(ParserTest, EmptyInput) {
   parser.setSource("tests/data/empty.pic");
-  auto ast = parser.parse();
+
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  auto ast = std::move(astRes.value());
+
   ASSERT_NE(ast, nullptr);
   EXPECT_EQ(ast->statements.size(), 0);
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
   parser.setSource("tests/data/load_image.pic");
+
   // file contents:
   // img = load_image("cat.jpg")
-  auto ast = parser.parse();
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  auto ast = std::move(astRes.value());
+
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements.size(), 1);
-  auto assignment =
-      dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
+  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
   ASSERT_NE(assignment, nullptr);
   EXPECT_EQ(assignment->lhs->name, "img");
   auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs.get());

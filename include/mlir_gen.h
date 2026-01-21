@@ -50,8 +50,7 @@ private:
   mlir::Value emitVariable(VariableNode *node);
   mlir::Value emitString(StringNode *node);
   mlir::Value emitNumber(NumberNode *node);
-  mlir::Value emitBuiltinCall(CallNode *node,
-                              const std::vector<mlir::Value> &args);
+  mlir::Value emitBuiltinCall(CallNode *node, const std::vector<mlir::Value> &args);
 
   /**
    * \}

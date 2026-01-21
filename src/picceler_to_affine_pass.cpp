@@ -44,8 +44,6 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
     mlir::Value output = createCall.getResult(0);
 
     ImageAccessHelper outputImage(output, rewriter, loc);
-    mlir::Value outputWidthI32 = outputImage.getWidth();
-    mlir::Value outputHeightI32 = outputImage.getHeight();
     mlir::Value outputDataPtr = outputImage.getDataPtr();
 
     mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, rewriter.getIndexType(), inputWidthI32);
@@ -140,8 +138,6 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
     mlir::Value output = createCall.getResult(0);
 
     ImageAccessHelper outputImage(output, rewriter, loc);
-    mlir::Value outputWidthI32 = outputImage.getWidth();
-    mlir::Value outputHeightI32 = outputImage.getHeight();
     mlir::Value outputDataPtr = outputImage.getDataPtr();
 
     mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, rewriter.getIndexType(), inputWidthI32);
@@ -265,15 +261,12 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
     mlir::Value output = createCall.getResult(0);
 
     ImageAccessHelper outputImage(output, rewriter, loc);
-    mlir::Value outputWidthI32 = outputImage.getWidth();
-    mlir::Value outputHeightI32 = outputImage.getHeight();
     mlir::Value outputDataPtr = outputImage.getDataPtr();
 
     mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputWidthI32);
     mlir::Value height = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputHeightI32);
 
     auto c0 = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
-    auto v0 = rewriter.create<mlir::arith::ConstantIntOp>(loc, i8Type, 0);
 
     auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
 
