@@ -20,11 +20,10 @@ find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 
 if (ENABLE_CLANG_TIDY)
-    find_program(CLANG_TIDY_EXE NAMES clang-tidy clang-tidy-18)
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy)
     if(CLANG_TIDY_EXE)
         message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-        # Pass the C++ standard explicitly so clang-tidy parses system headers consistently.
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++20")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++${CMAKE_CXX_STANDARD}")
     else()
         message(WARNING "clang-tidy option enabled but clang-tidy executable not found!")
     endif()

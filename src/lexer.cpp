@@ -7,7 +7,7 @@
 
 namespace picceler {
 
-std::string Token::toString() const {
+std::string Token::typeToString() const {
   switch (_type) {
   case Type::IDENTIFIER:
     return "IDENTIFIER";
@@ -149,9 +149,8 @@ Result<Token> Lexer::readNumber(std::pair<size_t, size_t> start) {
       value += get();
     } else if (ch == '.') {
       if (hasDot) {
-        throw std::runtime_error("Invalid number format at line " + std::to_string(start.first) + ", column " +
-                                 std::to_string(start.second));
-        break;
+        return std::unexpected(
+            CompileError{"Invalid number format: multiple decimal points", start.first, start.second});
       }
       hasDot = true;
       value += get();
@@ -180,8 +179,7 @@ Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &token) {
-  os << "Token(Type: " << token.toString() << ", Value: " << token._value << ", Line: " << token._line
-     << ", Column: " << token._column << ")";
+  os << token.toString();
   return os;
 }
 

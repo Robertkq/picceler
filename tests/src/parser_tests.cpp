@@ -11,6 +11,7 @@ protected:
 
 TEST_F(ParserTest, BadKernelMissingCommaFails) {
   parser.setSource("tests/data/bad_kernel_missing_comma.pic");
+  // setSource returns Result<void> but we don't assert here; parser.parse will fail
   auto ast = parser.parse();
   EXPECT_FALSE(ast.has_value());
 }

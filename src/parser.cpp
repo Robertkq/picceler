@@ -239,8 +239,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
 
   auto kernelNode = std::make_unique<KernelNode>();
 
-  bool finished = false;
-  while (!finished) {
+  while (true) {
     auto peekedtokenResult = _lexer.peekToken();
     if (!peekedtokenResult) {
       spdlog::error("{}", peekedtokenResult.error().message());
@@ -255,7 +254,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         spdlog::error("{}", rbracket.error().message());
         return std::unexpected(CompileError{"Failed to consume ']' token after kernel"});
       }
-      finished = true;
       break;
     }
 
@@ -274,8 +272,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     }
 
     std::vector<double> row;
-    bool rowFinished = false;
-    while (!rowFinished) {
+
+    while (true) {
       auto innerTokenResult = _lexer.peekToken();
       if (!innerTokenResult) {
         spdlog::error("{}", innerTokenResult.error().message());
@@ -290,7 +288,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
           spdlog::error("{}", consumed.error().message());
           return std::unexpected(CompileError{"Failed to consume inner ']' token in kernel"});
         }
-        rowFinished = true;
         break;
       }
 
@@ -329,7 +326,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
           spdlog::error("{}", consumed.error().message());
           return std::unexpected(CompileError{"Failed to consume inner ']' token in kernel"});
         }
-        rowFinished = true;
         break;
       } else {
         return std::unexpected(
@@ -361,7 +357,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         spdlog::error("{}", r.error().message());
         return std::unexpected(CompileError{"Failed to consume ']' token after kernel rows"});
       }
-      finished = true;
       break;
     } else {
       return std::unexpected(

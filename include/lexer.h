@@ -32,7 +32,15 @@ struct Token {
    * @brief Converts the token type to a string representation.
    * @return The string representation of the token type.
    */
-  std::string toString() const;
+  std::string typeToString() const;
+
+  /**
+   * @brief Converts the token to a string representation.
+   * @return The string representation of the token.
+   */
+  std::string toString() const {
+    return std::format("Token(type: {}, value: '{}', line: {}, column: {})", typeToString(), _value, _line, _column);
+  }
 
   Type _type;
   std::string _value;
