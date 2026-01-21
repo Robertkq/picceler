@@ -23,32 +23,30 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
     mlir::Location loc = op.getLoc();
     auto f64Type = rewriter.getF64Type();
 
-    // Get metadata from the custom type
-    auto kernelType = mlir::cast<picceler::KernelType>(op.getResult().getType());
+    auto kernelType = mlir::cast<KernelType>(op.getResult().getType());
     int64_t rows = kernelType.getRows();
     int64_t cols = kernelType.getCols();
 
-    // Create the memref type locally
-    auto memrefType = mlir::MemRefType::get({rows * cols}, f64Type);
+    auto memrefType = mlir::MemRefType::get({rows, cols}, f64Type);
 
-    // Allocation
     auto allocaOp = rewriter.create<mlir::memref::AllocaOp>(loc, memrefType);
     mlir::Value kStack = allocaOp.getResult();
 
-    // Get the values attribute
     auto kvaluesAttr = mlir::dyn_cast_or_null<mlir::DenseElementsAttr>(op.getValuesAttr());
     if (!kvaluesAttr)
       return mlir::failure();
 
-    // Store constants
     int64_t i = 0;
     for (double val : kvaluesAttr.getValues<double>()) {
-      auto cIdx = rewriter.create<mlir::arith::ConstantIndexOp>(loc, i++);
+      int64_t idx = i++;
+      int64_t r = idx / cols;
+      int64_t c = idx % cols;
+      auto cRow = rewriter.create<mlir::arith::ConstantIndexOp>(loc, r);
+      auto cCol = rewriter.create<mlir::arith::ConstantIndexOp>(loc, c);
       auto cVal = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(val));
-      rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cIdx});
+      rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cRow, cCol});
     }
 
-    // Replace the old Op with the new MemRef
     rewriter.replaceOp(op, kStack);
     return mlir::success();
   }

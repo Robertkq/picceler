@@ -42,8 +42,8 @@ void IRPassManager::registerPasses() {
 
 void IRPassManager::addPasses() {
   addHighLevelOptimizationPasses();
-  addRuntimeLoweringPasses();
   addAffineLoweringPasses();
+  addRuntimeLoweringPasses();
   addBackendLoweringPasses();
 }
 
