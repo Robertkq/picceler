@@ -202,54 +202,24 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
 
   mlir::LogicalResult matchAndRewrite(ConvolutionOp op, ConvolutionOpAdaptor adaptor,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     auto indexType = rewriter.getIndexType();
     auto i8Type = rewriter.getI8Type();
-    // auto f32Type = rewriter.getF32Type();
     auto f64Type = rewriter.getF64Type();
     auto i64Type = rewriter.getI64Type();
-    // can or should i be using stuff like "using alias = ..." here?
 
     mlir::Location loc = op.getLoc();
 
     mlir::Value input = adaptor.getInput();
-    mlir::Value kStack = adaptor.getKernel();
-
-    auto kMemTy = mlir::dyn_cast<mlir::MemRefType>(kStack.getType());
-    if (!kMemTy) {
-      if (auto def = kStack.getDefiningOp()) {
-        def->emitError("kernel operand must be lowered to a memref by PiccelerKernelToMemrefPass before ConvolutionToAffine");
-      } else {
-        op.emitError("kernel operand must be a memref");
-      }
-      return mlir::failure();
-    }
-
-    int64_t rows = 0, cols = 0;
-    if (kMemTy.getRank() == 2) {
-      rows = kMemTy.getShape()[0];
-      cols = kMemTy.getShape()[1];
-    } else if (kMemTy.getRank() == 1) {
-      // fallback: try to infer square kernel if possible
-      int64_t kSize = kMemTy.getShape()[0];
-        if (kSize <= 0) {
-          op.emitError("kernel memref has dynamic or non-positive size; prefer explicit 2D memref<rows x cols x f64>");
-          return mlir::failure();
-        }
-        int64_t s = (int64_t)std::llround(std::sqrt((double)kSize));
-        if (s * s == kSize) {
-          rows = cols = s;
-        } else {
-          op.emitError("kernel memref is 1D and rows/cols cannot be inferred; prefer 2D memref<rows x cols x f64>");
-          return mlir::failure();
-        }
-    } else {
-      op.emitError("expected kernel memref of rank 1 or 2");
-      return mlir::failure();
-    }
-    auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     if (input.getType() != ptrType) {
       input = rewriter.create<mlir::UnrealizedConversionCastOp>(loc, ptrType, input).getResult(0);
     }
+    mlir::Value kStack = adaptor.getKernel();
+
+    auto kMemTy = mlir::dyn_cast<mlir::MemRefType>(kStack.getType());
+
+    uint32_t rows = kMemTy.getShape()[0];
+    uint32_t cols = kMemTy.getShape()[1];
 
     ImageAccessHelper inputImage(input, rewriter, loc);
     mlir::Value inputWidthI32 = inputImage.getWidth();
@@ -336,13 +306,7 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
 
     rewriter.setInsertionPointToStart(ifOp.thenBlock());
 
-    auto kColsIndex = rewriter.create<mlir::arith::ConstantIndexOp>(loc, cols);
-    auto kIndexMap = mlir::AffineMap::get(
-        2, 1, rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) + rewriter.getAffineDimExpr(1));
-    auto kIndex = rewriter.create<mlir::affine::AffineApplyOp>(loc, kIndexMap, mlir::ValueRange{kx, ky, kColsIndex});
-
-    // Load the weight from stack-allocated kernel memref
-    auto kWeight = rewriter.create<mlir::memref::LoadOp>(loc, kStack, mlir::ValueRange{kIndex});
+    auto kWeight = rewriter.create<mlir::memref::LoadOp>(loc, kStack, mlir::ValueRange{kx, ky});
 
     auto multiplyAndAccumulate = [&](int offset, mlir::Value sumAlloca, bool applyConvolution) {
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
