@@ -12,7 +12,7 @@ namespace picceler {
 void PiccelerDialect::initialize() {
   addTypes<ImageType, StringType, KernelType>();
   addOperations<StringConstOp, KernelConstOp, LoadImageOp, ShowImageOp, SaveImageOp, BlurOp, BrightnessOp, InvertOp,
-                ConvolutionOp, SharpenOp>();
+                ConvolutionOp, SharpenOp, BoxBlurOp, GaussianBlurOp, EdgeDetectOp, EmbossOp>();
 }
 
 } // namespace picceler

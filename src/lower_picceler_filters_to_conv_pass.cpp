@@ -34,6 +34,43 @@ mlir::FailureOr<Kernel3x3> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor
     };
 }
 
+mlir::FailureOr<Kernel3x3> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
+    double v = 1.0 / 9.0;
+    return Kernel3x3{
+        v, v, v,
+        v, v, v,
+        v, v, v
+    };
+}
+
+mlir::FailureOr<Kernel3x3> calculateGaussianBlurKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
+    double v1 = 1.0 / 16.0;
+    double v2 = 2.0 / 16.0;
+    double v4 = 4.0 / 16.0;
+
+    return Kernel3x3{
+        v1, v2, v1,
+        v2, v4, v2,
+        v1, v2, v1
+    };
+}
+
+mlir::FailureOr<Kernel3x3> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
+    return Kernel3x3{
+        -1.0, -1.0, -1.0,
+        -1.0,  8.0, -1.0,
+        -1.0, -1.0, -1.0
+    };
+}
+
+mlir::FailureOr<Kernel3x3> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
+    return Kernel3x3{
+        -2.0, -1.0,  0.0,
+        -1.0,  1.0,  1.0,
+         0.0,  1.0,  2.0
+    };
+}
+
 template <typename OpTy>
 struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
   using KernelCalculator = std::function<mlir::FailureOr<Kernel3x3>(OpTy, typename OpTy::Adaptor)>;
@@ -47,7 +84,6 @@ struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
                                       mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     mlir::Value input = adaptor.getInput();
-    mlir::Value strengthValue = adaptor.getValue();
     auto f64Type = rewriter.getF64Type();
 
     auto kernelRes = kernelCalc(op, adaptor);
@@ -80,9 +116,17 @@ void LowerPiccelerFiltersToConvPass::runOnOperation() {
 
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<FilterToConvolutionPattern<SharpenOp>>(ctx, calculateSharpenKernel);
+  patterns.add<FilterToConvolutionPattern<BoxBlurOp>>(ctx, calculateBoxBlurKernel);
+  patterns.add<FilterToConvolutionPattern<GaussianBlurOp>>(ctx, calculateGaussianBlurKernel);
+  patterns.add<FilterToConvolutionPattern<EdgeDetectOp>>(ctx, calculateEdgeDetectKernel);
+  patterns.add<FilterToConvolutionPattern<EmbossOp>>(ctx, calculateEmbossKernel);
 
   mlir::ConversionTarget target(*ctx);
   target.addIllegalOp<SharpenOp>();
+  target.addIllegalOp<BoxBlurOp>();
+  target.addIllegalOp<GaussianBlurOp>();
+  target.addIllegalOp<EdgeDetectOp>();
+  target.addIllegalOp<EmbossOp>();
   target.addLegalOp<ConvolutionOp>();
   target.addLegalOp<KernelConstOp>();
 

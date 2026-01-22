@@ -175,6 +175,26 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto callOp =
         _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
     return callOp.getResult();
+  } else if (name == "box_blur") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    return callOp.getResult();
+  } else if (name == "gaussian_blur") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<GaussianBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    return callOp.getResult();
+  } else if (name == "edge_detect") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<EdgeDetectOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    return callOp.getResult();
+  } else if (name == "emboss") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<EmbossOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
   }
