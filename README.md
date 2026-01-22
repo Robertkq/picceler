@@ -1,7 +1,7 @@
 # picceler
 
 *picceler* (Pixel Accelerator) is a compiled domain specific language for image processing.
-The language aims to simlpify and fasten the development speed for image processing work (currently only supporting CPU x86 arch).
+The language aims to simplify and fasten the development speed for image processing work (currently CPU-only, targeting the host's native architecture).
 
 Picceler doesn't aim to be a production language, rather it aims to provide a good example of what you can achieve with MLIR.
 

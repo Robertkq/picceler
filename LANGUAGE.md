@@ -1,4 +1,4 @@
-This documents aims to provide information about the picceler language, more specifically it's syntax and builtin functionalities.
+This document aims to provide information about the picceler language, more specifically it's syntax and builtin functionalities.
 
 # Syntax
 
@@ -24,9 +24,9 @@ This documents aims to provide information about the picceler language, more spe
 
 # Examples
 
-We have multiples picceler files that exemplify how to use the picceler language.
+We have multiple picceler files that exemplify how to use the picceler language.
 
-You can try compiling any of the following files from the [exemples](./examples/) directory, by using:
+You can try compiling any of the following files from the [examples](./examples/) directory, by using:
 
 ```bash
 ./picceler -o myExecutable ./examples/<file>.pic

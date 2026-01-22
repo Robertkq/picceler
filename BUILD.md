@@ -1,6 +1,6 @@
 This document aims to provide all the necessary information to get picceler to build on your system.
 
-We recommend building on Linux, and the following command assume you are running Linux, but it is likely for picceler to build on Windows as well.
+We recommend building on Linux, and the following commands assume you are running Linux, but it is likely for picceler to build on Windows as well.
 
 
 # Dependencies
@@ -35,7 +35,7 @@ mkdir build && cd build
 cmake .. && cmake --build . -j
 sudo cmake --install .
 ```
-**opencv***
+**opencv**
 ```bash
 git clone https://github.com/opencv/opencv.git && cd opencv
 mkdir build && cd build
@@ -78,8 +78,8 @@ sudo cmake --install .
 ```
 > Make sure you do not skip on any of these cmake options, otherwise your MLIR installation is ill-formed.
 
-### Hooray, you are done! Now let's compile piccecler!
-### Todo: This section should contain more information about all the options available for picceler compilation, like tests, clang-tidy and otherrs
+### Hooray, you are done! Now let's compile picceler!
+### Todo: This section should contain more information about all the options available for picceler compilation, like tests, clang-tidy and others
 
 ```bash
 git clone https://github.com/Robertkq/picceler.git && cd picceler
@@ -87,7 +87,7 @@ mkdir build && cd build
 cmake .. && cmake --build . -j
 ```
 
-If compilation was succesful, you can now use `./picceler` to start compiling your own picceler files!
+If compilation was successful, you can now use `./picceler` to start compiling your own picceler files!
 
 ## Install picceler on your system - WIP
 
