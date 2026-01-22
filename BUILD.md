@@ -37,7 +37,11 @@ sudo cmake --install .
 ```
 **opencv***
 ```bash
-
+git clone https://github.com/opencv/opencv.git && cd opencv
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON
+cmake --build . -j
+sudo cmake --install .
 ```
 
 For **MLIR** and **CLI11** you are much less likely to have them available via your system's package manager so we need to build them manually:
