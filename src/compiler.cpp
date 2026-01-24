@@ -32,13 +32,15 @@ Compiler::Compiler()
   spdlog::cfg::load_env_levels();
   _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")->required()->check(CLI::ExistingFile);
   _cliApp.add_option("-o,--output", _cliOptions.outputFile, "Output executable file")->default_val("a.out");
-  _context.loadDialect<PiccelerDialect>();
-  _context.loadDialect<mlir::func::FuncDialect>();
-  _context.loadDialect<mlir::arith::ArithDialect>();
-  _context.loadDialect<mlir::affine::AffineDialect>();
-  _context.loadDialect<mlir::memref::MemRefDialect>();
-  _context.loadDialect<mlir::scf::SCFDialect>();
-  _context.loadDialect<mlir::LLVM::LLVMDialect>();
+
+  // _context.loadDialect<PiccelerDialect>();
+  // _context.loadDialect<mlir::func::FuncDialect>();
+  // _context.loadDialect<mlir::arith::ArithDialect>();
+  // _context.loadDialect<mlir::affine::AffineDialect>();
+  // _context.loadDialect<mlir::memref::MemRefDialect>();
+  // _context.loadDialect<mlir::scf::SCFDialect>();
+  // _context.loadDialect<mlir::LLVM::LLVMDialect>();
+  _context.loadAllAvailableDialects();
   spdlog::debug("Initialized MLIR Dialects:");
   for (auto *dialect : _context.getLoadedDialects()) {
     spdlog::debug(" - {}", dialect->getNamespace());
@@ -107,7 +109,7 @@ bool Compiler::run() {
     return false;
   }
 
-  success = linkWithLLD("picceler.o", "lib/libpicceler_runtime.a", outputFile);
+  success = linkWithLLD("picceler.o", "lib/libPiccelerRuntime.a", outputFile);
   if (!success) {
     spdlog::error("Failed to link an executable");
     return false;
