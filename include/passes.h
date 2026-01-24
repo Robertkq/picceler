@@ -21,7 +21,7 @@ public:
 };
 
 /**
- * @brief Pass that lowers named Picceler filters (blur, sharpen, etc.) to explicit convolution operations.
+ * @brief Pass that lowers named Picceler filters (gaussian_blur, sharpen, etc.) to explicit convolution operations.
  */
 class LowerPiccelerFiltersToConvPass
     : public mlir::PassWrapper<LowerPiccelerFiltersToConvPass, mlir::OperationPass<mlir::ModuleOp>> {

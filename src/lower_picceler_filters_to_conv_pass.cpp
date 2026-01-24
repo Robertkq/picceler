@@ -13,8 +13,8 @@
 namespace picceler {
 
 struct KernelData {
-    uint16_t rows;
-    uint16_t cols;
+    int64_t rows;
+    int64_t cols;
     std::vector<double> values;
 };
 
@@ -51,7 +51,12 @@ mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdapto
 
     if (radius < 1) radius = 1;
 
-    uint16_t size = 2 * radius + 1;
+    if (radius > 500) {
+        return op.emitError("Box blur radius is too large (" + std::to_string(radius) +
+                            "). Maximum allowed is 500.");
+    }
+
+    int64_t size = 2 * radius + 1;
     double val = 1.0 / static_cast<double>(size * size);
 
     std::vector<double> values(size * size, val);
@@ -67,7 +72,12 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
 
     if (radius < 1) radius = 1;
 
-    uint16_t size = 2 * radius + 1;
+    if (radius > 500) {
+        return op.emitError("Gaussian blur radius is too large (" + std::to_string(radius) +
+                            "). Maximum allowed is 500.");
+    }
+
+    int64_t size = 2 * radius + 1;
     double sigma = static_cast<double>(radius) / 2.0;
     if (sigma < 0.5) sigma = 0.5;
 
