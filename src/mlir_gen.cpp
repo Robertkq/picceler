@@ -154,7 +154,6 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &inputImage = args[0];
     _builder.create<ShowImageOp>(_builder.getUnknownLoc(), inputImage);
     return {};
-
   } else if (name == "brightness") {
     auto &inputImage = args[0];
     auto &brightnessValue = args[1];
@@ -169,6 +168,34 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &inputImage = args[0];
     auto &kernel = args[1];
     auto callOp = _builder.create<ConvolutionOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, kernel);
+    return callOp.getResult();
+  } else if (name == "sharpen") {
+    auto &inputImage = args[0];
+    auto &strenghtValue = args[1];
+    auto callOp =
+        _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
+    return callOp.getResult();
+  } else if (name == "box_blur") {
+    auto &inputImage = args[0];
+    auto &radiusValue = args[1];
+    auto callOp =
+        _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
+    return callOp.getResult();
+  } else if (name == "gaussian_blur") {
+    auto &inputImage = args[0];
+    auto &radiusValue = args[1];
+    auto callOp =
+        _builder.create<GaussianBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
+    return callOp.getResult();
+  } else if (name == "edge_detect") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<EdgeDetectOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    return callOp.getResult();
+  } else if (name == "emboss") {
+    auto &inputImage = args[0];
+    auto callOp =
+        _builder.create<EmbossOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);

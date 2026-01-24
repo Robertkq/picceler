@@ -21,6 +21,21 @@ public:
 };
 
 /**
+ * @brief Pass that lowers named Picceler filters (gaussian_blur, sharpen, etc.) to explicit convolution operations.
+ */
+class LowerPiccelerFiltersToConvPass
+    : public mlir::PassWrapper<LowerPiccelerFiltersToConvPass, mlir::OperationPass<mlir::ModuleOp>> {
+public:
+  void runOnOperation() override;
+  mlir::StringRef getArgument() const override { return "lower-picceler-filters-to-conv"; }
+  mlir::StringRef getDescription() const override {
+      return "Lower named Picceler filters to explicit convolutions";
+  }
+  static void registerPass() { mlir::PassRegistration<LowerPiccelerFiltersToConvPass>(); }
+  static std::unique_ptr<mlir::Pass> create() { return std::make_unique<LowerPiccelerFiltersToConvPass>(); }
+};
+
+/**
  * @brief Pass that converts Picceler types to LLVM IR types.
  */
 /**

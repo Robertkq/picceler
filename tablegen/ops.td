@@ -60,5 +60,35 @@ def Picceler_BlurOp : Op<PiccelerDialect, "blur", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
+def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", []> {
+  let summary = "Adjust the sharpness of an image";
+  let arguments = (ins Picceler_ImageType:$input, I64:$value);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", []> {
+  let summary = "Apply a simple box blur";
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", []> {
+  let summary = "Apply a gaussian blur (smoother)";
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", []> {
+  let summary = "Detect edges in the image";
+  let arguments = (ins Picceler_ImageType:$input);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", []> {
+  let summary = "Apply a 3D emboss effect";
+  let arguments = (ins Picceler_ImageType:$input);
+  let results = (outs Picceler_ImageType:$result);
+}
+
 #endif
 
