@@ -177,8 +177,9 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "box_blur") {
     auto &inputImage = args[0];
+    auto &radiusValue = args[1];
     auto callOp =
-        _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+        _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
     return callOp.getResult();
   } else if (name == "gaussian_blur") {
     auto &inputImage = args[0];

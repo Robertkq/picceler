@@ -68,7 +68,7 @@ def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", []> {
 
 def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", []> {
   let summary = "Apply a simple box blur";
-  let arguments = (ins Picceler_ImageType:$input);
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
 }
 

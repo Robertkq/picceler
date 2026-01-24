@@ -42,15 +42,21 @@ mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdapto
 }
 
 mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
-    double v = 1.0 / 9.0;
-    return KernelData{
-        3, 3,
-        {
-        v, v, v,
-        v, v, v,
-        v, v, v
-        }
-    };
+    int radius = 1;
+
+    auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
+    if (constOp) {
+        radius = constOp.value();
+    }
+
+    if (radius < 1) radius = 1;
+
+    uint16_t size = 2 * radius + 1;
+    double val = 1.0 / static_cast<double>(size * size);
+
+    std::vector<double> values(size * size, val);
+
+    return KernelData{size, size, values};
 }
 
 mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
