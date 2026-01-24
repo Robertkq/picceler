@@ -74,7 +74,7 @@ def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", []> {
 
 def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", []> {
   let summary = "Apply a gaussian blur (smoother)";
-  let arguments = (ins Picceler_ImageType:$input);
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
 }
 

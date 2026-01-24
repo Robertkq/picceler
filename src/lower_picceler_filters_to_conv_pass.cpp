@@ -12,9 +12,13 @@
 
 namespace picceler {
 
-using Kernel3x3 = std::array<double, 9>;
+struct KernelData {
+    uint16_t rows;
+    uint16_t cols;
+    std::vector<double> values;
+};
 
-mlir::FailureOr<Kernel3x3> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor) {
+mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor) {
     mlir::Value strengthValue = adaptor.getValue();
 
     auto constOp = strengthValue.getDefiningOp<mlir::arith::ConstantIntOp>();
@@ -27,53 +31,86 @@ mlir::FailureOr<Kernel3x3> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor
     double center = 1.0 + 4.0 * strength;
     double neighbor = -strength;
 
-    return Kernel3x3{
+    return KernelData{
+        3, 3,
+        {
          0.0,    neighbor, 0.0,
         neighbor, center,  neighbor,
          0.0,    neighbor, 0.0
+        }
     };
 }
 
-mlir::FailureOr<Kernel3x3> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
+mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
     double v = 1.0 / 9.0;
-    return Kernel3x3{
+    return KernelData{
+        3, 3,
+        {
         v, v, v,
         v, v, v,
         v, v, v
+        }
     };
 }
 
-mlir::FailureOr<Kernel3x3> calculateGaussianBlurKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
-    double v1 = 1.0 / 16.0;
-    double v2 = 2.0 / 16.0;
-    double v4 = 4.0 / 16.0;
+mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
+    int radius = 2;
 
-    return Kernel3x3{
-        v1, v2, v1,
-        v2, v4, v2,
-        v1, v2, v1
-    };
+    auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
+    if (constOp) radius = constOp.value();
+
+    if (radius < 1) radius = 1;
+
+    uint16_t size = 2 * radius + 1;
+    double sigma = static_cast<double>(radius) / 2.0;
+    if (sigma < 0.5) sigma = 0.5;
+
+    std::vector<double> values;
+    values.reserve(size * size);
+
+    double sum = 0.0;
+
+    for (int y = -radius; y <= radius; ++y) {
+        for (int x = -radius; x <= radius; ++x) {
+            double exponent = -(x*x + y*y) / (2 * sigma * sigma);
+            double value = std::exp(exponent) / (2 * M_PI * sigma * sigma);
+            values.push_back(value);
+            sum += value;
+        }
+    }
+
+    for (double &v : values) {
+        v /= sum;
+    }
+
+    return KernelData{size, size, values};
 }
 
-mlir::FailureOr<Kernel3x3> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
-    return Kernel3x3{
+mlir::FailureOr<KernelData> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
+    return KernelData{
+        3, 3,
+        {
         -1.0, -1.0, -1.0,
         -1.0,  8.0, -1.0,
         -1.0, -1.0, -1.0
+        }
     };
 }
 
-mlir::FailureOr<Kernel3x3> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
-    return Kernel3x3{
+mlir::FailureOr<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
+    return KernelData{
+        3, 3,
+        {
         -2.0, -1.0,  0.0,
         -1.0,  1.0,  1.0,
          0.0,  1.0,  2.0
+        }
     };
 }
 
 template <typename OpTy>
 struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
-  using KernelCalculator = std::function<mlir::FailureOr<Kernel3x3>(OpTy, typename OpTy::Adaptor)>;
+  using KernelCalculator = std::function<mlir::FailureOr<KernelData>(OpTy, typename OpTy::Adaptor)>;
 
   KernelCalculator kernelCalc;
 
@@ -90,12 +127,16 @@ struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
     if (mlir::failed(kernelRes)) {
       return mlir::failure();
     }
-    Kernel3x3 kernelValues = *kernelRes;
 
-    auto tensorType = mlir::RankedTensorType::get({3, 3}, f64Type);
-    auto dataAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef(kernelValues));
+    KernelData kData = *kernelRes;
+    if (kData.values.size() != kData.rows * kData.cols) {
+        return op.emitError("Kernel dimensions do not match the number of elements.");
+    }
 
-    auto kernelType = picceler::KernelType::get(op.getContext(), 3, 3);
+    auto tensorType = mlir::RankedTensorType::get({kData.rows, kData.cols}, f64Type);
+    auto dataAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef(kData.values));
+
+    auto kernelType = picceler::KernelType::get(op.getContext(), kData.rows, kData.cols);
     auto kernelOp = rewriter.create<picceler::KernelConstOp>(loc, kernelType, dataAttr);
 
     rewriter.replaceOpWithNewOp<ConvolutionOp>(
@@ -117,7 +158,7 @@ void LowerPiccelerFiltersToConvPass::runOnOperation() {
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<FilterToConvolutionPattern<SharpenOp>>(ctx, calculateSharpenKernel);
   patterns.add<FilterToConvolutionPattern<BoxBlurOp>>(ctx, calculateBoxBlurKernel);
-  patterns.add<FilterToConvolutionPattern<GaussianBlurOp>>(ctx, calculateGaussianBlurKernel);
+  patterns.add<FilterToConvolutionPattern<GaussianBlurOp>>(ctx, calculateGaussianKernel);
   patterns.add<FilterToConvolutionPattern<EdgeDetectOp>>(ctx, calculateEdgeDetectKernel);
   patterns.add<FilterToConvolutionPattern<EmbossOp>>(ctx, calculateEmbossKernel);
 
