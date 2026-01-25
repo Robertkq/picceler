@@ -10,7 +10,7 @@ protected:
 };
 
 TEST_F(LexerTest, EmptyInput) {
-  auto res = lexer.setSource("tests/data/empty.pic");
+  auto res = lexer.setSource("data/empty.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -24,7 +24,7 @@ TEST_F(LexerTest, EmptyInput) {
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
-  auto res = lexer.setSource("tests/data/load_image.pic");
+  auto res = lexer.setSource("data/load_image.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -59,7 +59,7 @@ TEST_F(LexerTest, LoadImageStatement) {
 }
 
 TEST_F(LexerTest, NumbersParsing) {
-  auto res = lexer.setSource("tests/data/numbers.pic");
+  auto res = lexer.setSource("data/numbers.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -81,7 +81,7 @@ TEST_F(LexerTest, NumbersParsing) {
 }
 
 TEST_F(LexerTest, KernelTokenSequence) {
-  auto res = lexer.setSource("tests/data/kernel.pic");
+  auto res = lexer.setSource("data/kernel.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -111,7 +111,7 @@ TEST_F(LexerTest, KernelTokenSequence) {
 }
 
 TEST_F(LexerTest, IdentifiersAndUnderscores) {
-  auto res = lexer.setSource("tests/data/identifiers.pic");
+  auto res = lexer.setSource("data/identifiers.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -140,7 +140,7 @@ TEST_F(LexerTest, IdentifiersAndUnderscores) {
 }
 
 TEST_F(LexerTest, StringParsingAndPeek) {
-  auto res = lexer.setSource("tests/data/strings.pic");
+  auto res = lexer.setSource("data/strings.pic");
   if (!res)
     FAIL() << res.error().message();
 
@@ -168,7 +168,7 @@ TEST_F(LexerTest, StringParsingAndPeek) {
 }
 
 TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
-  auto res = lexer.setSource("tests/data/weird.pic");
+  auto res = lexer.setSource("data/weird.pic");
   if (!res)
     FAIL() << res.error().message();
 

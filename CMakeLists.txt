@@ -80,6 +80,8 @@ add_subdirectory(tablegen)
 
 add_subdirectory(src)
 
+add_subdirectory(tools)
+
 if (ENABLE_TESTS)
   add_subdirectory(tests)
 endif()

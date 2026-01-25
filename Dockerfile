@@ -47,6 +47,7 @@ RUN mkdir -p llvm-project/build && cd llvm-project/build && \
         -DLLVM_ENABLE_ASSERTIONS=ON \
         -DLLVM_USE_LINKER=lld \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DLLVM_INSTALL_UTILS=ON \
     && ninja -j$(nproc) \
     && ninja install
 

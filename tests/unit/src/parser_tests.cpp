@@ -10,26 +10,33 @@ protected:
 };
 
 TEST_F(ParserTest, BadKernelMissingCommaFails) {
-  parser.setSource("tests/data/bad_kernel_missing_comma.pic");
-  // setSource returns Result<void> but we don't assert here; parser.parse will fail
-  auto ast = parser.parse();
-  EXPECT_FALSE(ast.has_value());
+  parser.setSource("data/bad_kernel_missing_comma.pic");
+
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelMissingBracketFails) {
-  parser.setSource("tests/data/bad_kernel_missing_bracket.pic");
-  auto ast = parser.parse();
-  EXPECT_FALSE(ast.has_value());
+  parser.setSource("data/bad_kernel_missing_bracket.pic");
+
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelBadNumberFails) {
-  parser.setSource("tests/data/bad_kernel_bad_number.pic");
-  auto ast = parser.parse();
-  EXPECT_FALSE(ast.has_value());
+  parser.setSource("data/bad_kernel_bad_number.pic");
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, EmptyInput) {
-  parser.setSource("tests/data/empty.pic");
+  parser.setSource("data/empty.pic");
 
   auto astRes = parser.parse();
   if (!astRes)
