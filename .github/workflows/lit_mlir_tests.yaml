@@ -1,11 +1,11 @@
-name: Unit Tests
+name: LIT MLIR Tests
 
 on:
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-and-test-mlir:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/robertkq/picceler-ci:latest
@@ -18,9 +18,9 @@ jobs:
         run: cmake -S . -B build
 
       - name: Build project
-        run: cmake --build build --target tests --parallel
+        run: cmake --build build --parallel
 
-      - name: Run unit
+      - name: Run mlir
         run: |
           cd build
           lit -v ./mlir

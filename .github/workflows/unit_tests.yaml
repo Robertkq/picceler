@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
+  build-and-test-unit:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/robertkq/picceler-ci:latest
@@ -18,7 +18,7 @@ jobs:
         run: cmake -S . -B build
 
       - name: Build project
-        run: cmake --build build --target tests --parallel
+        run: cmake --build build --parallel
 
       - name: Run unit
         run: |
