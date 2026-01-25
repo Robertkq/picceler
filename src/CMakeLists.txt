@@ -43,10 +43,11 @@ add_dependencies(PiccelerIR
 )
 
 add_library(PiccelerTransforms STATIC
-    picceler_kernel_to_memref.cpp
+    picceler_kernel_to_memref_pass.cpp
     picceler_ops_to_func_calls_pass.cpp
     picceler_to_affine_pass.cpp
     picceler_to_llvm_ir_pass.cpp
+    picceler_filters_to_conv_pass.cpp
 )
 
 target_link_libraries(PiccelerTransforms PUBLIC 

@@ -1,6 +1,6 @@
 include "mlir/Pass/PassBase.td"
 
-def PiccelerFiltersToConvPass : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
+def PiccelerFiltersToConv : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Filter Ops to Convolution Ops";
   let constructor = "picceler::createPiccelerFiltersToConvPass()";
 }
