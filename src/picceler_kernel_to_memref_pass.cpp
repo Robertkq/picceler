@@ -52,12 +52,22 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
   }
 };
 
-void PiccelerKernelToMemrefPass::runOnOperation() {
-  mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<KernelToMemref>(&getContext());
+#define GEN_PASS_DEF_PICCELERKERNELTOMEMREF
+#include "piccelerPasses.h.inc"
 
-  if (mlir::failed(mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
-    signalPassFailure();
+struct PiccelerKernelToMemrefPass : public impl::PiccelerKernelToMemrefBase<PiccelerKernelToMemrefPass> {
+  void runOnOperation() override {
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<KernelToMemref>(&getContext());
+
+    if (mlir::failed(mlir::applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      signalPassFailure();
+    }
   }
+};
+
+std::unique_ptr<mlir::Pass> createPiccelerKernelToMemrefPass() {
+  return std::make_unique<PiccelerKernelToMemrefPass>();
 }
+
 } // namespace picceler

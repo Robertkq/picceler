@@ -142,20 +142,26 @@ struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
   }
 };
 
-void LowerPiccelerOpsToFuncCallsPass::runOnOperation() {
-  spdlog::trace("Running LowerPiccelerOpsToFuncCallsPass");
-  mlir::ModuleOp module = getOperation();
+#define GEN_PASS_DEF_PICCELEROPSTOFUNCCALLS
+#include "piccelerPasses.h.inc"
 
-  mlir::RewritePatternSet patterns(&getContext());
+struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<PiccelerOpsToFuncCallsPass> {
+  using PiccelerOpsToFuncCallsBase::PiccelerOpsToFuncCallsBase;
 
-  patterns.add<LoadImageToCall>(&getContext());
-  patterns.add<BlurImageToCall>(&getContext());
-  patterns.add<ShowImageToCall>(&getContext());
-  patterns.add<SaveImageToCall>(&getContext());
+  void runOnOperation() override {
+    mlir::ModuleOp module = getOperation();
 
-  if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
-    signalPassFailure();
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, BlurImageToCall>(&getContext());
+
+    if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
+      signalPassFailure();
+    }
   }
+};
+
+std::unique_ptr<mlir::Pass> createPiccelerOpsToFuncCallsPass() {
+  return std::make_unique<PiccelerOpsToFuncCallsPass>();
 }
 
 } // namespace picceler

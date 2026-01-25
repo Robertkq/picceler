@@ -44,13 +44,6 @@ if (ENABLE_DOCS)
     endif()
 endif()
 
-file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-
-set(COMPILER_NAME "picceler")
-
-# Add the runtime library subdirectory
-add_subdirectory(lib)
-
 find_package(LLVM REQUIRED CONFIG)
 find_package(MLIR REQUIRED CONFIG)
 message(STATUS "LLVM includes: ${LLVM_INCLUDE_DIRS}")
@@ -71,92 +64,28 @@ include(AddLLVM)
 include(TableGen)
 include(AddMLIR)
 
-set(PICCELER_TD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tablegen)
-
-# Dialect
-set(LLVM_TARGET_DEFINITIONS ${PICCELER_TD_DIR}/dialect.td)
-mlir_tablegen(piccelerDialect.h.inc -gen-dialect-decls -dialect=picceler -I${PICCELER_TD_DIR})
-mlir_tablegen(piccelerDialect.cpp.inc -gen-dialect-defs -dialect=picceler -I${PICCELER_TD_DIR})
-add_public_tablegen_target(PiccelerDialectIncGen)
-
-# Types
-set(LLVM_TARGET_DEFINITIONS ${PICCELER_TD_DIR}/types.td)
-mlir_tablegen(piccelerTypes.h.inc -gen-typedef-decls -dialect=picceler -I${PICCELER_TD_DIR})
-mlir_tablegen(piccelerTypes.cpp.inc -gen-typedef-defs -dialect=picceler -I${PICCELER_TD_DIR})
-add_public_tablegen_target(PiccelerTypesIncGen)
-
-# Ops
-set(LLVM_TARGET_DEFINITIONS ${PICCELER_TD_DIR}/ops.td)
-mlir_tablegen(piccelerOps.h.inc -gen-op-decls -dialect=picceler -I${PICCELER_TD_DIR})
-mlir_tablegen(piccelerOps.cpp.inc -gen-op-defs -dialect=picceler -I${PICCELER_TD_DIR})
-add_public_tablegen_target(PiccelerOpsIncGen)
-
-# Define common libraries to link against
-set(PICCELER_LINK_LIBS
-    CLI11::CLI11
-    spdlog::spdlog
-    MLIRIR
-    MLIRFuncDialect
-    MLIRArithDialect
-    MLIRAffineDialect
-    MLIRSCFDialect
-    MLIRReconcileUnrealizedCasts
-    MLIRSCFToControlFlow
-    MLIRAffineToStandard
-    MLIRParser
-    MLIRSupport
-    MLIRTransforms
-    MLIRPass
-    MLIRDialect
-    MLIROptLib
-    MLIRAnalysis
-    MLIRLLVMCommonConversion
-    MLIRConvertToLLVMPass
-    MLIRMemRefToLLVM
-    MLIRFuncToLLVM
-    MLIRTargetLLVMIRExport
-    MLIRLLVMToLLVMIRTranslation
-    MLIRBuiltinToLLVMIRTranslation
-    LLVMSelectionDAG
-    LLVMX86CodeGen
-    LLVMX86Desc
-    LLVMX86Info
-    LLVMX86TargetMCA
-    LLVMX86AsmParser
-    LLVMX86Disassembler
-    LLVMTarget
-    LLVMTargetParser
-    LLVMMC
-    LLVMCore
-    LLVMSupport
+llvm_map_components_to_libnames(NATIVE_HW_LLVM_LIBS 
+    X86 
+    Target 
+    Core 
+    Support 
+    AsmPrinter
 )
+
+message(STATUS "Native hardware LLVM libs: ${NATIVE_HW_LLVM_LIBS}")
+
+add_subdirectory(lib)
+
+add_subdirectory(tablegen)
+
+add_subdirectory(src)
+
+add_subdirectory(tools)
 
 if (ENABLE_TESTS)
   add_subdirectory(tests)
 endif()
 
-add_executable(${COMPILER_NAME} 
-    ${SOURCES}
-)
 
-add_dependencies(${COMPILER_NAME}
-  PiccelerDialectIncGen
-  PiccelerTypesIncGen
-  PiccelerOpsIncGen
-)
-add_dependencies(tests
-  PiccelerDialectIncGen
-  PiccelerTypesIncGen
-  PiccelerOpsIncGen
-)
 
-target_include_directories(${COMPILER_NAME} PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${LLVM_INCLUDE_DIRS}
-    ${MLIR_INCLUDE_DIRS}
-)
-target_link_libraries(${COMPILER_NAME} PRIVATE
-    picceler_runtime
-    ${PICCELER_LINK_LIBS}
-)
+

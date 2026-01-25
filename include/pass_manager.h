@@ -45,12 +45,6 @@ public:
 
 private:
   /**
-   * @brief Registers all necessary passes.
-   * To be used for mlir-opt compatibility.
-   */
-  void registerPasses();
-
-  /**
    * @brief This function adds the passes to the pass manager.
    */
   void addPasses();

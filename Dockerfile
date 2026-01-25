@@ -26,6 +26,8 @@ RUN dnf -y update && dnf -y install \
     opencv-devel \
     && dnf clean all -y
 
+RUN python3 -m pip install --upgrade pip setuptools wheel && python3 -m pip install lit
+
 ENV CC=clang
 ENV CXX=clang++
 
@@ -47,6 +49,7 @@ RUN mkdir -p llvm-project/build && cd llvm-project/build && \
         -DLLVM_ENABLE_ASSERTIONS=ON \
         -DLLVM_USE_LINKER=lld \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DLLVM_INSTALL_UTILS=ON \
     && ninja -j$(nproc) \
     && ninja install
 

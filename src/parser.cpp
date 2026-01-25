@@ -10,7 +10,7 @@ using namespace picceler;
 
 Parser::Parser() : _lexer() {}
 
-void Parser::setSource(const std::string &source) { _lexer.setSource(source); }
+Result<void> Parser::setSource(const std::string &source) { return _lexer.setSource(source); }
 
 Result<std::vector<Token>> Parser::getTokens() {
   auto tokens = _lexer.tokenizeAll();

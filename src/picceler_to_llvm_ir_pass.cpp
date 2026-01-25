@@ -80,40 +80,49 @@ struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
   }
 };
 
-void PiccelerToLLVMConversionPass::runOnOperation() {
-  mlir::ModuleOp module = getOperation();
-  mlir::MLIRContext *ctx = &getContext();
+#define GEN_PASS_DEF_PICCELERTOLLVMIR
+#include "piccelerPasses.h.inc"
 
-  mlir::LLVMTypeConverter converter(ctx);
+struct PiccelerToLLVMIRPass : public impl::PiccelerToLLVMIRBase<PiccelerToLLVMIRPass> {
+  void runOnOperation() override {
+    mlir::ModuleOp module = getOperation();
+    mlir::MLIRContext *ctx = &getContext();
 
-  converter.addConversion([ctx](picceler::StringType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
+    mlir::LLVMTypeConverter converter(ctx);
 
-  converter.addConversion([&](picceler::ImageType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
+    converter.addConversion(
+        [ctx](picceler::StringType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
 
-  mlir::RewritePatternSet patterns(ctx);
+    converter.addConversion([&](picceler::ImageType) -> mlir::Type { return mlir::LLVM::LLVMPointerType::get(ctx); });
 
-  mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
+    mlir::RewritePatternSet patterns(ctx);
 
-  patterns.add<StringConstConverter>(converter, ctx);
+    mlir::populateFuncToLLVMConversionPatterns(converter, patterns);
 
-  mlir::ConversionTarget target(*ctx);
-  target.addLegalDialect<mlir::LLVM::LLVMDialect>();
-  target.addLegalDialect<mlir::arith::ArithDialect>();
-  target.addLegalDialect<mlir::affine::AffineDialect>();
+    patterns.add<StringConstConverter>(converter, ctx);
 
-  target.addLegalOp<mlir::ModuleOp>();
-  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+    mlir::ConversionTarget target(*ctx);
+    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    target.addLegalDialect<mlir::arith::ArithDialect>();
+    target.addLegalDialect<mlir::affine::AffineDialect>();
 
-  target.addIllegalDialect<picceler::PiccelerDialect>();
-  target.addIllegalOp<picceler::StringConstOp>();
+    target.addLegalOp<mlir::ModuleOp>();
+    target.addLegalOp<mlir::UnrealizedConversionCastOp>();
 
-  target.addDynamicallyLegalOp<mlir::func::FuncOp>(
-      [&](mlir::func::FuncOp op) { return converter.isSignatureLegal(op.getFunctionType()); });
-  target.addDynamicallyLegalOp<mlir::func::CallOp>([&](mlir::func::CallOp op) { return converter.isLegal(op); });
-  target.addDynamicallyLegalOp<mlir::func::ReturnOp>([&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
+    target.addIllegalDialect<picceler::PiccelerDialect>();
+    target.addIllegalOp<picceler::StringConstOp>();
 
-  if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
-    signalPassFailure();
+    target.addDynamicallyLegalOp<mlir::func::FuncOp>(
+        [&](mlir::func::FuncOp op) { return converter.isSignatureLegal(op.getFunctionType()); });
+    target.addDynamicallyLegalOp<mlir::func::CallOp>([&](mlir::func::CallOp op) { return converter.isLegal(op); });
+    target.addDynamicallyLegalOp<mlir::func::ReturnOp>([&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
+
+    if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
+      signalPassFailure();
+    }
   }
-}
+};
+
+std::unique_ptr<mlir::Pass> createPiccelerToLLVMIRPass() { return std::make_unique<PiccelerToLLVMIRPass>(); }
+
 } // namespace picceler

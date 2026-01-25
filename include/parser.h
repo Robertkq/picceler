@@ -23,7 +23,7 @@ public:
    * @brief Sets the source file for the parser.
    * @param source The source file to read from.
    */
-  void setSource(const std::string &source);
+  Result<void> setSource(const std::string &source);
 
   /**
    * @brief Retrieves all tokens from the lexer.

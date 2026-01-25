@@ -373,51 +373,58 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
   }
 };
 
-void PiccelerToAffinePass::runOnOperation() {
-  mlir::ModuleOp module = getOperation();
-  mlir::MLIRContext *ctx = &getContext();
-  mlir::Location loc = module.getLoc();
+#define GEN_PASS_DEF_PICCELERTOAFFINE
+#include "piccelerPasses.h.inc"
 
-  mlir::OpBuilder builder(&module.getBodyRegion());
+struct PiccelerToAffinePass : public impl::PiccelerToAffineBase<PiccelerToAffinePass> {
+  void runOnOperation() override {
+    mlir::ModuleOp module = getOperation();
+    mlir::MLIRContext *ctx = &getContext();
+    mlir::Location loc = module.getLoc();
 
-  auto ptrType = mlir::LLVM::LLVMPointerType::get(ctx);
-  auto i32Type = mlir::IntegerType::get(ctx, 32);
+    mlir::OpBuilder builder(&module.getBodyRegion());
 
-  if (!module.lookupSymbol<mlir::func::FuncOp>("piccelerCreateImage")) {
-    auto funcType = builder.getFunctionType({i32Type, i32Type}, ptrType);
-    auto func = builder.create<mlir::func::FuncOp>(loc, "piccelerCreateImage", funcType);
-    func.setPrivate();
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(ctx);
+    auto i32Type = mlir::IntegerType::get(ctx, 32);
+
+    if (!module.lookupSymbol<mlir::func::FuncOp>("piccelerCreateImage")) {
+      auto funcType = builder.getFunctionType({i32Type, i32Type}, ptrType);
+      auto func = builder.create<mlir::func::FuncOp>(loc, "piccelerCreateImage", funcType);
+      func.setPrivate();
+    }
+
+    mlir::TypeConverter typeConverter;
+
+    typeConverter.addConversion(
+        [&](picceler::ImageType type) { return mlir::LLVM::LLVMPointerType::get(type.getContext()); });
+    typeConverter.addConversion([](mlir::Type type) { return type; });
+
+    typeConverter.addSourceMaterialization([&](mlir::OpBuilder &builder, mlir::Type resultType, mlir::ValueRange inputs,
+                                               mlir::Location loc) -> mlir::Value {
+      return builder.create<mlir::UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
+    });
+
+    mlir::ConversionTarget target(*ctx);
+    target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
+                           mlir::func::FuncDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect>();
+
+    target.addLegalOp<mlir::UnrealizedConversionCastOp>();
+    target.addLegalOp<LoadImageOp, SaveImageOp, ShowImageOp, StringConstOp, KernelConstOp>();
+    /*ConvolutionOp*/
+    target.addIllegalOp<BrightnessOp, InvertOp>();
+
+    mlir::RewritePatternSet patterns(ctx);
+    patterns.add<BrightnessToAffine>(typeConverter, ctx);
+    patterns.add<InvertToAffine>(typeConverter, ctx);
+    patterns.add<ConvolutionToAffine>(typeConverter, ctx);
+
+    if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
+      spdlog::error("Failed to convert Picceler operations to Affine dialect");
+      signalPassFailure();
+    }
   }
+};
 
-  mlir::TypeConverter typeConverter;
-
-  typeConverter.addConversion(
-      [&](picceler::ImageType type) { return mlir::LLVM::LLVMPointerType::get(type.getContext()); });
-  typeConverter.addConversion([](mlir::Type type) { return type; });
-
-  typeConverter.addSourceMaterialization(
-      [&](mlir::OpBuilder &builder, mlir::Type resultType, mlir::ValueRange inputs, mlir::Location loc) -> mlir::Value {
-        return builder.create<mlir::UnrealizedConversionCastOp>(loc, resultType, inputs).getResult(0);
-      });
-
-  mlir::ConversionTarget target(*ctx);
-  target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
-                         mlir::func::FuncDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect>();
-
-  target.addLegalOp<mlir::UnrealizedConversionCastOp>();
-  target.addLegalOp<LoadImageOp, SaveImageOp, ShowImageOp, StringConstOp, KernelConstOp>();
-  /*ConvolutionOp*/
-  target.addIllegalOp<BrightnessOp, InvertOp>();
-
-  mlir::RewritePatternSet patterns(ctx);
-  patterns.add<BrightnessToAffine>(typeConverter, ctx);
-  patterns.add<InvertToAffine>(typeConverter, ctx);
-  patterns.add<ConvolutionToAffine>(typeConverter, ctx);
-
-  if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
-    spdlog::error("Failed to convert Picceler operations to Affine dialect");
-    signalPassFailure();
-  }
-}
+std::unique_ptr<mlir::Pass> createPiccelerToAffinePass() { return std::make_unique<PiccelerToAffinePass>(); }
 
 } // namespace picceler

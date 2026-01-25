@@ -23,7 +23,6 @@ IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context)
                                 [](mlir::Pass *, mlir::Operation *) { return true; }, false, false, false, *_outStream);
   _passManager.enableIRPrintingToFileTree(nullptr, [](mlir::Pass *, mlir::Operation *) { return true; }, false, false);
   _passManager.addInstrumentation(std::make_unique<PassLogger>());
-  registerPasses();
   addPasses();
 };
 
@@ -33,14 +32,6 @@ void IRPassManager::run(mlir::ModuleOp module) {
   }
 }
 
-void IRPassManager::registerPasses() {
-  LowerPiccelerFiltersToConvPass::registerPass();
-  LowerPiccelerOpsToFuncCallsPass::registerPass();
-  PiccelerKernelToMemrefPass::registerPass();
-  PiccelerToAffinePass::registerPass();
-  PiccelerToLLVMConversionPass::registerPass();
-}
-
 void IRPassManager::addPasses() {
   addHighLevelOptimizationPasses();
   addAffineLoweringPasses();
@@ -48,17 +39,19 @@ void IRPassManager::addPasses() {
   addBackendLoweringPasses();
 }
 
-void IRPassManager::addHighLevelOptimizationPasses() {}
+void IRPassManager::addHighLevelOptimizationPasses() {
+  _passManager.addPass(mlir::createCanonicalizerPass());
+  _passManager.addPass(createPiccelerFiltersToConvPass());
+}
 
 void IRPassManager::addAffineLoweringPasses() {
-  _passManager.addPass(mlir::createCanonicalizerPass());
-  _passManager.addPass(LowerPiccelerFiltersToConvPass::create());
-  _passManager.addPass(PiccelerKernelToMemrefPass::create());
-  _passManager.addPass(PiccelerToAffinePass::create());
+  _passManager.addPass(createPiccelerKernelToMemrefPass());
+  _passManager.addPass(createPiccelerToAffinePass());
 }
-void IRPassManager::addRuntimeLoweringPasses() { _passManager.addPass(LowerPiccelerOpsToFuncCallsPass::create()); }
+void IRPassManager::addRuntimeLoweringPasses() { _passManager.addPass(createPiccelerOpsToFuncCallsPass()); }
 void IRPassManager::addBackendLoweringPasses() {
-  _passManager.addPass(PiccelerToLLVMConversionPass::create());
+
+  _passManager.addPass(createPiccelerToLLVMIRPass());
   _passManager.addPass(mlir::createReconcileUnrealizedCastsPass());
   _passManager.addPass(mlir::createCanonicalizerPass());
   _passManager.addPass(mlir::createLowerAffinePass());
