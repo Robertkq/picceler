@@ -33,13 +33,6 @@ Compiler::Compiler()
   _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")->required()->check(CLI::ExistingFile);
   _cliApp.add_option("-o,--output", _cliOptions.outputFile, "Output executable file")->default_val("a.out");
 
-  // _context.loadDialect<PiccelerDialect>();
-  // _context.loadDialect<mlir::func::FuncDialect>();
-  // _context.loadDialect<mlir::arith::ArithDialect>();
-  // _context.loadDialect<mlir::affine::AffineDialect>();
-  // _context.loadDialect<mlir::memref::MemRefDialect>();
-  // _context.loadDialect<mlir::scf::SCFDialect>();
-  // _context.loadDialect<mlir::LLVM::LLVMDialect>();
   _context.loadAllAvailableDialects();
   spdlog::debug("Initialized MLIR Dialects:");
   for (auto *dialect : _context.getLoadedDialects()) {
