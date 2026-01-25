@@ -6,7 +6,6 @@
 
 #include "dialect.h"
 #include "passes.h"
-#include "pass_manager.h"
 
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
@@ -17,7 +16,7 @@ int main(int argc, char **argv) {
 
   // Register YOUR Picceler dialect and passes
   registry.insert<picceler::PiccelerDialect>();
-  picceler::IRPassManager::registerPasses();
+  picceler::registerPasses();
 
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Picceler optimizer driver\n", registry));
 }

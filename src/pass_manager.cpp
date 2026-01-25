@@ -23,7 +23,6 @@ IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context)
                                 [](mlir::Pass *, mlir::Operation *) { return true; }, false, false, false, *_outStream);
   _passManager.enableIRPrintingToFileTree(nullptr, [](mlir::Pass *, mlir::Operation *) { return true; }, false, false);
   _passManager.addInstrumentation(std::make_unique<PassLogger>());
-  piccelerRegisterPasses();
   addPasses();
 };
 
@@ -32,8 +31,6 @@ void IRPassManager::run(mlir::ModuleOp module) {
     throw std::runtime_error("Failed to run pass manager");
   }
 }
-
-void IRPassManager::piccelerRegisterPasses() { registerPasses(); }
 
 void IRPassManager::addPasses() {
   addHighLevelOptimizationPasses();

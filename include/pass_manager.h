@@ -43,12 +43,6 @@ public:
    */
   void run(mlir::ModuleOp module);
 
-  /**
-   * @brief Registers all necessary passes.
-   * To be used for mlir-opt compatibility.
-   */
-  static void piccelerRegisterPasses();
-
 private:
   /**
    * @brief This function adds the passes to the pass manager.

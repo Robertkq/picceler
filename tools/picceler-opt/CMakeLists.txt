@@ -1,15 +1,13 @@
 
-add_executable(picceler-opt ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-
-target_include_directories(picceler-opt PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_BINARY_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${LLVM_INCLUDE_DIRS}
-    ${MLIR_INCLUDE_DIRS}
+add_executable(picceler-opt 
+    main.cpp
 )
 
 target_link_libraries(picceler-opt PRIVATE
+    PiccelerIR
+    PiccelerTransforms
+    PiccelerGlobalDeps
+    MLIRMlirOptMain
     MLIROptLib
     MLIRArithDialect
     MLIRAffineDialect
@@ -17,4 +15,8 @@ target_link_libraries(picceler-opt PRIVATE
     MLIRFuncDialect
     MLIRControlFlowDialect
     MLIRSCFDialect
+)
+
+set_target_properties(picceler-opt PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )

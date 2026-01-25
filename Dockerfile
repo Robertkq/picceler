@@ -26,6 +26,8 @@ RUN dnf -y update && dnf -y install \
     opencv-devel \
     && dnf clean all -y
 
+RUN python3 -m pip install --upgrade pip setuptools wheel && python3 -m pip install lit
+
 ENV CC=clang
 ENV CXX=clang++
 
