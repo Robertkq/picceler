@@ -146,8 +146,8 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
 
 struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<PiccelerFiltersToConvPass> {
 
-  void runOnOperation() {
-    spdlog::trace("Running LowerPiccelerFiltersToConvPass");
+  void runOnOperation() override {
+    spdlog::trace("Running PiccelerFiltersToConvPass");
     mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *ctx = &getContext();
 
