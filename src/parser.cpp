@@ -5,6 +5,7 @@
 
 #include "spdlog/spdlog.h"
 #include "error.h"
+#include "utils.h"
 
 using namespace picceler;
 
@@ -389,7 +390,11 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
     return std::unexpected(CompileError{std::format("Expected string at {}:{}", token._line, token._column)});
   }
   auto strNode = std::make_unique<StringNode>();
-  strNode->value = token._value;
+  if (!token._value.empty() && token._value[0] == '~') {
+    strNode->value = utils::expandTilde(token._value);
+  } else {
+    strNode->value = token._value;
+  }
   return strNode;
 }
 
