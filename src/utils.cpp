@@ -43,7 +43,7 @@ std::string expandTilde(const std::string& inputPath) {
 
     homePath /= remainder;
 
-    return homePath.string(); 
+    return homePath.string();
 }
 
 } // namespace picceler::utils

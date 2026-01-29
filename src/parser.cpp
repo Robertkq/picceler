@@ -390,7 +390,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
     return std::unexpected(CompileError{std::format("Expected string at {}:{}", token._line, token._column)});
   }
   auto strNode = std::make_unique<StringNode>();
-  // TODO: Implement a compiler flag to let the user not expand tilde if it's not needed
+  // TODO: Implement a compiler flag to let the user not expand tilde if it is not needed
   strNode->value = utils::expandTilde(token._value);
   return strNode;
 }
