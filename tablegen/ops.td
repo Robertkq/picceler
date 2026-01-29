@@ -1,3 +1,10 @@
+// ===- ops.td - Picceler ops ------------------------------*- tablegen -*-===//
+//
+// This file defines the Picceler dialect ops.
+//
+// ===----------------------------------------------------------------------===//
+
+
 #ifndef PICCELER_OPS_TD
 #define PICCELER_OPS_TD
 
@@ -8,7 +15,6 @@ def Picceler_StringConstOp : Op<PiccelerDialect, "string.const"> {
   let summary = "String constant producing a picceler.string";
   let arguments = (ins StrAttr:$value);
   let results = (outs Picceler_StringType:$result);
-  let assemblyFormat = "$value attr-dict `:` type($result)";
 }
 
 def Picceler_KernelConstOp : Op<PiccelerDialect, "kernel.const"> {

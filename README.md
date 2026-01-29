@@ -22,27 +22,3 @@ This section will provide details about how, using MLIR, we can get from high le
 WIP -- md document or latex would be cool
 
 
-# Compiler
-## Frontend
-* Should parse the DSL and generate a Abstract syntax tree
-## Middleend
-* MLIR Dialect
-## Backend
-* Lowering to LLVM IR & using SYCL to generate the kernel
-* might not be able to use SYCL here due to complex procedure
-
-# Language
-## Syntax
-* python-like
-* immutable variables
-
-## Builtin
-* load_image
-* save_image
-* show_image
-* blur()
-
-## Functions (later)
-* parameters
-* return
-
