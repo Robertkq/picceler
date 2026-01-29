@@ -13,6 +13,14 @@ target_link_libraries(PiccelerGlobalDeps INTERFACE
     spdlog::spdlog
 )
 
+add_library(PiccelerUtils STATIC
+    utils.cpp
+)
+
+target_link_libraries(PiccelerUtils PUBLIC
+    PiccelerGlobalDeps
+)
+
 add_library(PiccelerFrontend STATIC
     lexer.cpp
     ast.cpp
@@ -21,6 +29,7 @@ add_library(PiccelerFrontend STATIC
 
 target_link_libraries(PiccelerFrontend PUBLIC 
     PiccelerGlobalDeps
+    PiccelerUtils
 )
 
 add_library(PiccelerIR STATIC
