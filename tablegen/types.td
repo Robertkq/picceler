@@ -42,6 +42,9 @@ def Picceler_StringType : TypeDef<PiccelerDialect, "String"> {
 def Picceler_KernelType : TypeDef<PiccelerDialect, "Kernel"> {
   let mnemonic = "kernel";
   let summary = "A 2D matrix kernel for convolution";
+  let description = [{
+    Represents a 2D convolution kernel used in image processing.
+  }];
   let parameters = (ins "int":$rows, "int":$cols);
   let assemblyFormat = "`<` $rows `x` $cols `>`";
 }

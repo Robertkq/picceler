@@ -1,4 +1,14 @@
+// ===- passes.td - Picceler passes ------------------------------*- tablegen -*-===//
+//
+// This file defines the Picceler dialect passes.
+//
+// ===----------------------------------------------------------------------===//
+
 include "mlir/Pass/PassBase.td"
+
+//===----------------------------------------------------------------------===//
+// Picceler Passes
+//===----------------------------------------------------------------------===//
 
 def PiccelerFiltersToConv : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Filter Ops to Convolution Ops";

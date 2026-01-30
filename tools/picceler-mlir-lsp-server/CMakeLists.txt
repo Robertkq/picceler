@@ -1,12 +1,18 @@
 
-add_executable(picceler-opt 
+add_executable(picceler-mlir-lsp-server 
     main.cpp
 )
 
-target_link_libraries(picceler-opt PRIVATE
+target_link_libraries(picceler-mlir-lsp-server PRIVATE
     PiccelerIR
     PiccelerTransforms
     PiccelerGlobalDeps
+    MLIRLspServerLib
+    MLIRFuncToLLVM
+    MLIRLLVMCommonConversion
+    MLIRIR
+    MLIRSupport
+    LLVMSupport
     MLIRMlirOptMain
     MLIROptLib
     MLIRArithDialect
@@ -15,9 +21,8 @@ target_link_libraries(picceler-opt PRIVATE
     MLIRFuncDialect
     MLIRControlFlowDialect
     MLIRSCFDialect
-    MLIRLLVMDialect
 )
 
-set_target_properties(picceler-opt PROPERTIES
+set_target_properties(picceler-mlir-lsp-server PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
