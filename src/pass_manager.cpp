@@ -13,9 +13,10 @@ namespace picceler {
 
 IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context) {
   std::error_code ec;
-  _outStream = std::make_unique<llvm::raw_fd_ostream>("output.mlir", ec, llvm::sys::fs::OF_Text);
+  std::string outputFilename = "dump.mlir";
+  _outStream = std::make_unique<llvm::raw_fd_ostream>(outputFilename, ec, llvm::sys::fs::OF_Text);
   if (ec) {
-    throw std::runtime_error("Could not open output.mlir: " + ec.message());
+    throw std::runtime_error("Could not open " + outputFilename + ": " + ec.message());
   }
   _outStream->SetUnbuffered();
   _passManager.enableVerifier();
