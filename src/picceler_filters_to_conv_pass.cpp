@@ -10,6 +10,8 @@
 #include "ops.h"
 #include "types.h"
 
+#include <numbers>
+
 namespace picceler {
 
 struct KernelData {
@@ -35,18 +37,22 @@ mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdapto
 }
 
 mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
-  int radius = 1;
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
-  if (constOp) {
-    radius = constOp.value();
+  if (!constOp) {
+    op.emitError("Box blur supports only constant integer radius values.");
+    return mlir::failure();
+  }
+  int radius = constOp.value();
+
+  if (radius < 1) {
+    op.emitError("Box blur radius must be at least 1. Given: " + std::to_string(radius));
+    return mlir::failure();
   }
 
-  if (radius < 1)
-    radius = 1;
-
   if (radius > 500) {
-    return op.emitError("Box blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
+    op.emitError("Box blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
+    return mlir::failure();
   }
 
   int64_t size = 2 * radius + 1;
@@ -54,21 +60,26 @@ mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdapto
 
   std::vector<double> values(size * size, val);
 
-  return KernelData{size, size, values};
+  return KernelData{size, size, std::move(values)};
 }
 
 mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
-  int radius = 2;
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
-  if (constOp)
-    radius = constOp.value();
+  if (!constOp) {
+    op.emitError("Gaussian blur supports only constant integer radius values.");
+    return mlir::failure();
+  }
+  int radius = constOp.value();
 
-  if (radius < 1)
-    radius = 1;
+  if (radius < 1) {
+    op.emitError("Gaussian blur radius must be at least 1. Given: " + std::to_string(radius));
+    return mlir::failure();
+  }
 
   if (radius > 500) {
-    return op.emitError("Gaussian blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
+    op.emitError("Gaussian blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
+    return mlir::failure();
   }
 
   int64_t size = 2 * radius + 1;
@@ -84,7 +95,7 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
   for (int y = -radius; y <= radius; ++y) {
     for (int x = -radius; x <= radius; ++x) {
       double exponent = -(x * x + y * y) / (2 * sigma * sigma);
-      double value = std::exp(exponent) / (2 * M_PI * sigma * sigma);
+      double value = std::exp(exponent) / (2 * std::numbers::pi * sigma * sigma);
       values.push_back(value);
       sum += value;
     }
@@ -94,7 +105,7 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
     v /= sum;
   }
 
-  return KernelData{size, size, values};
+  return KernelData{size, size, std::move(values)};
 }
 
 mlir::FailureOr<KernelData> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
@@ -126,7 +137,8 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
 
     KernelData kData = *kernelRes;
     if (kData.values.size() != kData.rows * kData.cols) {
-      return op.emitError("Kernel dimensions do not match the number of elements.");
+      op.emitError("Kernel dimensions do not match the number of elements.");
+      return mlir::failure();
     }
 
     auto tensorType = mlir::RankedTensorType::get({kData.rows, kData.cols}, f64Type);
@@ -147,7 +159,6 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
 struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<PiccelerFiltersToConvPass> {
 
   void runOnOperation() override {
-    spdlog::trace("Running PiccelerFiltersToConvPass");
     mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *ctx = &getContext();
 
