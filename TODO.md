@@ -4,18 +4,35 @@
 
 - [x] Expand `~` to the home directory.
 - [x] Create the `picceler-opt` tool.
+- [x] Add MLIR LIT coverage for the current pass-level lowering flow.
 
-## In progress
+## Current focus
 
-- [~] Add MLIR LIT coverage for each pass using `picceler-opt`.
-	- [x] Basic `picceler-opt` test setup exists.
-	- [ ] Add one focused test file per pass.
-	- [ ] Cover success cases for every lowering path.
-	- [ ] Add failure/diagnostic cases for invalid input where useful.
+The compiler currently has a small set of lowering passes that are worth keeping stable.
+Prefer tests that prove the rewrite happened without overfitting to details that are likely to change.
+
+### 1. Keep the working pass surface healthy
+
+- [ ] Keep one focused lit file per maintained pass.
+- [ ] Prefer structural checks over exact full-IR snapshots for unstable lowerings.
+- [ ] Add diagnostics only where the pass is expected to reject invalid input.
+
+#### Currently maintained
+
+- [x] `picceler-filters-to-conv`
+- [x] `picceler-kernel-to-memref`
+- [ ] `picceler-to-affine`
+- [ ] `picceler-to-llvmir`
+
+#### Low-maintenance / best-effort
+
+- [ ] Keep affine lowering working, but avoid making the test suite depend on fragile IR details.
+- [ ] Keep LLVM IR lowering working, but keep expectations broad and update them only when the backend contract changes.
+- [ ] Do not add broad feature support to backend passes until the lowering pipeline is more stable.
 
 ## Next
 
-### 1. Operations
+### 2. Operations
 
 Break each operation into the same implementation slices:
 
@@ -40,7 +57,7 @@ Break each operation into the same implementation slices:
 - [ ] `blend()` - combine two images into one using an alpha or mix factor.
 - [ ] `diff()` - compare two images pixel-by-pixel and produce a difference image or mask.
 
-### 2. Custom for-loops
+### 3. Custom for-loops
 
 - [ ] Decide whether this is syntax sugar or a standard-library style feature.
 - [ ] Add `get_pixel(img, x, y)` support.
@@ -48,14 +65,14 @@ Break each operation into the same implementation slices:
 - [ ] Add matching `set_pixel(...)` or other image access helpers if needed.
 - [ ] Decide whether this should enable a small standard library.
 
-### 3. Custom functions for users
+### 4. Custom functions for users
 
 - [ ] Define the user-facing function syntax.
 - [ ] Decide how functions are stored in the AST.
 - [ ] Lower function calls through MLIR or the existing compilation pipeline.
 - [ ] Add parser and semantic tests.
 
-### 4. Better docs
+### 5. Better docs
 
 - [ ] Add a `tests/README.md` that explains how to run and add lit tests.
 - [ ] Add a `PASSES.md` or `PIPELINE.md` that explains the compiler pass order and responsibilities.
@@ -65,7 +82,7 @@ Break each operation into the same implementation slices:
 - [ ] Expand `BUILD.md` with build options, test options, and install notes.
 - [ ] Add examples for the language and built-in operations.
 
-### 5. Packaging and installs
+### 6. Packaging and installs
 
 - [ ] Produce generic Linux binaries.
 - [ ] Decide whether Windows packages are worth supporting now.
