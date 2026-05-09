@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/BuiltinOps.h"
 
@@ -401,6 +402,14 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     auto c360I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 360, 64);
 
     mlir::Value angle = adaptor.getAngle();
+    int64_t constantAngle = 0;
+    if (!mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
+      return op.emitOpError("angle must be a compile-time integer multiple of 90 degrees"), mlir::failure();
+    }
+    if ((constantAngle % 90) != 0) {
+      return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
+    }
+
     mlir::Value angleMod = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c360I64);
     mlir::Value wasNegative =
         rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, angleMod, c0I64);
