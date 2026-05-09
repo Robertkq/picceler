@@ -395,26 +395,22 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     mlir::Value inputHeightI32 = inputImage.getHeight();
     mlir::Value inputDataPtr = inputImage.getDataPtr();
 
-    auto c0I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 0, 64);
     auto c90I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 90, 64);
     auto c180I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 180, 64);
     auto c270I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 270, 64);
-    auto c360I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 360, 64);
 
     mlir::Value angle = adaptor.getAngle();
     int64_t constantAngle = 0;
     if (!mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
-      return op.emitOpError("angle must be a compile-time integer multiple of 90 degrees"), mlir::failure();
+      return op.emitOpError("picceler.rotate requires angle to be a compile-time constant"), mlir::failure();
     }
     if ((constantAngle % 90) != 0) {
       return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
     }
 
-    mlir::Value angleMod = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c360I64);
-    mlir::Value wasNegative =
-        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, angleMod, c0I64);
-    mlir::Value normalizedAngle = rewriter.create<mlir::arith::SelectOp>(
-        loc, wasNegative, rewriter.create<mlir::arith::AddIOp>(loc, angleMod, c360I64), angleMod);
+    // Normalize signed angles into [0, 360), e.g. -90 -> 270.
+    int64_t normalizedAngleValue = ((constantAngle % 360) + 360) % 360;
+    mlir::Value normalizedAngle = rewriter.create<mlir::arith::ConstantIntOp>(loc, normalizedAngleValue, 64);
 
     mlir::Value is90 =
         rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq, normalizedAngle, c90I64);
