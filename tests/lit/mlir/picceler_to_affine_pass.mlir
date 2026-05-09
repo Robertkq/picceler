@@ -10,6 +10,6 @@ func.func @RotateImage(%arg0 : !picceler.image) -> !picceler.image {
 // CHECK: call @piccelerCreateImage
 // CHECK: affine.for
 // CHECK: affine.for
-// CHECK: scf.if
+// CHECK: arith.select
 // CHECK-NOT: "picceler.rotate"
 // CHECK: return
