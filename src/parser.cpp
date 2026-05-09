@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <format>
+#include <stdexcept>
 
 #include "spdlog/spdlog.h"
 #include "error.h"
@@ -413,9 +414,12 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   auto numNode = std::make_unique<NumberNode>();
   try {
     numNode->value = std::stoll(token._value);
-  } catch (const std::exception &) {
+  } catch (const std::invalid_argument &) {
     return std::unexpected(CompileError{std::format("Invalid integer literal '{}' at {}:{}", token._value, token._line,
                                                     token._column)});
+  } catch (const std::out_of_range &) {
+    return std::unexpected(CompileError{std::format("Integer literal '{}' out of range at {}:{}", token._value,
+                                                    token._line, token._column)});
   }
   return numNode;
 }
