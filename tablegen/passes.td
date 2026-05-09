@@ -32,7 +32,9 @@ def PiccelerToAffine : Pass<"picceler-to-affine", "mlir::ModuleOp"> {
   let dependentDialects = [
     "mlir::affine::AffineDialect",
     "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect",
     "mlir::memref::MemRefDialect",
+    "mlir::scf::SCFDialect",
     "mlir::LLVM::LLVMDialect"
     ];
 }
