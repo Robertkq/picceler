@@ -18,6 +18,12 @@ def PiccelerFiltersToConv : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
 def PiccelerKernelToMemref : Pass<"picceler-kernel-to-memref", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Kernel Ops to Memref Ops";
   let constructor = "picceler::createPiccelerKernelToMemrefPass()";
+
+  let dependentDialects = [
+    "mlir::LLVM::LLVMDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::memref::MemRefDialect"
+    ];
 }
 
 def PiccelerToAffine : Pass<"picceler-to-affine", "mlir::ModuleOp"> {
