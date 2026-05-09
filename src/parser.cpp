@@ -406,8 +406,17 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   if (token._type != Token::Type::NUMBER) {
     return std::unexpected(CompileError{std::format("Expected number at {}:{}", token._line, token._column)});
   }
+  if (token._value.find('.') != std::string::npos) {
+    return std::unexpected(
+        CompileError{std::format("Expected integer literal at {}:{}", token._line, token._column)});
+  }
   auto numNode = std::make_unique<NumberNode>();
-  numNode->value = std::stoul(token._value);
+  try {
+    numNode->value = std::stoll(token._value);
+  } catch (const std::exception &) {
+    return std::unexpected(CompileError{std::format("Invalid integer literal '{}' at {}:{}", token._value, token._line,
+                                                    token._column)});
+  }
   return numNode;
 }
 

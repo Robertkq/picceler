@@ -373,6 +373,144 @@ struct ConvolutionToAffine : mlir::OpConversionPattern<ConvolutionOp> {
   }
 };
 
+struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(RotateOp op, RotateOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
+    auto i8Type = rewriter.getI8Type();
+    auto i64Type = rewriter.getI64Type();
+    auto indexType = rewriter.getIndexType();
+
+    mlir::Value input = adaptor.getInput();
+    if (input.getType() != ptrType) {
+      input = rewriter.create<mlir::UnrealizedConversionCastOp>(loc, ptrType, input).getResult(0);
+    }
+
+    ImageAccessHelper inputImage(input, rewriter, loc);
+    mlir::Value inputWidthI32 = inputImage.getWidth();
+    mlir::Value inputHeightI32 = inputImage.getHeight();
+    mlir::Value inputDataPtr = inputImage.getDataPtr();
+
+    auto createCall = rewriter.create<mlir::func::CallOp>(loc, ptrType, "piccelerCreateImage",
+                                                          mlir::ValueRange{inputWidthI32, inputHeightI32});
+    mlir::Value output = createCall.getResult(0);
+
+    ImageAccessHelper outputImage(output, rewriter, loc);
+    mlir::Value outputDataPtr = outputImage.getDataPtr();
+
+    mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputWidthI32);
+    mlir::Value height = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputHeightI32);
+
+    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+
+    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
+                                                              height, ubMap, 1);
+    rewriter.setInsertionPointToStart(rowLoop.getBody());
+
+    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
+                                                              width, ubMap, 1);
+    rewriter.setInsertionPointToStart(colLoop.getBody());
+
+    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
+    mlir::Value pixelColIndex = colLoop.getInductionVar();
+
+    auto c0Index = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto c1Index = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
+
+    auto c0I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 0, 64);
+    auto c90I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 90, 64);
+    auto c180I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 180, 64);
+    auto c270I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 270, 64);
+    auto c360I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 360, 64);
+
+    mlir::Value angle = adaptor.getAngle();
+    mlir::Value angleMod = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c360I64);
+    mlir::Value wasNegative =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, angleMod, c0I64);
+    mlir::Value normalizedAngle = rewriter.create<mlir::arith::SelectOp>(
+        loc, wasNegative, rewriter.create<mlir::arith::AddIOp>(loc, angleMod, c360I64), angleMod);
+
+    mlir::Value is90 =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq, normalizedAngle, c90I64);
+    mlir::Value is180 =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq, normalizedAngle, c180I64);
+    mlir::Value is270 =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq, normalizedAngle, c270I64);
+
+    mlir::Value widthMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, width, c1Index);
+    mlir::Value heightMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, height, c1Index);
+
+    mlir::Value srcRow90 = pixelColIndex;
+    mlir::Value srcCol90 = rewriter.create<mlir::arith::SubIOp>(loc, widthMinusOne, pixelRowIndex);
+    mlir::Value srcRow180 = rewriter.create<mlir::arith::SubIOp>(loc, heightMinusOne, pixelRowIndex);
+    mlir::Value srcCol180 = rewriter.create<mlir::arith::SubIOp>(loc, widthMinusOne, pixelColIndex);
+    mlir::Value srcRow270 = rewriter.create<mlir::arith::SubIOp>(loc, heightMinusOne, pixelColIndex);
+    mlir::Value srcCol270 = pixelRowIndex;
+
+    mlir::Value srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcRow90, pixelRowIndex);
+    mlir::Value srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcCol90, pixelColIndex);
+    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcRow180, srcRow);
+    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcCol180, srcCol);
+    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcRow270, srcRow);
+    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcCol270, srcCol);
+
+    auto rowLow = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sge, srcRow, c0Index);
+    auto rowHigh = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, srcRow, height);
+    auto colLow = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sge, srcCol, c0Index);
+    auto colHigh = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, srcCol, width);
+    auto isRowValid = rewriter.create<mlir::arith::AndIOp>(loc, rowLow, rowHigh);
+    auto isColValid = rewriter.create<mlir::arith::AndIOp>(loc, colLow, colHigh);
+    mlir::Value isValid = rewriter.create<mlir::arith::AndIOp>(loc, isRowValid, isColValid);
+
+    auto indexMap = mlir::AffineMap::get(
+        2, 1, (rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) + rewriter.getAffineDimExpr(1)) * 4);
+
+    mlir::Value dstPixelBaseIndex = rewriter.create<mlir::affine::AffineApplyOp>(
+        loc, indexMap, mlir::ValueRange{pixelRowIndex, pixelColIndex, width});
+    mlir::Value srcPixelBaseIndex =
+        rewriter.create<mlir::affine::AffineApplyOp>(loc, indexMap, mlir::ValueRange{srcRow, srcCol, width});
+
+    auto loadSourceOrFill = [&](int offset, int fillValue) {
+      auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, i8Type, isValid, true);
+      rewriter.setInsertionPointToStart(ifOp.thenBlock());
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+      auto srcAddr = rewriter.create<mlir::arith::AddIOp>(loc, srcPixelBaseIndex, cOffset);
+      auto srcAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, srcAddr);
+      auto srcPtr =
+          rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, i8Type, inputDataPtr, mlir::ValueRange{srcAddrI64});
+      auto srcVal = rewriter.create<mlir::LLVM::LoadOp>(loc, i8Type, srcPtr);
+      rewriter.create<mlir::scf::YieldOp>(loc, srcVal);
+
+      rewriter.setInsertionPointToStart(ifOp.elseBlock());
+      auto fill = rewriter.create<mlir::arith::ConstantIntOp>(loc, fillValue, 8);
+      rewriter.create<mlir::scf::YieldOp>(loc, fill);
+      rewriter.setInsertionPointAfter(ifOp);
+      return ifOp.getResult(0);
+    };
+
+    auto storeChannel = [&](int offset, mlir::Value value) {
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+      auto dstAddr = rewriter.create<mlir::arith::AddIOp>(loc, dstPixelBaseIndex, cOffset);
+      auto dstAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, dstAddr);
+      auto dstPtr =
+          rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, i8Type, outputDataPtr, mlir::ValueRange{dstAddrI64});
+      rewriter.create<mlir::LLVM::StoreOp>(loc, value, dstPtr);
+    };
+
+    storeChannel(0, loadSourceOrFill(0, 0));
+    storeChannel(1, loadSourceOrFill(1, 0));
+    storeChannel(2, loadSourceOrFill(2, 0));
+    storeChannel(3, loadSourceOrFill(3, 255));
+
+    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.replaceOp(op, output);
+    return mlir::success();
+  }
+};
+
 #define GEN_PASS_DEF_PICCELERTOAFFINE
 #include "piccelerPasses.h.inc"
 
@@ -411,12 +549,13 @@ struct PiccelerToAffinePass : public impl::PiccelerToAffineBase<PiccelerToAffine
     target.addLegalOp<mlir::UnrealizedConversionCastOp>();
     target.addLegalOp<LoadImageOp, SaveImageOp, ShowImageOp, StringConstOp, KernelConstOp>();
     /*ConvolutionOp*/
-    target.addIllegalOp<BrightnessOp, InvertOp>();
+    target.addIllegalOp<BrightnessOp, InvertOp, RotateOp>();
 
     mlir::RewritePatternSet patterns(ctx);
     patterns.add<BrightnessToAffine>(typeConverter, ctx);
     patterns.add<InvertToAffine>(typeConverter, ctx);
     patterns.add<ConvolutionToAffine>(typeConverter, ctx);
+    patterns.add<RotateToAffine>(typeConverter, ctx);
 
     if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
       spdlog::error("Failed to convert Picceler operations to Affine dialect");

@@ -96,5 +96,10 @@ def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
-#endif
+def Picceler_RotateOp : Op<PiccelerDialect, "rotate", []> {
+  let summary = "Rotate an image around its center";
+  let arguments = (ins Picceler_ImageType:$input, I64:$angle);
+  let results = (outs Picceler_ImageType:$result);
+}
 
+#endif
