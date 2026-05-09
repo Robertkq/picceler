@@ -20,7 +20,9 @@ This document aims to provide information about the picceler language, more spec
 * **gaussian_blur(img, radius)** -> Applies a smooth, weighted gaussian blur to `img` based on the specified `radius`
 * **edge_detect(img)** -> Detects and highlights the outlines and edges within `img`
 * **emboss(img)** -> Applies a 3D effect to `img` by highlighting pixel intensity differences
-* **rotate(img, angle)** -> Rotates `img` around its center by `angle` degrees (current implementation supports multiples of 90; positive is counter-clockwise, negative is clockwise). Output size stays equal to input size and out-of-bounds regions are filled in black
+* **rotate(img, angle)** -> Rotates `img` around its center by `angle` degrees (current implementation supports multiples
+  of 90; positive is counter-clockwise, negative is clockwise). Output size stays equal to input size and out-of-bounds
+  regions are filled in black
 
 ## Builtin Types
 
