@@ -14,6 +14,7 @@ int main(int argc, char **argv) {
 
   registry.insert<picceler::PiccelerDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
+  registry.insert<mlir::memref::MemRefDialect>();
   picceler::registerPasses();
 
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Picceler optimizer driver\n", registry));
