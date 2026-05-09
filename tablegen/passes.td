@@ -20,7 +20,6 @@ def PiccelerKernelToMemref : Pass<"picceler-kernel-to-memref", "mlir::ModuleOp">
   let constructor = "picceler::createPiccelerKernelToMemrefPass()";
 
   let dependentDialects = [
-    "mlir::LLVM::LLVMDialect",
     "mlir::arith::ArithDialect",
     "mlir::memref::MemRefDialect"
     ];
