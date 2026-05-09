@@ -445,22 +445,24 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
 
     auto c1Index = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
 
-    mlir::Value widthMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, inputWidth, c1Index);
-    mlir::Value heightMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, inputHeight, c1Index);
+    mlir::Value inputWidthMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, inputWidth, c1Index);
+    mlir::Value inputHeightMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, inputHeight, c1Index);
+    mlir::Value outputWidthMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, outputWidth, c1Index);
+    mlir::Value outputHeightMinusOne = rewriter.create<mlir::arith::SubIOp>(loc, outputHeight, c1Index);
 
-    mlir::Value srcRow90 = pixelColIndex;
-    mlir::Value srcCol90 = rewriter.create<mlir::arith::SubIOp>(loc, widthMinusOne, pixelRowIndex);
-    mlir::Value srcRow180 = rewriter.create<mlir::arith::SubIOp>(loc, heightMinusOne, pixelRowIndex);
-    mlir::Value srcCol180 = rewriter.create<mlir::arith::SubIOp>(loc, widthMinusOne, pixelColIndex);
-    mlir::Value srcRow270 = rewriter.create<mlir::arith::SubIOp>(loc, heightMinusOne, pixelColIndex);
-    mlir::Value srcCol270 = pixelRowIndex;
+    mlir::Value srcRowFor90DegRotation = pixelColIndex;
+    mlir::Value srcColFor90DegRotation = rewriter.create<mlir::arith::SubIOp>(loc, outputHeightMinusOne, pixelRowIndex);
+    mlir::Value srcRowFor180DegRotation = rewriter.create<mlir::arith::SubIOp>(loc, inputHeightMinusOne, pixelRowIndex);
+    mlir::Value srcColFor180DegRotation = rewriter.create<mlir::arith::SubIOp>(loc, inputWidthMinusOne, pixelColIndex);
+    mlir::Value srcRowFor270DegRotation = rewriter.create<mlir::arith::SubIOp>(loc, outputWidthMinusOne, pixelColIndex);
+    mlir::Value srcColFor270DegRotation = pixelRowIndex;
 
-    mlir::Value srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcRow90, pixelRowIndex);
-    mlir::Value srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcCol90, pixelColIndex);
-    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcRow180, srcRow);
-    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcCol180, srcCol);
-    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcRow270, srcRow);
-    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcCol270, srcCol);
+    mlir::Value srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcRowFor90DegRotation, pixelRowIndex);
+    mlir::Value srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is90, srcColFor90DegRotation, pixelColIndex);
+    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcRowFor180DegRotation, srcRow);
+    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is180, srcColFor180DegRotation, srcCol);
+    srcRow = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcRowFor270DegRotation, srcRow);
+    srcCol = rewriter.create<mlir::arith::SelectOp>(loc, is270, srcColFor270DegRotation, srcCol);
 
     auto indexMap = mlir::AffineMap::get(
         2, 1, (rewriter.getAffineDimExpr(0) * rewriter.getAffineSymbolExpr(0) + rewriter.getAffineDimExpr(1)) * 4);
