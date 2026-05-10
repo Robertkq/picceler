@@ -1,4 +1,16 @@
 img = load_image("~/Pictures/cat.png")
 show_image(img)
-rotated = rotate(img, 90)
-show_image(rotated)
+
+rotated_90 = rotate(img, 90)
+show_image(rotated_90)
+
+rotated_180 = rotate(rotated_90, 90)
+show_image(rotated_180)
+
+rotated_270 = rotate(rotated_180, 90)
+show_image(rotated_270)
+
+rotated_360 = rotate(rotated_270, 90)
+show_image(rotated_360)
+
+show_image(img)
