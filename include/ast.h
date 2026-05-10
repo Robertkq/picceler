@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 
 #include "lexer.h"
@@ -53,7 +54,7 @@ struct StringNode : public ASTNode {
  * @brief AST node for numeric literals.
  */
 struct NumberNode : public ASTNode {
-  size_t value;
+  int64_t value;
   std::string toString() const override;
 };
 

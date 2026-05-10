@@ -197,6 +197,11 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto callOp =
         _builder.create<EmbossOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
     return callOp.getResult();
+  } else if (name == "rotate") {
+    auto &inputImage = args[0];
+    auto &angle = args[1];
+    auto callOp = _builder.create<RotateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, angle);
+    return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
   }

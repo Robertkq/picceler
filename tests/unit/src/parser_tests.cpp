@@ -72,3 +72,28 @@ TEST_F(ParserTest, LoadImageStatement) {
   ASSERT_NE(strArg, nullptr);
   EXPECT_EQ(strArg->value, "cat.jpg");
 }
+
+TEST_F(ParserTest, RotateNegativeAngleParses) {
+  auto result = parser.setSource("data/rotate_negative.pic");
+  if (!result)
+    FAIL() << result.error().message();
+
+  auto astRes = parser.parse();
+  if (!astRes)
+    FAIL() << astRes.error().message();
+  auto ast = std::move(astRes.value());
+
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements.size(), 1);
+  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
+  ASSERT_NE(assignment, nullptr);
+
+  auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs.get());
+  ASSERT_NE(call, nullptr);
+  EXPECT_EQ(call->callee, "rotate");
+  ASSERT_EQ(call->arguments.size(), 2);
+
+  auto angleNode = dynamic_cast<picceler::NumberNode *>(call->arguments[1].get());
+  ASSERT_NE(angleNode, nullptr);
+  EXPECT_EQ(angleNode->value, -90);
+}
