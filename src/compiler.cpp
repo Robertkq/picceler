@@ -59,7 +59,11 @@ bool Compiler::run() {
   const auto &inputFile = _cliOptions.inputFile;
   const auto &outputFile = _cliOptions.outputFile;
 
-  _parser.setSource(inputFile);
+  auto sourceResult = _parser.setSource(inputFile);
+  if (!sourceResult) {
+    spdlog::error("Failed to set source file: {}", sourceResult.error().message());
+    return false;
+  }
   spdlog::info("Tokenizing source file: {}", inputFile);
   auto tokens = _parser.getTokens();
   if (!tokens) {
@@ -72,7 +76,11 @@ bool Compiler::run() {
   }
   spdlog::info("Finished tokenizing source file");
   spdlog::info("Resetting lexer");
-  _parser.setSource(inputFile);
+  auto resetResult = _parser.setSource(inputFile);
+  if (!resetResult) {
+    spdlog::error("Failed to reset source file: {}", resetResult.error().message());
+    return false;
+  }
   auto ast = _parser.parse();
   if (!ast) {
     spdlog::error("{}", ast.error().message());
