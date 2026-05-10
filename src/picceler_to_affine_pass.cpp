@@ -400,16 +400,17 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     auto c270I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 270, 64);
 
     mlir::Value angle = adaptor.getAngle();
-    int64_t constantAngle = 0;
+    mlir::APInt constantAngle;
     if (!mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
       return op.emitOpError("picceler.rotate requires angle to be a compile-time constant"), mlir::failure();
     }
-    if ((constantAngle % 90) != 0) {
+    int64_t constantAngleValue = constantAngle.getSExtValue();
+    if ((constantAngleValue % 90) != 0) {
       return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
     }
 
     // Normalize signed angles into [0, 360), e.g. -90 -> 270.
-    int64_t normalizedAngleValue = ((constantAngle % 360) + 360) % 360;
+    int64_t normalizedAngleValue = ((constantAngleValue % 360) + 360) % 360;
     mlir::Value normalizedAngle = rewriter.create<mlir::arith::ConstantIntOp>(loc, normalizedAngleValue, 64);
 
     mlir::Value is90 =
