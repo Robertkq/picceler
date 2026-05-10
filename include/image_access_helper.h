@@ -22,52 +22,24 @@ struct ImageAccessHelper {
   mlir::OpBuilder &builder;
   mlir::Location loc;
 
-  ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l) : structPtr(ptr), builder(b), loc(l) {}
+  ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l);
 
   /**
    * Defines the logical layout of the C++ struct for GEP offset calculations.
    * struct Image { i32, i32, ptr }
    */
-  static mlir::Type getImageStructType(mlir::MLIRContext *ctx) {
-    mlir::Type i32 = mlir::IntegerType::get(ctx, 32);
-    mlir::Type ptr = mlir::LLVM::LLVMPointerType::get(ctx);
-    return mlir::LLVM::LLVMStructType::getLiteral(ctx, {i32, i32, ptr});
-  }
+  static mlir::Type getImageStructType(mlir::MLIRContext *ctx);
 
   /**
    * Internal helper to create the GEP (Address calculation) for a field index.
    */
-  mlir::Value getFieldAddr(int32_t index) {
-    auto structType = getImageStructType(builder.getContext());
-    auto ptrType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  mlir::Value getFieldAddr(int32_t index);
 
-    // We use GEPArg to tell MLIR these are static constant indices.
-    // {0, index} means: start at base pointer, go to field 'index'.
-    llvm::SmallVector<mlir::LLVM::GEPArg> indices;
-    indices.push_back(0);
-    indices.push_back(index);
+  mlir::Value getWidth();
 
-    return builder.create<mlir::LLVM::GEPOp>(loc,
-                                             ptrType,    // Result is a pointer to the field
-                                             structType, // The layout we are indexing into
-                                             structPtr,  // The base opaque pointer
-                                             indices);
-  }
+  mlir::Value getHeight();
 
-  mlir::Value getWidth() {
-    mlir::Type i32 = mlir::IntegerType::get(builder.getContext(), 32);
-    return builder.create<mlir::LLVM::LoadOp>(loc, i32, getFieldAddr(0));
-  }
-
-  mlir::Value getHeight() {
-    mlir::Type i32 = mlir::IntegerType::get(builder.getContext(), 32);
-    return builder.create<mlir::LLVM::LoadOp>(loc, i32, getFieldAddr(1));
-  }
-
-  mlir::Value getDataPtr() {
-    mlir::Type ptrType = mlir::LLVM::LLVMPointerType::get(builder.getContext());
-    return builder.create<mlir::LLVM::LoadOp>(loc, ptrType, getFieldAddr(2));
-  }
+  mlir::Value getDataPtr();
 };
 
 } // namespace picceler

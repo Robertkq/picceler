@@ -69,11 +69,16 @@ target_link_libraries(PiccelerTransforms PUBLIC
     MLIRMemRefDialect
     MLIRSCFDialect
     MLIRLLVMDialect
+    PiccelerSupport
 )
 
 
 add_library(PiccelerSupport STATIC
     image_access_helper.cpp 
+)
+
+target_link_libraries(PiccelerSupport PUBLIC
+    PiccelerGlobalDeps
 )
 
 add_library(PiccelerCore STATIC
