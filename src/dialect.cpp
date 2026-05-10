@@ -10,9 +10,16 @@
 namespace picceler {
 
 void PiccelerDialect::initialize() {
-  addTypes<ImageType, StringType, KernelType>();
-  addOperations<StringConstOp, KernelConstOp, LoadImageOp, ShowImageOp, SaveImageOp, BlurOp, BrightnessOp, InvertOp,
-                ConvolutionOp, SharpenOp, BoxBlurOp, GaussianBlurOp, EdgeDetectOp, EmbossOp, RotateOp>();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "piccelerTypes.cpp.inc"
+#undef GET_TYPEDEF_LIST
+      >();
+  addOperations<
+#define GET_OP_LIST
+#include "piccelerOps.cpp.inc"
+#undef GET_OP_LIST
+      >();
 }
 
 } // namespace picceler
