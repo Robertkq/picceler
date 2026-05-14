@@ -631,6 +631,8 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
   }
 };
 
+struct CropToAffine : mlir::OpConversionPattern<RotateOp> {};
+
 #define GEN_PASS_DEF_PICCELERTOAFFINE
 #include "piccelerPasses.h.inc"
 

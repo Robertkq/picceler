@@ -123,4 +123,10 @@ def Picceler_BlendOp : Op<PiccelerDialect, "blend", [ElementWiseBinaryOpInterfac
   let hasVerifier = 1;
 }
 
+def Picceler_CropOp : Op<PiccelerDialect, "crop", []> {
+  let summary = "Crop an image to a rectangular region";
+  let arguments = (ins Picceler_ImageType:$input, I64:$x, I64:$y, I64:$width, I64:$height);
+  let results = (outs Picceler_ImageType:$result);
+}
+
 #endif

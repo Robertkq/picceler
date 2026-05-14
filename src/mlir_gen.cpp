@@ -233,6 +233,15 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto angle = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "rotate", "angle");
     auto callOp = _builder.create<RotateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, angle);
     return callOp.getResult();
+  } else if (name == "crop") {
+    auto &inputImage = args[0];
+    auto &x = args[1];
+    auto &y = args[2];
+    auto &width = args[3];
+    auto &height = args[4];
+    auto callOp =
+        _builder.create<CropOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, x, y, width, height);
+    return callOp.getResult();
   } else if (name == "diff") {
     auto &inputImage1 = args[0];
     auto &inputImage2 = args[1];
