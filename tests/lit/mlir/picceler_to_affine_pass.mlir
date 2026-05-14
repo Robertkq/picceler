@@ -13,3 +13,22 @@ func.func @RotateImage(%arg0 : !picceler.image) -> !picceler.image {
 // CHECK: arith.select
 // CHECK-NOT: "picceler.rotate"
 // CHECK: return
+
+// -----
+
+func.func @DiffImages(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
+    %0 = "picceler.diff" (%arg0, %arg1) : (!picceler.image, !picceler.image) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @DiffImages
+// CHECK: call @piccelerCreateImage
+// CHECK: func.call @abort
+// CHECK: affine.for
+// CHECK: affine.for
+// CHECK: arith.extui
+// CHECK: arith.subi
+// CHECK: arith.select
+// CHECK-NOT: "picceler.diff"       
+// CHECK: return
+
