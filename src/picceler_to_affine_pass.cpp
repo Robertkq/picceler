@@ -536,6 +536,19 @@ struct DiffToAffine : mlir::OpConversionPattern<DiffOp> {
     mlir::Value rhsHeightI32 = rhsImage.getHeight();
     mlir::Value rhsDataPtr = rhsImage.getDataPtr();
 
+    // throw error if dimensions don't match
+    auto widthMismatch =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne, lhsWidthI32, rhsWidthI32);
+    auto heightMismatch =
+        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne, lhsHeightI32, rhsHeightI32);
+    auto dimMatch = rewriter.create<mlir::arith::OrIOp>(loc, widthMismatch, heightMismatch);
+    auto ifDimMismatch = rewriter.create<mlir::scf::IfOp>(loc, dimMatch.getResult(), false);
+    rewriter.setInsertionPointToStart(ifDimMismatch.thenBlock());
+    // abort if dimensions don't match
+    rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
+
+    rewriter.setInsertionPointAfter(ifDimMismatch);
+
     auto createCall = rewriter.create<mlir::func::CallOp>(loc, ptrType, "piccelerCreateImage",
                                                           mlir::ValueRange{lhsWidthI32, lhsHeightI32});
     mlir::Value output = createCall.getResult(0);
@@ -545,19 +558,6 @@ struct DiffToAffine : mlir::OpConversionPattern<DiffOp> {
 
     mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, lhsWidthI32);
     mlir::Value height = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, lhsHeightI32);
-
-    // throw error if dimensions don't match
-    auto widthMatch =
-        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne, lhsWidthI32, rhsWidthI32);
-    auto heightMatch =
-        rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne, lhsHeightI32, rhsHeightI32);
-    auto dimMatch = rewriter.create<mlir::arith::AndIOp>(loc, widthMatch, heightMatch);
-    auto ifDimMatch = rewriter.create<mlir::scf::IfOp>(loc, dimMatch.getResult(), false);
-    rewriter.setInsertionPointToStart(ifDimMatch.thenBlock());
-    // return 1
-    rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
-    // rewriter.create<mlir::scf::YieldOp>(loc);
-    rewriter.setInsertionPointAfter(ifDimMatch);
 
     auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
     auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),

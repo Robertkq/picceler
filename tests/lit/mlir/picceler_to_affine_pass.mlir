@@ -22,8 +22,8 @@ func.func @DiffImages(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picc
 }
 
 // CHECK-LABEL: func.func @DiffImages
-// CHECK: call @piccelerCreateImage
 // CHECK: func.call @abort
+// CHECK: call @piccelerCreateImage
 // CHECK: affine.for
 // CHECK: affine.for
 // CHECK: arith.extui
