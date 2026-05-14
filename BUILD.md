@@ -71,6 +71,7 @@ cmake -G Ninja ../llvm \
         -DLLVM_ENABLE_RTTI=ON \
         -DLLVM_TARGETS_TO_BUILD="Native" \
         -DLLVM_ENABLE_ASSERTIONS=ON \
+        -DLLVM_INCLUDE_UTILS=ON \
         -DLLVM_USE_LINKER=lld \
         -DCMAKE_INSTALL_PREFIX=/usr/local 
 cmake --build . -j

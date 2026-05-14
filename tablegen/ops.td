@@ -102,4 +102,10 @@ def Picceler_RotateOp : Op<PiccelerDialect, "rotate", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
+def Picceler_DiffOp : Op<PiccelerDialect, "diff", []> {
+  let summary = "Compute the pixel-wise difference between two images";
+  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
+  let results = (outs Picceler_ImageType:$result);
+}
+
 #endif
