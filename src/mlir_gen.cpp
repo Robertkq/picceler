@@ -172,14 +172,12 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
   } else if (name == "sharpen") {
     auto &inputImage = args[0];
     auto &strenghtValue = args[1];
-    auto callOp =
-        _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
+    auto callOp = _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
     return callOp.getResult();
   } else if (name == "box_blur") {
     auto &inputImage = args[0];
     auto &radiusValue = args[1];
-    auto callOp =
-        _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
+    auto callOp = _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
     return callOp.getResult();
   } else if (name == "gaussian_blur") {
     auto &inputImage = args[0];
@@ -189,18 +187,25 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "edge_detect") {
     auto &inputImage = args[0];
-    auto callOp =
-        _builder.create<EdgeDetectOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    auto callOp = _builder.create<EdgeDetectOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
     return callOp.getResult();
   } else if (name == "emboss") {
     auto &inputImage = args[0];
-    auto callOp =
-        _builder.create<EmbossOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
+    auto callOp = _builder.create<EmbossOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage);
     return callOp.getResult();
   } else if (name == "rotate") {
     auto &inputImage = args[0];
     auto &angle = args[1];
     auto callOp = _builder.create<RotateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, angle);
+    return callOp.getResult();
+  } else if (name == "crop") {
+    auto &inputImage = args[0];
+    auto &x = args[1];
+    auto &y = args[2];
+    auto &width = args[3];
+    auto &height = args[4];
+    auto callOp =
+        _builder.create<CropOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, x, y, width, height);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);

@@ -505,6 +505,8 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
   }
 };
 
+struct CropToAffine : mlir::OpConversionPattern<RotateOp> {};
+
 #define GEN_PASS_DEF_PICCELERTOAFFINE
 #include "piccelerPasses.h.inc"
 
