@@ -4,6 +4,12 @@ mlir_tablegen(piccelerDialect.h.inc -gen-dialect-decls -dialect=picceler -I${CMA
 mlir_tablegen(piccelerDialect.cpp.inc -gen-dialect-defs -dialect=picceler -I${CMAKE_CURRENT_SOURCE_DIR})
 add_public_tablegen_target(PiccelerDialectIncGen)
 
+# Interfaces
+set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/interfaces.td)
+mlir_tablegen(piccelerInterfaces.h.inc -gen-op-interface-decls -dialect=picceler -I${CMAKE_CURRENT_SOURCE_DIR})
+mlir_tablegen(piccelerInterfaces.cpp.inc -gen-op-interface-defs -dialect=picceler -I${CMAKE_CURRENT_SOURCE_DIR})
+add_public_tablegen_target(PiccelerInterfacesIncGen)
+
 # Types
 set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/types.td)
 mlir_tablegen(piccelerTypes.h.inc -gen-typedef-decls -dialect=picceler -I${CMAKE_CURRENT_SOURCE_DIR})
@@ -26,5 +32,6 @@ set(PICCELER_TABLEGEN_TARGETS
   PiccelerTypesIncGen
   PiccelerOpsIncGen
   PiccelerPassesIncGen
+  PiccelerInterfacesIncGen
   PARENT_SCOPE
 )

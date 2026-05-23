@@ -8,7 +8,10 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <utility>
+
 #include "types.h"
+#include "piccelerInterfaces.h.inc"
 
 #define GET_OP_CLASSES
 #include "piccelerOps.h.inc"

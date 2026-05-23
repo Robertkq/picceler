@@ -9,6 +9,7 @@
 #define PICCELER_OPS_TD
 
 include "mlir/IR/OpBase.td"
+include "interfaces.td"
 include "types.td"
 
 def Picceler_StringConstOp : Op<PiccelerDialect, "string.const"> {
@@ -54,15 +55,9 @@ def Picceler_InvertOp : Op<PiccelerDialect, "invert", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", []> {
+def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
   let summary = "Apply convolution to an image with a kernel";
   let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
-  let results = (outs Picceler_ImageType:$result);
-}
-
-def Picceler_BlurOp : Op<PiccelerDialect, "blur", []> {
-  let summary = "Apply blur to an image";
-  let arguments = (ins Picceler_ImageType:$input, Picceler_StringType:$mode);
   let results = (outs Picceler_ImageType:$result);
 }
 
@@ -105,6 +100,18 @@ def Picceler_RotateOp : Op<PiccelerDialect, "rotate", []> {
 def Picceler_DiffOp : Op<PiccelerDialect, "diff", []> {
   let summary = "Compute the pixel-wise difference between two images";
   let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+  let summary = "Apply erosion to an image";
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+  let summary = "Apply dilation to an image";
+  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
 }
 

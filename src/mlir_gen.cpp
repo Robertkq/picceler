@@ -139,12 +139,6 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto filename = args[0];
     auto callOp = _builder.create<LoadImageOp>(_builder.getUnknownLoc(), imageType, filename);
     return callOp.getResult();
-  } else if (name == "blur") {
-    auto imageType = _builder.getType<ImageType>();
-    auto &inputImage = args[0];
-    auto &blurAmount = args[1];
-    auto callOp = _builder.create<BlurOp>(_builder.getUnknownLoc(), imageType, inputImage, blurAmount);
-    return callOp.getResult();
   } else if (name == "save_image") {
     auto &inputImage = args[0];
     auto &filename = args[1];
@@ -202,6 +196,16 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &inputImage1 = args[0];
     auto &inputImage2 = args[1];
     auto callOp = _builder.create<DiffOp>(_builder.getUnknownLoc(), inputImage1.getType(), inputImage1, inputImage2);
+    return callOp.getResult();
+  } else if (name == "dilate") {
+    auto &inputImage = args[0];
+    auto &radius = args[1];
+    auto callOp = _builder.create<DilateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radius);
+    return callOp.getResult();
+  } else if (name == "erode") {
+    auto &inputImage = args[0];
+    auto &radius = args[1];
+    auto callOp = _builder.create<ErodeOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radius);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
