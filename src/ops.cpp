@@ -39,10 +39,6 @@ std::pair<uint64_t, uint64_t> getKernelNeighborhoodSize(mlir::Value kernelOperan
   return {0, 0};
 }
 
-} // namespace picceler
-
-namespace picceler {
-
 llvm::LogicalResult KernelConstOp::verify() {
   auto valuesAttr = getValues();
   auto kernel = getResult().getType();
@@ -170,4 +166,4 @@ std::pair<uint64_t, uint64_t> ConvolutionOp::getNeighborhoodSize(mlir::ArrayRef<
 
 #define GET_OP_CLASSES
 #include "piccelerOps.cpp.inc"
-#define GET_OP_CLASSES
+#undef GET_OP_CLASSES
