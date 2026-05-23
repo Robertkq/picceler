@@ -115,33 +115,6 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
   }
 };
 
-/**
- * @brief Pattern to lower BlurOp to a function call.
- */
-struct BlurImageToCall : public mlir::OpRewritePattern<BlurOp> {
-  using mlir::OpRewritePattern<BlurOp>::OpRewritePattern;
-
-  mlir::LogicalResult matchAndRewrite(BlurOp op, mlir::PatternRewriter &rewriter) const override {
-
-    auto module = op->getParentOfType<mlir::ModuleOp>();
-    auto ctx = rewriter.getContext();
-    auto loc = op.getLoc();
-
-    auto stringType = StringType::get(ctx);
-    auto imageType = ImageType::get(ctx);
-
-    auto func = ensureRuntimeFunc(module, "piccelerBlurImage", {imageType, stringType}, {imageType}, rewriter, loc);
-    llvm::SmallVector<mlir::Value, 2> args;
-    args.push_back(op.getInput());
-    args.push_back(op.getMode());
-
-    auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
-    rewriter.replaceOp(op, call.getResults());
-
-    return mlir::success();
-  }
-};
-
 #define GEN_PASS_DEF_PICCELEROPSTOFUNCCALLS
 #include "piccelerPasses.h.inc"
 
@@ -152,7 +125,7 @@ struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<Picc
     mlir::ModuleOp module = getOperation();
 
     mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, BlurImageToCall>(&getContext());
+    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall>(&getContext());
 
     if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
       signalPassFailure();

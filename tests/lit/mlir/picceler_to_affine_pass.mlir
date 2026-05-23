@@ -32,3 +32,57 @@ func.func @DiffImages(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picc
 // CHECK-NOT: "picceler.diff"       
 // CHECK: return
 
+// -----
+
+func.func @DilateImage(%arg0 : !picceler.image) -> !picceler.image {
+    %radius = "arith.constant"() {value = 1 : i64} : () -> i64
+    %0 = "picceler.dilate" (%arg0, %radius) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @DilateImage
+// CHECK: call @piccelerCreateImage
+// CHECK-COUNT-4: affine.for
+// CHECK: arith.maximumf
+// CHECK-NOT: "picceler.dilate"
+// CHECK: return
+
+// -----
+
+func.func @ErodeImage(%arg0 : !picceler.image) -> !picceler.image {
+    %radius = "arith.constant"() {value = 1 : i64} : () -> i64
+    %0 = "picceler.erode" (%arg0, %radius) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @ErodeImage
+// CHECK: call @piccelerCreateImage
+// CHECK-COUNT-4: affine.for
+// CHECK: arith.minimumf
+// CHECK-NOT: "picceler.erode"
+// CHECK: return
+
+// -----
+
+func.func @ConvolutionImage(%arg0 : !picceler.image) -> !picceler.image {
+    %c0 = "arith.constant"() {value = 0 : index} : () -> index
+    %c1 = "arith.constant"() {value = 1 : index} : () -> index
+    %c0f = "arith.constant"() {value = 0.0 : f64} : () -> f64
+    %kernel = memref.alloca() : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c0, %c0] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c0, %c1] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c1, %c0] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c1, %c1] : memref<3x3xf64>
+    %0 = "picceler.convolution" (%arg0, %kernel) : (!picceler.image, memref<3x3xf64>) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @ConvolutionImage
+// CHECK: call @piccelerCreateImage
+// CHECK-COUNT-4: affine.for
+// CHECK: memref.load
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK-NOT: "picceler.convolution"
+// CHECK: return
+
