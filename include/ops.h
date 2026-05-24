@@ -16,3 +16,9 @@
 #define GET_OP_CLASSES
 #include "piccelerOps.h.inc"
 #undef GET_OP_CLASSES
+
+namespace picceler {
+
+mlir::Value createFloatConstant(mlir::OpBuilder &builder, mlir::Location loc, double value);
+
+}

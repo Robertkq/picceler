@@ -32,23 +32,38 @@ target_link_libraries(PiccelerFrontend PUBLIC
     PiccelerUtils
 )
 
+add_library(PiccelerOps STATIC
+    ops.cpp
+    ops/common.cpp
+    ops/convolution.cpp
+    ops/dilate.cpp
+    ops/erode.cpp
+)
+
+target_link_libraries(PiccelerOps PUBLIC
+    PiccelerGlobalDeps
+    MLIRIR
+    MLIRSupport
+    MLIRParser
+)
+
+add_dependencies(PiccelerOps 
+    ${PICCELER_TABLEGEN_TARGETS}
+)
+
 add_library(PiccelerIR STATIC
     dialect.cpp
     types.cpp
-    ops.cpp
     mlir_gen.cpp
 )
 
 target_link_libraries(PiccelerIR PUBLIC
     PiccelerGlobalDeps 
     PiccelerFrontend
+    PiccelerOps
     MLIRIR
     MLIRSupport
     MLIRParser
-)
-
-add_dependencies(PiccelerIR 
-    ${PICCELER_TABLEGEN_TARGETS}
 )
 
 add_library(PiccelerTransforms STATIC
@@ -70,8 +85,8 @@ target_link_libraries(PiccelerTransforms PUBLIC
     MLIRSCFDialect
     MLIRLLVMDialect
     PiccelerSupport
+    PiccelerOps
 )
-
 
 add_library(PiccelerSupport STATIC
     image_access_helper.cpp 
