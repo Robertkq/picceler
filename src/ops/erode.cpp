@@ -2,6 +2,8 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
+#include <limits>
+
 namespace picceler {
 
 mlir::Value ErodeOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {

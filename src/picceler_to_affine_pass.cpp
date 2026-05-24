@@ -523,10 +523,9 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
 
   mlir::LogicalResult matchAndRewrite(ElementWiseBinaryOpInterface op, mlir::ArrayRef<mlir::Value> operands,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
-    // This pattern is a catch-all for any binary operations that haven't been specifically handled.
-    // It emits an error to ensure that we don't silently generate incorrect code for unhandled operations.
     auto *rawOp = op.getOperation();
     mlir::Location loc = rawOp->getLoc();
+
     auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     auto i8Type = rewriter.getI8Type();
     auto i64Type = rewriter.getI64Type();

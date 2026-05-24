@@ -3,6 +3,8 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
+#include <limits>
+
 namespace picceler {
 
 mlir::Value DilateOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {
