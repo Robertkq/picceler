@@ -28,7 +28,10 @@ TEST_F(ParserTest, BadKernelMissingBracketFails) {
 }
 
 TEST_F(ParserTest, BadKernelBadNumberFails) {
-  parser.setSource("data/bad_kernel_bad_number.pic");
+  auto result = parser.setSource("data/bad_kernel_bad_number.pic");
+  if (!result)
+    FAIL() << result.error().message();
+
   auto astRes = parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }

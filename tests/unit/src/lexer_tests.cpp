@@ -159,7 +159,9 @@ TEST_F(LexerTest, StringParsingAndPeek) {
 
   // advance to string token
   // consume '=', identifier already consumed
-  lexer.nextToken(); // consume '='
+  auto eqToken = lexer.nextToken(); // consume '='
+  if (!eqToken)
+    FAIL() << eqToken.error().message();
   auto strRes = lexer.nextToken();
   if (!strRes)
     FAIL() << strRes.error().message();
