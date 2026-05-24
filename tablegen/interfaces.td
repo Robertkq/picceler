@@ -46,4 +46,31 @@ def NeighbourhoodOpInterface : OpInterface<"NeighbourhoodOpInterface"> {
 	];
 }
 
+def ElementWiseUnaryOpInterface : OpInterface<"ElementWiseUnaryOpInterface"> {
+  let methods = [
+    InterfaceMethod<
+      "Transforms one input pixel into one output pixel.",
+      "mlir::Value",
+      "transformPixel",
+      (ins "mlir::OpBuilder &":$builder,
+           "mlir::Location":$loc,
+           "mlir::Value":$inputPixel)
+    >
+  ];
+}
+
+def ElementWiseBinaryOpInterface : OpInterface<"ElementWiseBinaryOpInterface"> {
+  let methods = [
+    InterfaceMethod<
+      "Transforms two input pixels into one output pixel.",
+      "mlir::Value",
+      "transformPixels",
+      (ins "mlir::OpBuilder &":$builder,
+           "mlir::Location":$loc,
+           "mlir::Value":$lhsPixel,
+           "mlir::Value":$rhsPixel)
+    >
+  ];
+}
+
 #endif
