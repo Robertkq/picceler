@@ -38,6 +38,8 @@ add_library(PiccelerOps STATIC
     ops/convolution.cpp
     ops/dilate.cpp
     ops/erode.cpp
+    ops/blend.cpp
+    ops/diff.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC

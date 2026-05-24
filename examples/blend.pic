@@ -1,0 +1,10 @@
+white = load_image("~/Pictures/white.png")
+blue = load_image("~/Pictures/blue.png")
+
+more_white = blend(white, blue, 0.7)
+more_blue = blend(white, blue, 0.3)
+more_blue_2 = blend(blue, white, 0.7)
+
+show_image(more_white)
+show_image(more_blue)
+show_image(more_blue_2)
