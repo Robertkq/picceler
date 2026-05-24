@@ -55,12 +55,6 @@ def Picceler_InvertOp : Op<PiccelerDialect, "invert", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
-  let summary = "Apply convolution to an image with a kernel";
-  let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
-  let results = (outs Picceler_ImageType:$result);
-}
-
 def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", []> {
   let summary = "Adjust the sharpness of an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$value);
@@ -97,9 +91,9 @@ def Picceler_RotateOp : Op<PiccelerDialect, "rotate", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_DiffOp : Op<PiccelerDialect, "diff", []> {
-  let summary = "Compute the pixel-wise difference between two images";
-  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
+def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+  let summary = "Apply convolution to an image with a kernel";
+  let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
   let results = (outs Picceler_ImageType:$result);
 }
 
@@ -113,6 +107,20 @@ def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [NeighbourhoodOpInterface,
   let summary = "Apply dilation to an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_DiffOp : Op<PiccelerDialect, "diff", [ElementWiseBinaryOpInterface, DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
+  let summary = "Compute the pixel-wise difference between two images";
+  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
+  let results = (outs Picceler_ImageType:$result);
+}
+
+def Picceler_BlendOp : Op<PiccelerDialect, "blend", [ElementWiseBinaryOpInterface, DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
+  let summary = "Blend two images together";
+  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2, F64:$weight);
+  let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
 }
 
 #endif

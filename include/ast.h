@@ -54,7 +54,7 @@ struct StringNode : public ASTNode {
  * @brief AST node for numeric literals.
  */
 struct NumberNode : public ASTNode {
-  int64_t value;
+  double value;
   std::string toString() const override;
 };
 

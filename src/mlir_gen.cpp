@@ -1,16 +1,57 @@
 #include "mlir_gen.h"
 
-#include <unordered_set>
+#include <cmath>
+#include <limits>
+
+#include "llvm/ADT/APFloat.h"
 
 #include "spdlog/spdlog.h"
-#include "llvm/Support/raw_ostream.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
-#include "dialect.h"
 #include "ops.h"
 #include "types.h"
 
 namespace picceler {
+namespace {
+
+mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value value, llvm::StringRef opName,
+                               llvm::StringRef argName) {
+  if (value.getType().isSignlessInteger(64)) {
+    return value;
+  }
+
+  // Accept a non-I64 integer constant directly.
+  if (auto constInt = value.getDefiningOp<mlir::arith::ConstantIntOp>()) {
+    return builder.create<mlir::arith::ConstantIntOp>(loc, constInt.value(), 64);
+  }
+
+  // Accept a floating-point constant only if it is a whole number.
+  if (auto constFloat = value.getDefiningOp<mlir::arith::ConstantFloatOp>()) {
+    double numericValue = constFloat.value().convertToDouble();
+
+    if (!std::isfinite(numericValue)) {
+      throw std::runtime_error(opName.str() + " requires " + argName.str() + " to be a finite integer literal");
+    }
+
+    if (std::trunc(numericValue) != numericValue) {
+      throw std::runtime_error(opName.str() + " requires " + argName.str() + " to be an integer literal");
+    }
+
+    if (numericValue < static_cast<double>(std::numeric_limits<int64_t>::min()) ||
+        numericValue > static_cast<double>(std::numeric_limits<int64_t>::max())) {
+      throw std::runtime_error(opName.str() + " integer literal is out of range");
+    }
+
+    return builder.create<mlir::arith::ConstantIntOp>(loc, static_cast<int64_t>(numericValue), 64);
+  }
+
+  // Anything else is not a literal, so we do not try to guess.
+  throw std::runtime_error(opName.str() + " requires " + argName.str() + " to be a literal integer value");
+}
+
+} // namespace
+
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
     : _context(context), _builder(_context), _variableTable(), _functionTable() {}
 
@@ -128,8 +169,8 @@ mlir::Value MLIRGen::emitString(StringNode *node) {
 
 mlir::Value MLIRGen::emitNumber(NumberNode *node) {
   spdlog::debug("Emitting MLIR for number: {}", node->toString());
-  return _builder.create<mlir::arith::ConstantOp>(
-      _builder.getUnknownLoc(), mlir::IntegerAttr::get(mlir::IntegerType::get(_context, 64), node->value));
+  return _builder.create<mlir::arith::ConstantFloatOp>(_builder.getUnknownLoc(), _builder.getF64Type(),
+                                                       llvm::APFloat(node->value));
 }
 
 mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Value> &args) {
@@ -150,7 +191,7 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return {};
   } else if (name == "brightness") {
     auto &inputImage = args[0];
-    auto &brightnessValue = args[1];
+    auto brightnessValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "brightness", "value");
     auto callOp =
         _builder.create<BrightnessOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, brightnessValue);
     return callOp.getResult();
@@ -165,17 +206,17 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "sharpen") {
     auto &inputImage = args[0];
-    auto &strenghtValue = args[1];
-    auto callOp = _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strenghtValue);
+    auto strengthValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "sharpen", "strength");
+    auto callOp = _builder.create<SharpenOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, strengthValue);
     return callOp.getResult();
   } else if (name == "box_blur") {
     auto &inputImage = args[0];
-    auto &radiusValue = args[1];
+    auto radiusValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "box_blur", "radius");
     auto callOp = _builder.create<BoxBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
     return callOp.getResult();
   } else if (name == "gaussian_blur") {
     auto &inputImage = args[0];
-    auto &radiusValue = args[1];
+    auto radiusValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "gaussian_blur", "radius");
     auto callOp =
         _builder.create<GaussianBlurOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radiusValue);
     return callOp.getResult();
@@ -189,7 +230,7 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "rotate") {
     auto &inputImage = args[0];
-    auto &angle = args[1];
+    auto angle = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "rotate", "angle");
     auto callOp = _builder.create<RotateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, angle);
     return callOp.getResult();
   } else if (name == "diff") {
@@ -199,13 +240,20 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "dilate") {
     auto &inputImage = args[0];
-    auto &radius = args[1];
+    auto radius = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "dilate", "radius");
     auto callOp = _builder.create<DilateOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radius);
     return callOp.getResult();
   } else if (name == "erode") {
     auto &inputImage = args[0];
-    auto &radius = args[1];
+    auto radius = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "erode", "radius");
     auto callOp = _builder.create<ErodeOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, radius);
+    return callOp.getResult();
+  } else if (name == "blend") {
+    auto &inputImage1 = args[0];
+    auto &inputImage2 = args[1];
+    auto &weight = args[2];
+    auto callOp =
+        _builder.create<BlendOp>(_builder.getUnknownLoc(), inputImage1.getType(), inputImage1, inputImage2, weight);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);
@@ -213,11 +261,19 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
 }
 
 std::unordered_map<std::string, mlir::Value> MLIRGen::builtinVariables() {
+  auto variables = std::unordered_map<std::string, mlir::Value>{};
   auto stringType = StringType::get(_context);
-  return {{"gaussian", _builder.create<StringConstOp>(_builder.getUnknownLoc(), stringType,
-                                                      mlir::StringAttr::get(_context, "gaussian"))}};
-}
 
-std::unordered_map<std::string, mlir::func::FuncOp> MLIRGen::builtinFunctions() { return {}; }
+  // variables["gaussian"] =
+  //     _builder.create<StringConstOp>(_builder.getUnknownLoc(), stringType, mlir::StringAttr::get(_context,
+  //     "gaussian"));
+
+  return variables;
+};
+
+std::unordered_map<std::string, mlir::func::FuncOp> MLIRGen::builtinFunctions() {
+  auto functions = std::unordered_map<std::string, mlir::func::FuncOp>{};
+  return functions;
+}
 
 } // namespace picceler

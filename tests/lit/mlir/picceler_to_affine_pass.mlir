@@ -34,6 +34,25 @@ func.func @DiffImages(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picc
 
 // -----
 
+func.func @BlendImages(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
+    %weight = "arith.constant"() {value = 0.5 : f64} : () -> f64
+    %0 = "picceler.blend" (%arg0, %arg1, %weight) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @BlendImages
+// CHECK: call @piccelerCreateImage
+// CHECK: affine.for
+// CHECK: affine.for
+// CHECK: arith.uitofp
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK: arith.fptoui
+// CHECK-NOT: "picceler.blend"
+// CHECK: return
+
+// -----
+
 func.func @DilateImage(%arg0 : !picceler.image) -> !picceler.image {
     %radius = "arith.constant"() {value = 1 : i64} : () -> i64
     %0 = "picceler.dilate" (%arg0, %radius) : (!picceler.image, i64) -> !picceler.image
