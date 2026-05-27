@@ -1,4 +1,4 @@
-// RUN: not %picceler-opt --picceler-to-affine %s 2>&1 | FileCheck %s
+// RUN: ! %picceler-opt --picceler-to-affine %s 2>&1 | FileCheck %s
 
 func.func @RotateImageInvalidAngle(%arg0 : !picceler.image) -> !picceler.image {
     %angle = "arith.constant"() {value = 45 : i64} : () -> i64
