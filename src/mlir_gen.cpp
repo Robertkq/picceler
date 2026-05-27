@@ -235,10 +235,10 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     return callOp.getResult();
   } else if (name == "crop") {
     auto &inputImage = args[0];
-    auto &x = args[1];
-    auto &y = args[2];
-    auto &width = args[3];
-    auto &height = args[4];
+    auto x = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[1], "crop", "x");
+    auto y = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[2], "crop", "y");
+    auto width = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[3], "crop", "width");
+    auto height = coerceValueToInt64(_builder, _builder.getUnknownLoc(), args[4], "crop", "height");
     auto callOp =
         _builder.create<CropOp>(_builder.getUnknownLoc(), inputImage.getType(), inputImage, x, y, width, height);
     return callOp.getResult();
