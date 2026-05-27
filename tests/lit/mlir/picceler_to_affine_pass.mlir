@@ -105,3 +105,20 @@ func.func @ConvolutionImage(%arg0 : !picceler.image) -> !picceler.image {
 // CHECK-NOT: "picceler.convolution"
 // CHECK: return
 
+// -----
+
+func.func @CropImage(%arg0 : !picceler.image) -> !picceler.image {
+    %x = "arith.constant"() {value = 30 : i64} : () -> i64
+    %y = "arith.constant"() {value = 135 : i64} : () -> i64
+    %w = "arith.constant"() {value = 335 : i64} : () -> i64
+    %h = "arith.constant"() {value = 240 : i64} : () -> i64
+    %0 = "picceler.crop" (%arg0, %x, %y, %w, %h) : (!picceler.image, i64, i64, i64, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @CropImage
+// CHECK: call @piccelerCreateImage
+// CHECK-COUNT-2: affine.for
+// CHECK-NOT: "picceler.crop"
+// CHECK: return
+
