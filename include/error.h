@@ -5,6 +5,10 @@
 #include <format>
 
 namespace picceler {
+
+/**
+ * @brief Struct to hold compilation error information.
+ */
 struct CompileError {
 
   CompileError() : _message("Empty message! If this isn't a test, debug this."), _line(0), _column(0) {}
@@ -23,13 +27,17 @@ struct CompileError {
   size_t _line;
   size_t _column;
 
-  const std::string &message() const { return _message; }
+  //   const std::string &message() const { return _message; }
   size_t line() const { return _line; }
   size_t column() const { return _column; }
 
-  std::string format() const { return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message); }
+  std::string message() const { return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message); }
 };
 
+/**
+ * @brief A type alias for the result of a compilation operation.
+ * @tparam T The type of the successful result.
+ */
 template <typename T> using Result = std::expected<T, CompileError>;
 
 } // namespace picceler

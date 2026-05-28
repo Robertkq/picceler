@@ -1,3 +1,12 @@
+/**
+ * @file pass_manager.cpp
+ * @brief Implementation of the IRPassManager class, which manages the sequence of MLIR passes
+ * that transform the MLIR module from its initial form to the final LLVM IR form ready for code generation. The pass
+ * manager is responsible for organizing passes into logical phases of compilation, such as high-level optimization,
+ * affine lowering, and backend lowering. It also sets up instrumentation to log the execution of passes for debugging
+ * and performance analysis.
+ */
+
 #include "pass_manager.h"
 
 #include "mlir/Transforms/Passes.h"

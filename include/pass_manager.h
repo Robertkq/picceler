@@ -13,6 +13,10 @@
 
 namespace picceler {
 
+/**
+ * @brief Custom struct to log pass execution using spdlog.
+ * This struct implements the PassInstrumentation interface to hook into the pass execution lifecycle.
+ */
 struct PassLogger : public mlir::PassInstrumentation {
   void runBeforePass(mlir::Pass *pass, mlir::Operation *op) override {
     spdlog::info("Started pass: {}", pass->getName().str());
@@ -45,19 +49,38 @@ public:
 
 private:
   /**
-   * @brief This function adds the passes to the pass manager.
+   * @brief This function adds all the passes to the pass manager.
    */
   void addPasses();
 
   /**
-   * @brief The following functions describe the phases of compilation
+   * @name The following functions describe the phases of compilation
    * and groups passes accordingly.
+   * @{
    */
 
+  /**
+   *  @brief Add passes for the high-level optimization phase.
+   *
+   */
   void addHighLevelOptimizationPasses();
+
+  /**
+   * @brief Add passes that lower the IR toward affine/loop forms.
+   */
   void addAffineLoweringPasses();
+
+  /**
+   * @brief Add passes that replace runtime-level ops with runtime calls.
+   */
   void addRuntimeLoweringPasses();
+
+  /**
+   *  @brief Add passes for final backend lowering.
+   */
   void addBackendLoweringPasses();
+
+  /** @} */
 
 private:
   std::unique_ptr<llvm::raw_fd_ostream> _outStream;

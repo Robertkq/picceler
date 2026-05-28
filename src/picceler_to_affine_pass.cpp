@@ -731,6 +731,13 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
 #define GEN_PASS_DEF_PICCELERTOAFFINE
 #include "piccelerPasses.h.inc"
 
+/**
+ * @brief A pass that converts Picceler operations to the Affine dialect. This is the crucial step where we lower from
+ * our high-level image processing operations to a more explicit representation that can be further lowered to LLVM IR.
+ * Each Picceler operation is matched and rewritten into one or more Affine loops that perform the equivalent
+ * computation. This pass also handles type conversions and ensures that necessary runtime functions (like
+ * piccelerCreateImage) are declared.
+ */
 struct PiccelerToAffinePass : public impl::PiccelerToAffineBase<PiccelerToAffinePass> {
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();

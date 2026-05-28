@@ -25,20 +25,38 @@ struct ImageAccessHelper {
   ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l);
 
   /**
-   * Defines the logical layout of the C++ struct for GEP offset calculations.
+   * @brief Defines the logical layout of the C++ struct for GEP offset calculations.
    * struct Image { i32, i32, ptr }
+   *
+   * @param ctx MLIR context for type creation.
+   * @return MLIR type representing the struct layout for GEP indexing.
    */
   static mlir::Type getImageStructType(mlir::MLIRContext *ctx);
 
   /**
-   * Internal helper to create the GEP (Address calculation) for a field index.
+   * @brief Internal helper to create the GEP (Address calculation) for a field index.
+   * The expected value of index is 0 for width, 1 for height, and 2 for data pointer.
+   * @param index The index of the field for which to calculate the address.
+   * @return MLIR value representing the address of the field.
    */
   mlir::Value getFieldAddr(int32_t index);
 
+  /**
+   * @brief Gets the value of the width field.
+   * @return MLIR value representing the width.
+   */
   mlir::Value getWidth();
 
+  /**
+   * @brief Gets the value of the height field.
+   * @return MLIR value representing the height.
+   */
   mlir::Value getHeight();
 
+  /**
+   * @brief Gets the value of the data pointer field.
+   * @return MLIR value representing the data pointer.
+   */
   mlir::Value getDataPtr();
 };
 
