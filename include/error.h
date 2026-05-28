@@ -27,11 +27,11 @@ struct CompileError {
   size_t _line;
   size_t _column;
 
-  const std::string &message() const { return _message; }
+  //   const std::string &message() const { return _message; }
   size_t line() const { return _line; }
   size_t column() const { return _column; }
 
-  std::string format() const { return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message); }
+  std::string message() const { return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message); }
 };
 
 /**
