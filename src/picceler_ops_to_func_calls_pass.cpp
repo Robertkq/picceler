@@ -118,6 +118,9 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
 #define GEN_PASS_DEF_PICCELEROPSTOFUNCCALLS
 #include "piccelerPasses.h.inc"
 
+/**
+ * @brief A pass that converts image operations (like load, show, save) into function calls.
+ */
 struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<PiccelerOpsToFuncCallsPass> {
   using PiccelerOpsToFuncCallsBase::PiccelerOpsToFuncCallsBase;
 

@@ -21,6 +21,9 @@
 
 namespace picceler {
 
+/**
+ * @brief Struct to hold command-line options for the compiler.
+ */
 class CLIOptions {
 public:
   std::string inputFile;
@@ -44,9 +47,27 @@ public:
 
 private:
   mlir::MLIRContext &getContext() { return _context; }
+
+  /**
+   * @brief Initializes the MLIR dialect registry with the necessary dialects for the compiler.
+   */
   static mlir::DialectRegistry initRegistry();
 
+  /**
+   * @brief Emits an object file from the given LLVM module.
+   * @param llvmModule The LLVM module to emit.
+   * @param objFilename The name of the output object file.
+   * @return True if the object file was emitted successfully, false otherwise.
+   */
   bool emitObjectFile(llvm::Module *llvmModule, const std::string &objFilename);
+
+  /**
+   * @brief Links the generated object file with the runtime library to produce the final executable.
+   * @param objFile The object file to link.
+   * @param runtimeLib The runtime library to link against.
+   * @param outputExe The name of the output executable file.
+   * @return True if the linking was successful, false otherwise.
+   */
   bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe);
 
 private:

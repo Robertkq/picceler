@@ -156,6 +156,10 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
 #define GEN_PASS_DEF_PICCELERFILTERSTOCONV
 #include "piccelerPasses.h.inc"
 
+/**
+ * @brief A pass that converts high-level image filter operations (like sharpen, blur, edge detect) into convolution
+ * operations with constant kernels.
+ */
 struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<PiccelerFiltersToConvPass> {
 
   void runOnOperation() override {

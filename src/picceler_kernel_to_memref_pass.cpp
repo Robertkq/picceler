@@ -55,6 +55,10 @@ struct KernelToMemref : mlir::OpRewritePattern<KernelConstOp> {
 #define GEN_PASS_DEF_PICCELERKERNELTOMEMREF
 #include "piccelerPasses.h.inc"
 
+/**
+ * @brief A pass that converts KernelConstOp operations, which represent constant convolution kernels, into MemRef
+ * operations that allocate memory for the kernel and store the constant values into it.
+ */
 struct PiccelerKernelToMemrefPass : public impl::PiccelerKernelToMemrefBase<PiccelerKernelToMemrefPass> {
   void runOnOperation() override {
     mlir::RewritePatternSet patterns(&getContext());

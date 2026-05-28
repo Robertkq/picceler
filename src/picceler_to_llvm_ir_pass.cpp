@@ -83,6 +83,9 @@ struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
 #define GEN_PASS_DEF_PICCELERTOLLVMIR
 #include "piccelerPasses.h.inc"
 
+/**
+ * @brief A pass that helps convert last pieces of Picceler IR to LLVM IR.
+ */
 struct PiccelerToLLVMIRPass : public impl::PiccelerToLLVMIRBase<PiccelerToLLVMIRPass> {
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();

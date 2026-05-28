@@ -13,7 +13,18 @@
 #include "types.h"
 
 namespace picceler {
-namespace {
+
+/**
+ * @brief Coerces a given MLIR value to a 64-bit integer if possible, with special handling for constants.
+ * @param builder The MLIR OpBuilder to use for creating new operations if coercion is needed.
+ * @param loc The location to use for any new operations created during coercion.
+ * @param value The MLIR value to coerce.
+ * @param opName The name of the operation for error reporting purposes.
+ * @param argName The name of the argument for error reporting purposes.
+ * @return The coerced MLIR value as a 64-bit integer.
+ * @throws std::runtime_error if the value cannot be coerced to a 64-bit integer, or if a floating-point constant is not
+ * a whole number or is out of range.
+ */
 
 mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value value, llvm::StringRef opName,
                                llvm::StringRef argName) {
@@ -50,11 +61,14 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
   throw std::runtime_error(opName.str() + " requires " + argName.str() + " to be a literal integer value");
 }
 
-} // namespace
-
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
     : _context(context), _builder(_context), _variableTable(), _functionTable() {}
 
+/**
+ * @brief Generates MLIR code from the given AST root node.
+ * @param root The root node of the AST.
+ * @return The generated MLIR module operation.
+ */
 mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   // Create a top-level main function to own all generated ops.
