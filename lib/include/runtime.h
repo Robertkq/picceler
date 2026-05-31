@@ -15,6 +15,8 @@ picceler::Image *piccelerLoadImage(const char *filename);
 void piccelerShowImage(picceler::Image *image);
 void piccelerSaveImage(picceler::Image *image, const char *filename);
 picceler::Image *piccelerCreateImage(uint32_t width, uint32_t height);
+void *piccelerReadString(const char *prompt);
+double piccelerReadNumber(const char *prompt);
 
 /**
  * \}

@@ -20,32 +20,33 @@ llvm::LogicalResult KernelConstOp::verify() {
   return mlir::success();
 }
 
-std::pair<uint64_t, uint64_t> getKernelNeighborhoodSize(mlir::Value kernelOperand) {
+Result<std::pair<mlir::Value, mlir::Value>> getKernelNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc,
+                                                                      mlir::Value kernelOperand) {
   if (auto kernelMemRefType = mlir::dyn_cast<mlir::MemRefType>(kernelOperand.getType())) {
     if (kernelMemRefType.getRank() < 2) {
-      return {0, 0};
+      return std::unexpected(CompileError("Kernel operand must have rank of at least 2"));
     }
 
     auto rows = kernelMemRefType.getShape()[0];
     auto cols = kernelMemRefType.getShape()[1];
     if (rows <= 0 || cols <= 0) {
-      return {0, 0};
+      return std::unexpected(CompileError("Invalid kernel dimensions"));
     }
 
-    return {static_cast<uint64_t>(rows), static_cast<uint64_t>(cols)};
+    return std::make_pair(createIntConstant(builder, loc, rows), createIntConstant(builder, loc, cols));
   }
 
   if (auto kernelTypeAttr = mlir::dyn_cast<KernelType>(kernelOperand.getType())) {
     auto rows = kernelTypeAttr.getRows();
     auto cols = kernelTypeAttr.getCols();
     if (rows <= 0 || cols <= 0) {
-      return {0, 0};
+      return std::unexpected(CompileError("Invalid kernel dimensions"));
     }
 
-    return {static_cast<uint64_t>(rows), static_cast<uint64_t>(cols)};
+    return std::make_pair(createIntConstant(builder, loc, rows), createIntConstant(builder, loc, cols));
   }
 
-  return {0, 0};
+  return std::unexpected(CompileError("Invalid kernel operand"));
 }
 
 mlir::Value ConvolutionOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {
@@ -54,30 +55,28 @@ mlir::Value ConvolutionOp::initializeAccumulator(mlir::OpBuilder &builder, mlir:
 
 mlir::Value ConvolutionOp::accumulate(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value currentAcc,
                                       mlir::Value pixelValue, mlir::Value optionalKernelValue) {
-  auto img = pixelValue;
+
   auto kernelWeight = optionalKernelValue;
-  (void)img;
   return builder
       .create<mlir::arith::AddFOp>(loc, currentAcc, builder.create<mlir::arith::MulFOp>(loc, pixelValue, kernelWeight))
       .getResult();
 }
 
-mlir::Value ConvolutionOp::finalizeAccumulator(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value finalAcc) {
-  (void)builder;
-  (void)loc;
+mlir::Value ConvolutionOp::finalizeAccumulator([[maybe_unused]] mlir::OpBuilder &builder,
+                                               [[maybe_unused]] mlir::Location loc, mlir::Value finalAcc) {
   return finalAcc;
 }
 
-std::pair<uint64_t, uint64_t> ConvolutionOp::getNeighborhoodSize(mlir::ArrayRef<mlir::Value> operands) {
+Result<std::pair<mlir::Value, mlir::Value>>
+ConvolutionOp::getNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc, mlir::ArrayRef<mlir::Value> operands) {
   if (operands.size() < 2) {
-    return {0, 0};
+    return std::unexpected(CompileError("ConvolutionOp requires at least 2 operands: input image and kernel"));
   }
 
   [[maybe_unused]] auto img = operands[0];
   auto kernelOperand = operands[1];
-  (void)img;
 
-  return getKernelNeighborhoodSize(kernelOperand);
+  return getKernelNeighborhoodSize(builder, loc, kernelOperand);
 }
 
 } // namespace picceler

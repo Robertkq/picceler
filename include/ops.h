@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "types.h"
+#include "error.h"
 #include "piccelerInterfaces.h.inc"
 
 #define GET_OP_CLASSES
@@ -27,5 +28,14 @@ namespace picceler {
  * @return An MLIR Value representing the constant float.
  */
 mlir::Value createFloatConstant(mlir::OpBuilder &builder, mlir::Location loc, double value);
+
+/**
+ * @brief Common utility function to create a constant int value in MLIR.
+ * @param builder The MLIR OpBuilder to use for creating the operation.
+ * @param loc The MLIR Location to associate with the operation.
+ * @param value The int64_t value to create as a constant.
+ * @return An MLIR Value representing the constant int.
+ */
+mlir::Value createIntConstant(mlir::OpBuilder &builder, mlir::Location loc, int64_t value);
 
 } // namespace picceler

@@ -50,3 +50,21 @@ func.func @LoadShowSaveImage() {
 // CHECK-NOT: "picceler.save_image"
 // CHECK-NEXT: call @piccelerSaveImage(%[[LOAD]], %[[OUTPATH]]) : (!picceler.image, !picceler.string) -> ()
 // CHECK-NEXT: return
+
+// -----
+
+func.func @ReadStringAndNumber() {
+    %0 = "picceler.string.const"() <{ value="Enter a string: " }> : () -> !picceler.string
+    %1 = "picceler.read_string"(%0) : (!picceler.string) -> !picceler.string
+    %2 = "picceler.string.const"() <{ value="Enter a number: " }> : () -> !picceler.string
+    %3 = "picceler.read_number"(%2) : (!picceler.string) -> f64
+    return
+}
+
+// CHECK-LABEL: func.func @ReadStringAndNumber()
+// CHECK-NEXT: %[[PROMPT1:.*]] = "picceler.string.const"() 
+// CHECK-NEXT: %[[READ_STR:.*]] = call @piccelerReadString(%[[PROMPT1]]) : (!picceler.string) -> !picceler.string
+// CHECK-NEXT: %[[PROMPT2:.*]] = "picceler.string.const"() 
+// CHECK-NEXT: %[[READ_NUM:.*]] = call @piccelerReadNumber(%[[PROMPT2]]) : (!picceler.string) -> f64
+// CHECK-NEXT: return
+

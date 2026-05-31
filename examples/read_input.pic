@@ -1,0 +1,6 @@
+path = read_string("Please enter the path to your image:")
+value = read_number("Please enter the radius for DilateOp:")
+
+img = load_image(path)
+dilated_img = dilate(img, value)
+show_image(dilated_img)

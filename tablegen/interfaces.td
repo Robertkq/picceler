@@ -39,9 +39,9 @@ def NeighbourhoodOpInterface : OpInterface<"NeighbourhoodOpInterface"> {
 		>,
         InterfaceMethod<
 		"Returns the neighborhood shape to be processed around each pixel.",
-		"std::pair<uint64_t, uint64_t>",
+		"::picceler::Result<std::pair<mlir::Value, mlir::Value>>",
         "getNeighborhoodSize",
-        (ins "mlir::ArrayRef<mlir::Value>":$operands)
+        (ins "mlir::OpBuilder &":$builder, "mlir::Location":$loc, "mlir::ArrayRef<mlir::Value>":$operands)
         >
 	];
 }

@@ -24,22 +24,18 @@ mlir::Value ErodeOp::finalizeAccumulator(mlir::OpBuilder &builder, mlir::Locatio
   return finalAcc;
 }
 
-std::pair<uint64_t, uint64_t> ErodeOp::getNeighborhoodSize(mlir::ArrayRef<mlir::Value> operands) {
+Result<std::pair<mlir::Value, mlir::Value>> ErodeOp::getNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc,
+                                                                         mlir::ArrayRef<mlir::Value> operands) {
   if (operands.size() < 2) {
-    return {0, 0};
+    return std::unexpected(CompileError("ErodeOp requires at least 2 operands: input image and radius"));
   }
 
-  auto img = operands[0];
-  auto radiusOperand = operands[1];
-  (void)img;
+  [[maybe_unused]] auto img = operands[0];
+  auto radius = operands[1];
 
-  auto constRadius = radiusOperand.getDefiningOp<mlir::arith::ConstantIntOp>();
-  if (!constRadius) {
-    return {0, 0};
-  }
-
-  auto neighborhoodSize = static_cast<uint64_t>(2 * constRadius.value() + 1);
-  return {neighborhoodSize, neighborhoodSize};
+  auto doubleRadius = builder.create<mlir::arith::AddIOp>(loc, radius, radius);
+  auto neighborhoodSize = builder.create<mlir::arith::AddIOp>(loc, doubleRadius, createIntConstant(builder, loc, 1));
+  return std::make_pair(neighborhoodSize, neighborhoodSize);
 }
 
 } // namespace picceler
