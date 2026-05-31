@@ -1,6 +1,6 @@
 
 
-add_library(PiccelerGlobalDeps INTERFACE) 
+add_library(PiccelerGlobalDeps INTERFACE)
 
 target_include_directories(PiccelerGlobalDeps INTERFACE
     ${CMAKE_SOURCE_DIR}/include
@@ -9,7 +9,7 @@ target_include_directories(PiccelerGlobalDeps INTERFACE
     ${MLIR_INCLUDE_DIRS}
 )
 
-target_link_libraries(PiccelerGlobalDeps INTERFACE 
+target_link_libraries(PiccelerGlobalDeps INTERFACE
     spdlog::spdlog
 )
 
@@ -27,7 +27,7 @@ add_library(PiccelerFrontend STATIC
     parser.cpp
 )
 
-target_link_libraries(PiccelerFrontend PUBLIC 
+target_link_libraries(PiccelerFrontend PUBLIC
     PiccelerGlobalDeps
     PiccelerUtils
 )
@@ -49,7 +49,7 @@ target_link_libraries(PiccelerOps PUBLIC
     MLIRParser
 )
 
-add_dependencies(PiccelerOps 
+add_dependencies(PiccelerOps
     ${PICCELER_TABLEGEN_TARGETS}
 )
 
@@ -60,7 +60,7 @@ add_library(PiccelerIR STATIC
 )
 
 target_link_libraries(PiccelerIR PUBLIC
-    PiccelerGlobalDeps 
+    PiccelerGlobalDeps
     PiccelerFrontend
     PiccelerOps
     MLIRIR
@@ -76,7 +76,7 @@ add_library(PiccelerTransforms STATIC
     picceler_filters_to_conv_pass.cpp
 )
 
-target_link_libraries(PiccelerTransforms PUBLIC 
+target_link_libraries(PiccelerTransforms PUBLIC
     PiccelerIR
     MLIRPass
     MLIRTransforms
@@ -91,7 +91,7 @@ target_link_libraries(PiccelerTransforms PUBLIC
 )
 
 add_library(PiccelerSupport STATIC
-    image_access_helper.cpp 
+    image_access_helper.cpp
 )
 
 target_link_libraries(PiccelerSupport PUBLIC
@@ -104,7 +104,6 @@ add_library(PiccelerCore STATIC
 )
 
 target_link_libraries(PiccelerCore PUBLIC
-    CLI11::CLI11
     PiccelerFrontend
     PiccelerIR
     PiccelerTransforms
@@ -124,7 +123,7 @@ target_link_libraries(PiccelerCore PUBLIC
     ${NATIVE_HW_LLVM_LIBS}
 )
 
-add_executable(picceler 
+add_executable(picceler
     main.cpp
 )
 
