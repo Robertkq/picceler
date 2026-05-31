@@ -15,7 +15,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-find_package(CLI11 REQUIRED)
 find_package(spdlog REQUIRED)
 
 if (ENABLE_CLANG_TIDY)
@@ -63,11 +62,11 @@ include(AddLLVM)
 include(TableGen)
 include(AddMLIR)
 
-llvm_map_components_to_libnames(NATIVE_HW_LLVM_LIBS 
-    X86 
-    Target 
-    Core 
-    Support 
+llvm_map_components_to_libnames(NATIVE_HW_LLVM_LIBS
+    X86
+    Target
+    Core
+    Support
     AsmPrinter
 )
 

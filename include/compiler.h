@@ -2,8 +2,9 @@
 
 #include <format>
 #include <iostream>
+#include <memory>
 
-#include "CLI/CLI.hpp"
+#include "llvm/Support/CommandLine.h"
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -38,15 +39,20 @@ public:
   Compiler();
 
   /**
+   * @brief Parses command-line arguments.
+   * @return True if parsing was successful, false otherwise.
+   */
+  bool parseArgs(int argc, char **argv);
+
+  /**
    * @brief Runs the compilation process.
    */
   bool run();
 
-  CLI::App &getCliApp() { return _cliApp; }
   const CLIOptions &getCliOptions() const { return _cliOptions; }
 
 private:
-  mlir::MLIRContext &getContext() { return _context; }
+  mlir::MLIRContext &getContext();
 
   /**
    * @brief Initializes the MLIR dialect registry with the necessary dialects for the compiler.
@@ -71,13 +77,13 @@ private:
   bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe);
 
 private:
-  CLI::App _cliApp;
   CLIOptions _cliOptions;
   Parser _parser;
 
-  mlir::MLIRContext _context;
-  MLIRGen _mlirGen;
-  IRPassManager _passManager;
+  // Lazily initialized to avoid LLVM option registration conflicts
+  std::unique_ptr<mlir::MLIRContext> _context;
+  std::unique_ptr<MLIRGen> _mlirGen;
+  std::unique_ptr<IRPassManager> _passManager;
 };
 
 } // namespace picceler
