@@ -129,4 +129,26 @@ def Picceler_CropOp : Op<PiccelerDialect, "crop", []> {
   let results = (outs Picceler_ImageType:$result);
 }
 
+def Picceler_ReadStringOp : Op<PiccelerDialect, "read_string", []> {
+  let summary = "Read a string from the keyboard";
+  let arguments = (ins Picceler_StringType:$prompt);
+  let results = (outs Picceler_StringType:$result);
+}
+
+def Picceler_ReadNumberOp : Op<PiccelerDialect, "read_number", []> {
+  let summary = "Read a number from the keyboard";
+  let arguments = (ins Picceler_StringType:$prompt);
+  let results = (outs F64:$result);
+}
+
+def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
+  let summary = "Print anything to the console, alike std::format";
+  let arguments = (ins AnyType:$input);
+  let results = (outs);
+
+  // let hasVerifier = 1;
+}
+
+
+
 #endif

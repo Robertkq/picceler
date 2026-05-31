@@ -347,11 +347,13 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       kernelOperand = operands[1];
     }
 
-    auto [neighborhoodRows, neighborhoodCols] = op.getNeighborhoodSize(operands);
-    if (neighborhoodRows == 0 || neighborhoodCols == 0) {
+    auto neighborhoodSizeResult = op.getNeighborhoodSize(rewriter, loc, operands);
+    if (!neighborhoodSizeResult) {
       rawOp->emitOpError("unable to determine a valid neighborhood size");
       return mlir::failure();
     }
+
+    auto [neighborhoodRows, neighborhoodCols] = *neighborhoodSizeResult;
 
     auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     auto indexType = rewriter.getIndexType();
@@ -379,14 +381,18 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     mlir::Value width = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputWidthI32);
     mlir::Value height = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, inputHeightI32);
 
-    mlir::Value neighborhoodRowsValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int64_t>(neighborhoodRows));
-    mlir::Value neighborhoodColsValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int64_t>(neighborhoodCols));
-    mlir::Value neighborhoodRowRadiusValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int64_t>(neighborhoodRows / 2));
-    mlir::Value neighborhoodColRadiusValue =
-        rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int64_t>(neighborhoodCols / 2));
+    mlir::Value c2 = createIntConstant(rewriter, loc, 2);
+
+    mlir::Value neighborhoodRowRadius = rewriter.create<mlir::arith::DivSIOp>(loc, neighborhoodRows, c2);
+    mlir::Value neighborhoodColRadius = rewriter.create<mlir::arith::DivSIOp>(loc, neighborhoodCols, c2);
+
+    mlir::Value neighborhoodRowsIdx = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodRows);
+    mlir::Value neighborhoodColsIdx = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodCols);
+    mlir::Value neighborhoodRowRadiusIdx =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodRowRadius);
+    mlir::Value neighborhoodColRadiusIdx =
+        rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodColRadius);
+
     mlir::Value zeroIndex = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
 
     auto oneConstant = rewriter.create<mlir::arith::ConstantIntOp>(loc, 1, 32);
@@ -419,12 +425,12 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     rewriter.create<mlir::LLVM::StoreOp>(loc, initAcc, sumB);
 
     auto kRowLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodRowsValue,
+        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodRowsIdx,
         mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
     rewriter.setInsertionPointToStart(kRowLoop.getBody());
 
     auto kColLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodColsValue,
+        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodColsIdx,
         mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
     rewriter.setInsertionPointToStart(kColLoop.getBody());
 
@@ -435,9 +441,9 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
         2, 1, rewriter.getAffineDimExpr(0) + rewriter.getAffineDimExpr(1) - rewriter.getAffineSymbolExpr(0));
 
     mlir::Value sampleRow = rewriter.create<mlir::affine::AffineApplyOp>(
-        loc, coordMap, mlir::ValueRange{pixelRowIndex, kRowIndex, neighborhoodRowRadiusValue});
+        loc, coordMap, mlir::ValueRange{pixelRowIndex, kRowIndex, neighborhoodRowRadiusIdx});
     mlir::Value sampleCol = rewriter.create<mlir::affine::AffineApplyOp>(
-        loc, coordMap, mlir::ValueRange{pixelColIndex, kColIndex, neighborhoodColRadiusValue});
+        loc, coordMap, mlir::ValueRange{pixelColIndex, kColIndex, neighborhoodColRadiusIdx});
 
     auto rowLow = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sge, sampleRow, zeroIndex);
     auto rowHigh = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, sampleRow, height);

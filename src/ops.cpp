@@ -1,3 +1,5 @@
+
+#include "error.h"
 #include "ops.h"
 
 #define GET_OP_INTERFACE_DEFS

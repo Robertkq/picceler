@@ -8,6 +8,7 @@
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Dialect.h"
 
 #include "ops.h"
 #include "types.h"
@@ -57,8 +58,11 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
     return builder.create<mlir::arith::ConstantIntOp>(loc, static_cast<int64_t>(numericValue), 64);
   }
 
-  // Anything else is not a literal, so we do not try to guess.
-  throw std::runtime_error(opName.str() + " requires " + argName.str() + " to be a literal integer value");
+  if (auto isRuntimeFloat = mlir::isa<mlir::FloatType>(value.getType())) {
+    return builder.create<mlir::arith::FPToSIOp>(loc, builder.getI64Type(), value);
+  }
+
+  throw std::runtime_error(opName.str() + " requires " + argName.str() + ", it is an unsupported use case");
 }
 
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
@@ -277,6 +281,16 @@ mlir::Value MLIRGen::emitBuiltinCall(CallNode *node, const std::vector<mlir::Val
     auto &weight = args[2];
     auto callOp =
         _builder.create<BlendOp>(_builder.getUnknownLoc(), inputImage1.getType(), inputImage1, inputImage2, weight);
+    return callOp.getResult();
+  } else if (name == "read_number") {
+    auto resultType = _builder.getType<mlir::Float64Type>();
+    auto &prompt = args[0];
+    auto callOp = _builder.create<ReadNumberOp>(_builder.getUnknownLoc(), resultType, prompt);
+    return callOp.getResult();
+  } else if (name == "read_string") {
+    auto resultType = _builder.getType<StringType>();
+    auto &prompt = args[0];
+    auto callOp = _builder.create<ReadStringOp>(_builder.getUnknownLoc(), resultType, prompt);
     return callOp.getResult();
   } else {
     throw std::runtime_error("Unsupported builtin function: " + name);

@@ -4,6 +4,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/SymbolTable.h"
 
 #include "ops.h"
@@ -40,10 +41,11 @@ mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module, mlir::StringRef name
 /**
  * @brief Pattern to lower LoadImageOp to a function call.
  */
-struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
-  using mlir::OpRewritePattern<LoadImageOp>::OpRewritePattern;
+struct LoadImageToCall : public mlir::OpConversionPattern<LoadImageOp> {
+  using mlir::OpConversionPattern<LoadImageOp>::OpConversionPattern;
 
-  mlir::LogicalResult matchAndRewrite(LoadImageOp op, mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(LoadImageOp op, LoadImageOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -54,7 +56,7 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
 
     auto func = ensureRuntimeFunc(module, "piccelerLoadImage", {stringType}, {imageType}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
-    args.push_back(op.getFilename());
+    args.push_back(adaptor.getFilename());
 
     auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
     rewriter.replaceOp(op, call.getResults());
@@ -66,10 +68,11 @@ struct LoadImageToCall : public mlir::OpRewritePattern<LoadImageOp> {
 /**
  * @brief Pattern to lower ShowImageOp to a function call.
  */
-struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
-  using mlir::OpRewritePattern<ShowImageOp>::OpRewritePattern;
+struct ShowImageToCall : public mlir::OpConversionPattern<ShowImageOp> {
+  using mlir::OpConversionPattern<ShowImageOp>::OpConversionPattern;
 
-  mlir::LogicalResult matchAndRewrite(ShowImageOp op, mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(ShowImageOp op, ShowImageOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -79,7 +82,7 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
 
     auto func = ensureRuntimeFunc(module, "piccelerShowImage", {imageType}, {}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 1> args;
-    args.push_back(op.getInput());
+    args.push_back(adaptor.getInput());
 
     auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
     rewriter.replaceOp(op, call.getResults());
@@ -91,10 +94,11 @@ struct ShowImageToCall : public mlir::OpRewritePattern<ShowImageOp> {
 /**
  * @brief Pattern to lower SaveImageOp to a function call.
  */
-struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
-  using mlir::OpRewritePattern<SaveImageOp>::OpRewritePattern;
+struct SaveImageToCall : public mlir::OpConversionPattern<SaveImageOp> {
+  using OpConversionPattern<SaveImageOp>::OpConversionPattern;
 
-  mlir::LogicalResult matchAndRewrite(SaveImageOp op, mlir::PatternRewriter &rewriter) const override {
+  mlir::LogicalResult matchAndRewrite(SaveImageOp op, SaveImageOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
 
     auto module = op->getParentOfType<mlir::ModuleOp>();
     auto ctx = rewriter.getContext();
@@ -105,8 +109,53 @@ struct SaveImageToCall : public mlir::OpRewritePattern<SaveImageOp> {
 
     auto func = ensureRuntimeFunc(module, "piccelerSaveImage", {imageType, stringType}, {}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
-    args.push_back(op.getInput());
-    args.push_back(op.getFilename());
+    args.push_back(adaptor.getInput());
+    args.push_back(adaptor.getFilename());
+
+    auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
+    rewriter.replaceOp(op, call.getResults());
+
+    return mlir::success();
+  }
+};
+
+struct ReadNumberToCall : public mlir::OpConversionPattern<ReadNumberOp> {
+  using OpConversionPattern<ReadNumberOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(ReadNumberOp op, ReadNumberOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
+    auto module = op->getParentOfType<mlir::ModuleOp>();
+    auto ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    auto stringType = StringType::get(ctx);
+    auto F64Type = rewriter.getF64Type();
+
+    auto func = ensureRuntimeFunc(module, "piccelerReadNumber", {stringType}, {F64Type}, rewriter, loc);
+    llvm::SmallVector<mlir::Value, 2> args;
+    args.push_back(adaptor.getPrompt());
+
+    auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
+    rewriter.replaceOp(op, call.getResults());
+
+    return mlir::success();
+  }
+};
+
+struct ReadStringToCall : mlir::OpConversionPattern<ReadStringOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(ReadStringOp op, ReadStringOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
+    auto module = op->getParentOfType<mlir::ModuleOp>();
+    auto ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    auto stringType = StringType::get(ctx);
+
+    auto func = ensureRuntimeFunc(module, "piccelerReadString", {stringType}, {stringType}, rewriter, loc);
+    llvm::SmallVector<mlir::Value, 2> args;
+    args.push_back(adaptor.getPrompt());
 
     auto call = rewriter.create<mlir::func::CallOp>(loc, func, args);
     rewriter.replaceOp(op, call.getResults());
@@ -127,10 +176,15 @@ struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<Picc
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();
 
-    mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall>(&getContext());
+    mlir::ConversionTarget target(getContext());
+    target.addLegalOp<mlir::ModuleOp>();
+    target.addLegalDialect<mlir::func::FuncDialect>();
+    target.addIllegalOp<LoadImageOp, ShowImageOp, SaveImageOp, ReadNumberOp, ReadStringOp>();
 
-    if (mlir::failed(mlir::applyPatternsGreedily(module, std::move(patterns)))) {
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, ReadNumberToCall, ReadStringToCall>(&getContext());
+
+    if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
     }
   }
