@@ -48,12 +48,14 @@ void *piccelerReadString(const char *prompt) {
   return static_cast<void *>(const_cast<char *>(result->c_str()));
 }
 
-void *piccelerReadNumber(const char *prompt) {
+double piccelerReadNumber(const char *prompt) {
   spdlog::debug("piccelerReadNumber called with prompt: {}", prompt);
   double *result = new double(); // for now just let it leak
 
   std::cout << prompt;
   std::cin >> *result;
-  return static_cast<void *>(result);
+  std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+  return *result;
 }
-}
+
+} // extern "C"
