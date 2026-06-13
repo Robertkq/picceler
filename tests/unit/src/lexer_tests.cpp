@@ -104,6 +104,8 @@ TEST_F(LexerTest, KernelTokenSequence) {
       seq.push_back(t.value());
     else if (t.type() == picceler::Token::Type::IDENTIFIER)
       seq.push_back(t.value());
+    else if (t.type() == picceler::Token::Type::ASSIGN)
+      seq.push_back(t.value());
   }
 
   std::vector<std::string> expected = {"k", "=", "[", "[", "1", ",", "2", "]", ",", "[", "3", ",", "4", "]", "]"};

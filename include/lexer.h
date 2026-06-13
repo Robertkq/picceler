@@ -180,9 +180,9 @@ private:
   /*
    * @brief Identifies if a string is a keyword.
    * @param value The string to check.
-   * @return True if the string is a keyword, false otherwise.
+   * @return The token type if the string is a keyword, std::unexpected otherwise.
    */
-  bool isKeyword(const std::string &value) const;
+  Result<Token::Type> isKeyword(const std::string &value) const;
 
   /**
    * @brief Reads an identifier or keyword token from the input.

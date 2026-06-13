@@ -147,12 +147,16 @@ bool Lexer::isSymbol(char ch) const {
   return _symbols.find(ch) != std::string::npos;
 }
 
-bool Lexer::isKeyword(const std::string &value) const {
+Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   static const std::unordered_map<std::string, Token::Type> keywords = {
       {"def", Token::Type::KW_DEF},
       {"return", Token::Type::KW_RETURN},
   };
-  return keywords.find(value) != keywords.end();
+  auto it = keywords.find(value);
+  if (it != keywords.end()) {
+    return it->second;
+  }
+  return std::unexpected(CompileError{std::format("Not a keyword: {}", value)});
 }
 
 Result<Token> Lexer::readIdentifierOrKeyword(std::pair<size_t, size_t> start) {
@@ -160,8 +164,10 @@ Result<Token> Lexer::readIdentifierOrKeyword(std::pair<size_t, size_t> start) {
   while (!eof() && (isalnum(peek()) || peek() == '_')) {
     value += get();
   }
-  if (isKeyword(value)) {
-    return Token{Token::Type::KW_DEF, value, start.first, start.second};
+  auto result = isKeyword(value);
+  if (result) {
+    Token::Type keywordType = *result;
+    return Token{keywordType, value, start.first, start.second};
   }
   return Token{Token::Type::IDENTIFIER, value, start.first, start.second};
 }
