@@ -26,7 +26,52 @@ namespace picceler {
  */
 struct Token {
   /** @brief The type of the token. */
-  enum class Type : size_t { IDENTIFIER, NUMBER, STRING, SYMBOL, EOF_TOKEN, UNKNOWN };
+  enum class Type : size_t {
+    IDENTIFIER, // Represents identifiers (user defined names)
+    NUMBER,     // Represents numeric literals (e.g., integers, floats)
+    STRING,     // Represents string literals
+    L_PAREN,    // Represents the left parenthesis '('
+    R_PAREN,    // Represents the right parenthesis ')'
+    L_BRACKET,  // Represents the left bracket '['
+    R_BRACKET,  // Represents the right bracket ']'
+    L_BRACE,    // Represents the left brace '{'
+    R_BRACE,    // Represents the right brace '}'
+    COMMA,      // Represents the comma ','
+    COLON,      // Represents the colon ':'
+    ARROW,      // Represents the arrow '->'
+    ASSIGN,     // Represents the assignment operator '='
+    KW_DEF,     // Represents the keyword 'def'
+    KW_RETURN,  // Represents the keyword 'return'
+    EOF_TOKEN,  // Represents the end of file
+    UNKNOWN     // Represents unknown tokens
+  };
+
+  Token() : _type(Type::UNKNOWN), _value(""), _line(0), _column(0) {}
+
+  Token(Type type, std::string value, size_t line, size_t column)
+      : _type(type), _value(std::move(value)), _line(line), _column(column) {}
+
+  Token(const Token &other) : _type(other._type), _value(other._value), _line(other._line), _column(other._column) {}
+  Token(Token &&other) noexcept
+      : _type(other._type), _value(std::move(other._value)), _line(other._line), _column(other._column) {}
+  Token &operator=(const Token &other) {
+    if (this != &other) {
+      _type = other._type;
+      _value = other._value;
+      _line = other._line;
+      _column = other._column;
+    }
+    return *this;
+  }
+  Token &operator=(Token &&other) noexcept {
+    if (this != &other) {
+      _type = other._type;
+      _value = std::move(other._value);
+      _line = other._line;
+      _column = other._column;
+    }
+    return *this;
+  }
 
   /**
    * @brief Converts the token type to a string representation.
@@ -42,6 +87,20 @@ struct Token {
     return std::format("Token(type: {}, value: '{}', line: {}, column: {})", typeToString(), _value, _line, _column);
   }
 
+  Type type() const { return _type; }
+  const std::string &value() const { return _value; }
+  size_t line() const { return _line; }
+  size_t column() const { return _column; }
+
+  /*
+   * @brief Compares a token to a token type for easy checking in parsing.
+   * @param lhs The token to compare.
+   * @param rhs The token type to compare against.
+   * @return True if the token's type matches the token type, false otherwise.
+   */
+  friend constexpr bool operator==(const Token &lhs, const Token::Type &rhs) { return lhs._type == rhs; }
+
+private:
   Type _type;
   std::string _value;
   size_t _line;
@@ -118,12 +177,19 @@ private:
    */
   bool isSymbol(char ch) const;
 
-  /**
-   * @brief Reads an identifier token from the input.
-   * @param start The starting line and column of the token.
-   * @return The identifier token.
+  /*
+   * @brief Identifies if a string is a keyword.
+   * @param value The string to check.
+   * @return True if the string is a keyword, false otherwise.
    */
-  Result<Token> readIdentifier(std::pair<size_t, size_t> start);
+  bool isKeyword(const std::string &value) const;
+
+  /**
+   * @brief Reads an identifier or keyword token from the input.
+   * @param start The starting line and column of the token.
+   * @return The identifier or keyword token.
+   */
+  Result<Token> readIdentifierOrKeyword(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a number token from the input.

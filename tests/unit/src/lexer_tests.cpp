@@ -20,7 +20,7 @@ TEST_F(LexerTest, EmptyInput) {
   auto tokens = tokensRes.value();
 
   ASSERT_EQ(tokens.size(), 1);
-  EXPECT_EQ(tokens[0]._type, picceler::Token::Type::EOF_TOKEN);
+  EXPECT_EQ(tokens[0].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
@@ -37,25 +37,25 @@ TEST_F(LexerTest, LoadImageStatement) {
 
   ASSERT_GE(tokens.size(), 7); // img, =, load_image, (, "cat.jpg", ), EOF
 
-  EXPECT_EQ(tokens[0]._type, picceler::Token::Type::IDENTIFIER);
-  EXPECT_EQ(tokens[0]._value, "img");
+  EXPECT_EQ(tokens[0].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[0].value(), "img");
 
-  EXPECT_EQ(tokens[1]._type, picceler::Token::Type::SYMBOL);
-  EXPECT_EQ(tokens[1]._value, "=");
+  EXPECT_EQ(tokens[1].type(), picceler::Token::Type::ASSIGN);
+  EXPECT_EQ(tokens[1].value(), "=");
 
-  EXPECT_EQ(tokens[2]._type, picceler::Token::Type::IDENTIFIER);
-  EXPECT_EQ(tokens[2]._value, "load_image");
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[2].value(), "load_image");
 
-  EXPECT_EQ(tokens[3]._type, picceler::Token::Type::SYMBOL);
-  EXPECT_EQ(tokens[3]._value, "(");
+  EXPECT_EQ(tokens[3].type(), picceler::Token::Type::L_PAREN);
+  EXPECT_EQ(tokens[3].value(), "(");
 
-  EXPECT_EQ(tokens[4]._type, picceler::Token::Type::STRING);
-  EXPECT_EQ(tokens[4]._value, "cat.jpg");
+  EXPECT_EQ(tokens[4].type(), picceler::Token::Type::STRING);
+  EXPECT_EQ(tokens[4].value(), "cat.jpg");
 
-  EXPECT_EQ(tokens[5]._type, picceler::Token::Type::SYMBOL);
-  EXPECT_EQ(tokens[5]._value, ")");
+  EXPECT_EQ(tokens[5].type(), picceler::Token::Type::R_PAREN);
+  EXPECT_EQ(tokens[5].value(), ")");
 
-  EXPECT_EQ(tokens.back()._type, picceler::Token::Type::EOF_TOKEN);
+  EXPECT_EQ(tokens.back().type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, NumbersParsing) {
@@ -70,8 +70,8 @@ TEST_F(LexerTest, NumbersParsing) {
 
   std::vector<std::string> numbers;
   for (const auto &t : tokens) {
-    if (t._type == picceler::Token::Type::NUMBER)
-      numbers.push_back(t._value);
+    if (t.type() == picceler::Token::Type::NUMBER)
+      numbers.push_back(t.value());
   }
 
   ASSERT_EQ(numbers.size(), 3);
@@ -94,12 +94,16 @@ TEST_F(LexerTest, KernelTokenSequence) {
   // ']', ']', EOF
   std::vector<std::string> seq;
   for (const auto &t : tokens) {
-    if (t._type == picceler::Token::Type::SYMBOL)
-      seq.push_back(t._value);
-    else if (t._type == picceler::Token::Type::NUMBER)
-      seq.push_back(t._value);
-    else if (t._type == picceler::Token::Type::IDENTIFIER)
-      seq.push_back(t._value);
+    if (t.type() == picceler::Token::Type::L_BRACKET)
+      seq.push_back(t.value());
+    else if (t.type() == picceler::Token::Type::R_BRACKET)
+      seq.push_back(t.value());
+    else if (t.type() == picceler::Token::Type::COMMA)
+      seq.push_back(t.value());
+    else if (t.type() == picceler::Token::Type::NUMBER)
+      seq.push_back(t.value());
+    else if (t.type() == picceler::Token::Type::IDENTIFIER)
+      seq.push_back(t.value());
   }
 
   std::vector<std::string> expected = {"k", "=", "[", "[", "1", ",", "2", "]", ",", "[", "3", ",", "4", "]", "]"};
@@ -125,12 +129,12 @@ TEST_F(LexerTest, IdentifiersAndUnderscores) {
   bool foundSomeFunction = false;
   bool foundPrivate = false;
   for (const auto &t : tokens) {
-    if (t._type == picceler::Token::Type::IDENTIFIER) {
-      if (t._value == "my_var")
+    if (t.type() == picceler::Token::Type::IDENTIFIER) {
+      if (t.value() == "my_var")
         foundMyVar = true;
-      if (t._value == "some_function")
+      if (t.value() == "some_function")
         foundSomeFunction = true;
-      if (t._value == "_private123")
+      if (t.value() == "_private123")
         foundPrivate = true;
     }
   }
@@ -148,14 +152,14 @@ TEST_F(LexerTest, StringParsingAndPeek) {
   if (!peekRes)
     FAIL() << peekRes.error().message();
   // peek should return first token (identifier 's') without consuming
-  EXPECT_EQ(peekRes->_type, picceler::Token::Type::IDENTIFIER);
-  EXPECT_EQ(peekRes->_value, "s");
+  EXPECT_EQ(peekRes->type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(peekRes->value(), "s");
 
   auto nextRes = lexer.nextToken();
   if (!nextRes)
     FAIL() << nextRes.error().message();
-  EXPECT_EQ(nextRes->_type, picceler::Token::Type::IDENTIFIER);
-  EXPECT_EQ(nextRes->_value, "s");
+  EXPECT_EQ(nextRes->type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(nextRes->value(), "s");
 
   // advance to string token
   // consume '=', identifier already consumed
@@ -165,8 +169,8 @@ TEST_F(LexerTest, StringParsingAndPeek) {
   auto strRes = lexer.nextToken();
   if (!strRes)
     FAIL() << strRes.error().message();
-  EXPECT_EQ(strRes->_type, picceler::Token::Type::STRING);
-  EXPECT_EQ(strRes->_value, "hello world");
+  EXPECT_EQ(strRes->type(), picceler::Token::Type::STRING);
+  EXPECT_EQ(strRes->value(), "hello world");
 }
 
 TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
@@ -181,7 +185,7 @@ TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
 
   bool foundUnknown = false;
   for (const auto &t : tokens) {
-    if (t._type == picceler::Token::Type::UNKNOWN)
+    if (t.type() == picceler::Token::Type::UNKNOWN)
       foundUnknown = true;
   }
   EXPECT_TRUE(foundUnknown);
