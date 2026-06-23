@@ -35,6 +35,8 @@ std::string Token::typeToString() const {
     return "ARROW";
   case Type::ASSIGN:
     return "ASSIGN";
+  case Type::TYPE:
+    return "TYPE";
   case Type::KW_DEF:
     return "KW_DEF";
   case Type::KW_RETURN:
@@ -75,7 +77,7 @@ Result<Token> Lexer::nextToken() {
   char ch;
   ch = peek();
   if (isIdentifier(ch)) {
-    return readIdentifierOrKeyword({_line, _column});
+    return readIdentifierOrKeywordOrType({_line, _column});
   }
   if (isdigit(ch) || ch == '-') {
     return readNumber({_line, _column});
@@ -159,7 +161,20 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   return std::unexpected(CompileError{std::format("Not a keyword: {}", value)});
 }
 
-Result<Token> Lexer::readIdentifierOrKeyword(std::pair<size_t, size_t> start) {
+Result<Token::Type> Lexer::isType(const std::string &value) const {
+  static const std::unordered_map<std::string, Token::Type> types = {
+      {"int", Token::Type::TYPE},
+      {"float", Token::Type::TYPE},
+      {"string", Token::Type::TYPE},
+  };
+  auto it = types.find(value);
+  if (it != types.end()) {
+    return it->second;
+  }
+  return std::unexpected(CompileError{std::format("Not a type: {}", value)});
+}
+
+Result<Token> Lexer::readIdentifierOrKeywordOrType(std::pair<size_t, size_t> start) {
   std::string value;
   while (!eof() && (isalnum(peek()) || peek() == '_')) {
     value += get();
@@ -168,6 +183,11 @@ Result<Token> Lexer::readIdentifierOrKeyword(std::pair<size_t, size_t> start) {
   if (result) {
     Token::Type keywordType = *result;
     return Token{keywordType, value, start.first, start.second};
+  }
+  result = isType(value);
+  if (result) {
+    Token::Type typeType = *result;
+    return Token{typeType, value, start.first, start.second};
   }
   return Token{Token::Type::IDENTIFIER, value, start.first, start.second};
 }

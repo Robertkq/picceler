@@ -40,6 +40,7 @@ struct Token {
     COLON,      // Represents the colon ':'
     ARROW,      // Represents the arrow '->'
     ASSIGN,     // Represents the assignment operator '='
+    TYPE,       // Represents type annotations (e.g., int, float, string)
     KW_DEF,     // Represents the keyword 'def'
     KW_RETURN,  // Represents the keyword 'return'
     EOF_TOKEN,  // Represents the end of file
@@ -54,6 +55,7 @@ struct Token {
   Token(const Token &other) : _type(other._type), _value(other._value), _line(other._line), _column(other._column) {}
   Token(Token &&other) noexcept
       : _type(other._type), _value(std::move(other._value)), _line(other._line), _column(other._column) {}
+  ~Token() = default;
   Token &operator=(const Token &other) {
     if (this != &other) {
       _type = other._type;
@@ -177,7 +179,7 @@ private:
    */
   bool isSymbol(char ch) const;
 
-  /*
+  /**
    * @brief Identifies if a string is a keyword.
    * @param value The string to check.
    * @return The token type if the string is a keyword, std::unexpected otherwise.
@@ -185,11 +187,18 @@ private:
   Result<Token::Type> isKeyword(const std::string &value) const;
 
   /**
+   * @brief Identifies if a string is a type.
+   * @param value The string to check.
+   * @return The token type if the string is a type, std::unexpected otherwise.
+   */
+  Result<Token::Type> isType(const std::string &value) const;
+
+  /**
    * @brief Reads an identifier or keyword token from the input.
    * @param start The starting line and column of the token.
    * @return The identifier or keyword token.
    */
-  Result<Token> readIdentifierOrKeyword(std::pair<size_t, size_t> start);
+  Result<Token> readIdentifierOrKeywordOrType(std::pair<size_t, size_t> start);
 
   /**
    * @brief Reads a number token from the input.

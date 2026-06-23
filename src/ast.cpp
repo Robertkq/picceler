@@ -6,6 +6,23 @@ namespace picceler {
 
 std::string ModuleNode::toString() const { return std::format("Module: {} statements", statements.size()); }
 
+std::string FunctionNode::toString() const {
+  std::string params;
+  for (const auto &param : parameters) {
+    if (!params.empty()) {
+      params += ", ";
+    }
+    params += std::format("{}: {}", param.first, param.second);
+  }
+  std::string statements;
+  if (!body.empty()) {
+    for (const auto &statement : body) {
+      statements += "\t" + statement->toString() + "\n";
+    }
+  }
+  return std::format("Function:[{}({})] {{\n{}}}", name, params, statements);
+}
+
 std::string VariableNode::toString() const { return std::format("Variable:[{}]", name); }
 
 std::string StringNode::toString() const { return std::format("String:[{}]", value); }

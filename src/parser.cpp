@@ -72,12 +72,138 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return std::unexpected(CompileError{std::format("Unexpected token '{}' after identifier at {}:{}",
                                                     nextToken.value(), nextToken.line(), nextToken.column())});
 
+  } else if (token == Token::Type::KW_DEF) {
+    auto defTokenResult = _lexer.nextToken(); // consume 'def'
+    if (!defTokenResult) {
+      spdlog::error("{}", defTokenResult.error().message());
+      return std::unexpected(CompileError{"Failed to consume 'def' token"});
+    }
+    return parseFunctionDefinition(*defTokenResult);
   } else if (token == Token::Type::EOF_TOKEN) {
     return nullptr;
   } else {
     return std::unexpected(
         CompileError{std::format("Unexpected token '{}' at {}:{}", token.value(), token.line(), token.column())});
   }
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken) {
+  auto nameTokenResult = _lexer.nextToken(); // consume function name
+  if (!nameTokenResult) {
+    spdlog::error("{}", nameTokenResult.error().message());
+    return std::unexpected(CompileError{"Failed to consume function name token"});
+  }
+  if (nameTokenResult->type() != Token::Type::IDENTIFIER) {
+    return std::unexpected(CompileError{std::format("Expected function name after 'def' at {}:{}",
+                                                    nameTokenResult->line(), nameTokenResult->column())});
+  }
+  auto funcNode = std::make_unique<FunctionNode>();
+  funcNode->name = nameTokenResult->value();
+  auto lParenTokenResult = _lexer.nextToken(); // consume '('
+  if (!lParenTokenResult) {
+    spdlog::error("{}", lParenTokenResult.error().message());
+    return std::unexpected(CompileError{"Failed to consume '(' token in function definition"});
+  }
+  auto lParenToken = *lParenTokenResult;
+  if (lParenToken.type() != Token::Type::L_PAREN) {
+    return std::unexpected(CompileError{"Expected '(' in function definition"});
+  }
+  auto tokenItter = _lexer.peekToken();
+  while (tokenItter != Token::Type::R_PAREN) {
+    auto paramTokenResult = _lexer.nextToken(); // consume parameter -- expected name
+    if (!paramTokenResult) {
+      spdlog::error("{}", paramTokenResult.error().message());
+      return std::unexpected(CompileError{"Failed to consume parameter token in function definition"});
+    }
+    auto paramToken = *paramTokenResult;
+    if (paramToken != Token::Type::IDENTIFIER) {
+      return std::unexpected(
+          CompileError{std::format("Expected parameter name at {}:{}", paramToken.line(), paramToken.column())});
+    }
+    auto colonTokenResult = _lexer.nextToken(); // consume ':'
+    if (!colonTokenResult) {
+      spdlog::error("{}", colonTokenResult.error().message());
+      return std::unexpected(CompileError{"Failed to consume ':' token in function definition"});
+    }
+    auto colonToken = *colonTokenResult;
+    if (colonToken != Token::Type::COLON) {
+      return std::unexpected(CompileError{
+          std::format("Expected ':' after parameter name at {}:{}", colonToken.line(), colonToken.column())});
+    }
+    auto typeTokenResult = _lexer.nextToken(); // consume type
+    if (!typeTokenResult) {
+      spdlog::error("{}", typeTokenResult.error().message());
+      return std::unexpected(CompileError{"Failed to consume type token in function definition"});
+    }
+    auto typeToken = *typeTokenResult;
+    if (typeToken != Token::Type::TYPE) {
+      return std::unexpected(
+          CompileError{std::format("Expected type after ':' at {}:{}", typeToken.line(), typeToken.column())});
+    }
+    funcNode->parameters.push_back({paramToken.value(), typeToken.value()});
+    tokenItter = _lexer.peekToken();
+    if (tokenItter == Token::Type::COMMA) {
+      auto commaTokenResult = _lexer.nextToken(); // consume ','
+      if (!commaTokenResult) {
+        spdlog::error("{}", commaTokenResult.error().message());
+        return std::unexpected(CompileError{"Failed to consume ',' token in function definition"});
+      }
+    }
+    tokenItter = _lexer.peekToken(); // could be ')' or another parameter
+    if (!tokenItter) {
+      spdlog::error("{}", tokenItter.error().message());
+      return std::unexpected(CompileError{"Failed to consume token in function definition"});
+    }
+  }
+  auto rParenTokenResult = _lexer.nextToken(); // consume ')'
+  if (!rParenTokenResult) {
+    spdlog::error("{}", rParenTokenResult.error().message());
+    return std::unexpected(CompileError{"Failed to consume ')' token in function definition"});
+  }
+  auto rParenToken = *rParenTokenResult;
+  if (rParenToken != Token::Type::R_PAREN) {
+    return std::unexpected(
+        CompileError{std::format("Expected ')' after parameters at {}:{}", rParenToken.line(), rParenToken.column())});
+  }
+
+  auto lBraceTokenResult = _lexer.nextToken(); // consume '{'
+  if (!lBraceTokenResult) {
+    spdlog::error("{}", lBraceTokenResult.error().message());
+    return std::unexpected(CompileError{"Failed to consume '{' token in function definition"});
+  }
+  auto lBraceToken = *lBraceTokenResult;
+  if (lBraceToken != Token::Type::L_BRACE) {
+    return std::unexpected(CompileError{
+        std::format("Expected '{{' after function signature at {}:{}", lBraceToken.line(), lBraceToken.column())});
+  }
+
+  tokenItter = _lexer.peekToken();
+  while (tokenItter != Token::Type::R_BRACE) {
+    auto stmtResult = parseStatement();
+    if (!stmtResult) {
+      spdlog::error("{}", stmtResult.error().message());
+      return std::unexpected(CompileError{"Failed to parse statement in function body"});
+    }
+    auto stmt = std::move(stmtResult.value());
+    if (!stmt) {
+      return std::unexpected(CompileError{"Unexpected end of function body"});
+    }
+    funcNode->body.push_back(std::move(stmt));
+    tokenItter = _lexer.peekToken();
+  }
+
+  auto rBraceTokenResult = _lexer.nextToken(); // consume '}'
+  if (!rBraceTokenResult) {
+    spdlog::error("{}", rBraceTokenResult.error().message());
+    return std::unexpected(CompileError{"Failed to consume '}' token in function definition"});
+  }
+  auto rBraceToken = *rBraceTokenResult;
+  if (rBraceToken != Token::Type::R_BRACE) {
+    return std::unexpected(CompileError{
+        std::format("Expected '}}' after function body at {}:{}", rBraceToken.line(), rBraceToken.column())});
+  }
+
+  return funcNode;
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(Token identifier) {

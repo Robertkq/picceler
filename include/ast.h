@@ -2,8 +2,7 @@
 
 #include <vector>
 #include <string>
-#include <cstddef>
-#include <cstdint>
+#include <optional>
 #include <memory>
 
 #include "lexer.h"
@@ -34,11 +33,19 @@ struct ModuleNode : public ASTNode {
   std::string toString() const override;
 };
 
+struct FunctionNode : public ASTNode {
+  std::string name;
+  std::vector<std::pair<std::string, std::string>> parameters;
+  std::vector<std::unique_ptr<ASTNode>> body;
+  std::string toString() const override;
+};
+
 /**
  * @brief AST node for variable references.
  */
 struct VariableNode : public ASTNode {
   std::string name;
+  std::optional<std::string> type; // optional type annotation
   std::string toString() const override;
 };
 
