@@ -1,11 +1,15 @@
 def f() {
-    img = load_image("~/Pictures/cat.png")
+    pathx = "~/Pictures/cat.png"
+    img = load_image(pathx)
     show_image(img)
+    g(pathx)
+    dilated = dilate(img, 3)
+    show_image(dilated)
 }
 
 def g(path : string)
 {
-    img = load_image("~/Pictures/cat.png")
+    img = load_image(path)
     show_image(img)
 }
 

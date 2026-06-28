@@ -13,6 +13,7 @@
 #include "mlir/Pass/Pass.h"
 
 #include "dialect.h"
+#include "types.h"
 #include "parser.h"
 
 namespace picceler {
@@ -22,8 +23,18 @@ namespace picceler {
  * This offers the initial IR generation from the AST.
  */
 class MLIRGen {
+
+public:
+  using GeneratorFunction = std::function<mlir::Value(mlir::Location, const std::vector<mlir::Value> &)>;
+
 public:
   MLIRGen(mlir::MLIRContext *context);
+
+  bool normalizeASTMain(mlir::ModuleOp module, ModuleNode *root);
+  void declareUserFunctions(mlir::ModuleOp module, ModuleNode *root);
+  void defineUserFunctions(mlir::ModuleOp module, ModuleNode *root);
+
+  std::vector<mlir::Type> getFunctionArgTypes(FunctionNode *funcNode);
 
   /**
    * @brief Generates MLIR code from the given AST root node.
@@ -50,37 +61,19 @@ private:
   mlir::Value emitVariable(VariableNode *node);
   mlir::Value emitString(StringNode *node);
   mlir::Value emitNumber(NumberNode *node);
-  mlir::Value emitBuiltinCall(CallNode *node, const std::vector<mlir::Value> &args);
+  mlir::Value emitCallExpression(CallNode *node, const std::vector<mlir::Value> &args);
 
   /**
    * \}
    */
 
-  /**
-   * @brief Checks if a function call is to a built-in function.
-   * @param node The function call AST node.
-   * @return True if it's a built-in function, false otherwise.
-   */
-  bool isBuiltinFunction(CallNode *node);
-
-  /**
-   * @brief Provides a mapping of built-in variable names to their MLIR values.
-   * @return An unordered map of built-in variable names to MLIR values.
-   */
-  std::unordered_map<std::string, mlir::Value> builtinVariables();
-
-  /**
-   * @brief Provides a mapping of built-in function names to their MLIR function
-   * ops.
-   * @return An unordered map of built-in function names to MLIR function ops.
-   */
-  std::unordered_map<std::string, mlir::func::FuncOp> builtinFunctions();
+  void registerBuiltinFunctions();
 
 private:
   mlir::MLIRContext *_context;
   mlir::OpBuilder _builder;
   std::unordered_map<std::string, mlir::Value> _variableTable;
-  std::unordered_map<std::string, mlir::func::FuncOp> _functionTable;
+  std::unordered_map<std::string, GeneratorFunction> _functionTable;
 };
 
 } // namespace picceler

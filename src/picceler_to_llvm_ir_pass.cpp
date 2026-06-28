@@ -58,9 +58,11 @@ struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToStart(module.getBody());
 
-      // Create the global string constant
-      rewriter.create<mlir::LLVM::GlobalOp>(loc, arrayType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal, name,
-                                            rewriter.getStringAttr(bytes));
+      // Check if this global was already created by another function/statement
+      if (!module.lookupSymbol<mlir::LLVM::GlobalOp>(name)) {
+        rewriter.create<mlir::LLVM::GlobalOp>(loc, arrayType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal, name,
+                                              rewriter.getStringAttr(bytes));
+      }
     }
 
     // Now create addressof and GEP at the use site (inside the function, where
@@ -113,12 +115,7 @@ struct PiccelerToLLVMIRPass : public impl::PiccelerToLLVMIRBase<PiccelerToLLVMIR
     target.addLegalOp<mlir::UnrealizedConversionCastOp>();
 
     target.addIllegalDialect<picceler::PiccelerDialect>();
-    target.addIllegalOp<picceler::StringConstOp>();
-
-    target.addDynamicallyLegalOp<mlir::func::FuncOp>(
-        [&](mlir::func::FuncOp op) { return converter.isSignatureLegal(op.getFunctionType()); });
-    target.addDynamicallyLegalOp<mlir::func::CallOp>([&](mlir::func::CallOp op) { return converter.isLegal(op); });
-    target.addDynamicallyLegalOp<mlir::func::ReturnOp>([&](mlir::func::ReturnOp op) { return converter.isLegal(op); });
+    target.addIllegalDialect<mlir::func::FuncDialect>();
 
     if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();
