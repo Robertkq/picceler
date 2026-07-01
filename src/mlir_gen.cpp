@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <limits>
-#include <print>
 
 #include "llvm/ADT/APFloat.h"
 
@@ -30,13 +29,14 @@ namespace picceler {
 
 mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value value, llvm::StringRef opName,
                                llvm::StringRef argName) {
-  if (value.getType().isSignlessInteger(64)) {
+  auto intBitWidth = 64;
+  if (value.getType().isSignlessInteger(intBitWidth)) {
     return value;
   }
 
   // Accept a non-I64 integer constant directly.
   if (auto constInt = value.getDefiningOp<mlir::arith::ConstantIntOp>()) {
-    return builder.create<mlir::arith::ConstantIntOp>(loc, constInt.value(), 64);
+    return builder.create<mlir::arith::ConstantIntOp>(loc, constInt.value(), intBitWidth);
   }
 
   // Accept a floating-point constant only if it is a whole number.
@@ -56,7 +56,7 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
       throw std::runtime_error(opName.str() + " integer literal is out of range");
     }
 
-    return builder.create<mlir::arith::ConstantIntOp>(loc, static_cast<int64_t>(numericValue), 64);
+    return builder.create<mlir::arith::ConstantIntOp>(loc, static_cast<int64_t>(numericValue), intBitWidth);
   }
 
   if (auto isRuntimeFloat = mlir::isa<mlir::FloatType>(value.getType())) {
@@ -67,7 +67,13 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
 }
 
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
-    : _context(context), _builder(_context), _variableTable(), _functionTable() {}
+    : _context(context), _builder(_context), _scopedVariableTable(), _functionTable() {
+  enterScope("Global"); // Enter the global scope
+}
+
+MLIRGen::~MLIRGen() {
+  exitScope(); // Exit the global scope
+}
 
 bool MLIRGen::normalizeASTMain(mlir::ModuleOp module, ModuleNode *root) {
   bool hasMain = false;
@@ -121,9 +127,11 @@ bool MLIRGen::normalizeASTMain(mlir::ModuleOp module, ModuleNode *root) {
 }
 
 void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
+  spdlog::debug("Declaring user-defined functions in the MLIR module");
   _builder.setInsertionPointToStart(module.getBody());
   for (const auto &stmt : root->statements) {
     if (auto funcNode = dynamic_cast<FunctionNode *>(stmt.get())) {
+      spdlog::debug("Declaring function: {}", funcNode->name);
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
       auto funcType = _builder.getFunctionType(funcArgTypes, {});
       auto funcOp = _builder.create<mlir::func::FuncOp>(_builder.getUnknownLoc(), funcNode->name, funcType);
@@ -156,11 +164,22 @@ std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
 }
 
 void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
+  spdlog::debug("Defining user-defined functions in the MLIR module");
   for (const auto &stmt : root->statements) {
     if (auto funcNode = dynamic_cast<FunctionNode *>(stmt.get())) {
       auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcNode->name);
       if (!funcOp) {
         throw std::runtime_error("Function not declared: " + funcNode->name);
+      }
+      spdlog::debug("Defining function: {}", funcNode->name);
+
+      enterScope(funcNode->name);
+
+      int argIndex = 0;
+      for (auto &[paramName, paramType] : funcNode->parameters) {
+        auto argValue = funcOp.getArgument(argIndex);
+        declareVariable(paramName, argValue);
+        ++argIndex;
       }
 
       mlir::OpBuilder::InsertionGuard guard(_builder);
@@ -169,6 +188,8 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
       for (const auto &bodyStmt : funcNode->body) {
         emitStatement(bodyStmt.get());
       }
+
+      exitScope();
 
       _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
     } else {
@@ -251,16 +272,63 @@ mlir::Value MLIRGen::emitExpression(ASTNode *node) {
   }
 }
 
+Result<mlir::Value> MLIRGen::lookupVariable(const std::string &name) const {
+  for (auto it = _scopedVariableTable.rbegin(); it != _scopedVariableTable.rend(); ++it) {
+    const auto &scope = it->second;
+    auto found = scope.find(name);
+    if (found != scope.end()) {
+      return found->second;
+    }
+  }
+  return std::unexpected(CompileError{"Undefined variable: " + name});
+}
+
+void MLIRGen::declareVariable(const std::string &varName, mlir::Value value) {
+  if (_scopedVariableTable.empty()) {
+    _scopedVariableTable.emplace_back();
+  }
+  auto &currentScope = _scopedVariableTable.back();
+  auto &scopeName = currentScope.first;
+  auto &scope = currentScope.second;
+  spdlog::debug("Declaring variable: {} for scope: {}", varName, scopeName);
+  scope[varName] = value;
+}
+
+void MLIRGen::enterScope(const std::string &name) {
+  spdlog::debug("Entering scope: {}", name);
+  _scopedVariableTable.emplace_back(name, VariableTable());
+}
+
+void MLIRGen::exitScope() {
+  if (!_scopedVariableTable.empty()) {
+    _scopedVariableTable.pop_back();
+  } else {
+    throw std::runtime_error("Attempted to exit scope when no scopes are active");
+  }
+}
+
 /**
- * lhs - variable
- * rhs - expression
+ * img = load_image("input.png")
+ * ^ lhs
+ * %0 = load_image("input.png")
+ * ^ rhs
+ *
+ * lhs is the variable name
+ * rhs is the SSA value returned from the expression
  */
 mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
   spdlog::debug("Emitting MLIR for assignment: {}", node->toString());
   auto rhs = emitExpression(node->rhs.get());
-  _variableTable[node->lhs->name] = rhs; // Bind 'img' to %0
+  auto varName = node->lhs->name;
+
+  auto var = lookupVariable(varName);
+  if (var) {
+    throw std::runtime_error("Variable already exists in the current scope and is immutable: " + varName);
+  }
+  declareVariable(varName, rhs);
   return rhs;
 }
+
 mlir::Value MLIRGen::emitCall(CallNode *node) {
   spdlog::debug("Emitting MLIR for call: {}", node->toString());
   std::vector<mlir::Value> args;
@@ -273,9 +341,12 @@ mlir::Value MLIRGen::emitCall(CallNode *node) {
 
 mlir::Value MLIRGen::emitVariable(VariableNode *node) {
   spdlog::debug("Emitting MLIR for variable: {}", node->toString());
-  auto it = _variableTable.find(node->name);
-  if (it != _variableTable.end()) {
-    return it->second;
+  auto var = lookupVariable(node->name);
+  if (var) {
+    return var.value();
+  } else {
+    spdlog::error("lookupVariable failed with error message {}", var.error().message());
+    spdlog::error("Undefined variable: {}", node->name);
   }
   throw std::runtime_error("Undefined variable: " + node->name);
 }

@@ -33,6 +33,9 @@ struct ModuleNode : public ASTNode {
   std::string toString() const override;
 };
 
+/**
+ * @brief AST node for function definitions.
+ */
 struct FunctionNode : public ASTNode {
   std::string name;
   std::vector<std::pair<std::string, std::string>> parameters;

@@ -194,9 +194,9 @@ private:
   Result<Token::Type> isType(const std::string &value) const;
 
   /**
-   * @brief Reads an identifier or keyword token from the input.
+   * @brief Reads an identifier, keyword or type token from the input.
    * @param start The starting line and column of the token.
-   * @return The identifier or keyword token.
+   * @return The identifier, keyword or type token.
    */
   Result<Token> readIdentifierOrKeywordOrType(std::pair<size_t, size_t> start);
 
