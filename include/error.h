@@ -31,7 +31,13 @@ struct CompileError {
   size_t line() const { return _line; }
   size_t column() const { return _column; }
 
-  std::string message() const { return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message); }
+  std::string message() const {
+    if (_line == 0 && _column == 0) {
+      return std::format("CompilerError: {}", _message);
+    }
+
+    return std::format("[line {}:{}] CompilerError: {}", _line, _column, _message);
+  }
 };
 
 /**
