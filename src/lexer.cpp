@@ -163,9 +163,10 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
 
 Result<Token::Type> Lexer::isType(const std::string &value) const {
   static const std::unordered_map<std::string, Token::Type> types = {
-      {"int", Token::Type::TYPE},
-      {"float", Token::Type::TYPE},
+      {"int64", Token::Type::TYPE},
+      {"f64", Token::Type::TYPE},
       {"string", Token::Type::TYPE},
+      {"image", Token::Type::TYPE},
   };
   auto it = types.find(value);
   if (it != types.end()) {

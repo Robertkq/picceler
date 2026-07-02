@@ -111,6 +111,7 @@ bool MLIRGen::normalizeASTMain(mlir::ModuleOp module, ModuleNode *root) {
       root->statements.push_back(std::move(mainFunc));
     } else {
       spdlog::error("No 'main' function found and no top-level statements to wrap.");
+      return false;
     }
   } else {
     if (!onlyFunctions) {
@@ -173,17 +174,18 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
       }
       spdlog::debug("Defining function: {}", funcNode->name);
 
+      mlir::OpBuilder::InsertionGuard guard(_builder);
+      _builder.setInsertionPointToStart(funcOp.addEntryBlock());
+
       enterScope(funcNode->name);
 
       int argIndex = 0;
-      for (auto &[paramName, paramType] : funcNode->parameters) {
+      for (const auto &[paramName, paramType] : funcNode->parameters) {
+        (void)paramType; // Suppress unused variable warning
         auto argValue = funcOp.getArgument(argIndex);
         declareVariable(paramName, argValue);
         ++argIndex;
       }
-
-      mlir::OpBuilder::InsertionGuard guard(_builder);
-      _builder.setInsertionPointToStart(funcOp.addEntryBlock());
 
       for (const auto &bodyStmt : funcNode->body) {
         emitStatement(bodyStmt.get());

@@ -87,7 +87,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
   }
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken) {
+Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]] Token defToken) {
   auto nameTokenResult = _lexer.nextToken(); // consume function name
   if (!nameTokenResult) {
     spdlog::error("{}", nameTokenResult.error().message());
@@ -109,7 +109,11 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken)
     return std::unexpected(CompileError{"Expected '(' in function definition"});
   }
   auto tokenItter = _lexer.peekToken();
-  while (tokenItter != Token::Type::R_PAREN) {
+  if (!tokenItter) {
+    spdlog::error("{}", tokenItter.error().message());
+    return std::unexpected(CompileError{"Failed to peek token in function definition"});
+  }
+  while (tokenItter.value() != Token::Type::R_PAREN) {
     auto paramTokenResult = _lexer.nextToken(); // consume parameter -- expected name
     if (!paramTokenResult) {
       spdlog::error("{}", paramTokenResult.error().message());
@@ -142,7 +146,11 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken)
     }
     funcNode->parameters.push_back({paramToken.value(), typeToken.value()});
     tokenItter = _lexer.peekToken();
-    if (tokenItter == Token::Type::COMMA) {
+    if (!tokenItter) {
+      spdlog::error("{}", tokenItter.error().message());
+      return std::unexpected(CompileError{"Failed to peek token in function definition"});
+    }
+    if (tokenItter.value() == Token::Type::COMMA) {
       auto commaTokenResult = _lexer.nextToken(); // consume ','
       if (!commaTokenResult) {
         spdlog::error("{}", commaTokenResult.error().message());
@@ -178,7 +186,11 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken)
   }
 
   tokenItter = _lexer.peekToken();
-  while (tokenItter != Token::Type::R_BRACE) {
+  if (!tokenItter) {
+    spdlog::error("{}", tokenItter.error().message());
+    return std::unexpected(CompileError{"Failed to peek token in function definition"});
+  }
+  while (tokenItter.value() != Token::Type::R_BRACE) {
     auto stmtResult = parseStatement();
     if (!stmtResult) {
       spdlog::error("{}", stmtResult.error().message());
@@ -190,6 +202,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition(Token defToken)
     }
     funcNode->body.push_back(std::move(stmt));
     tokenItter = _lexer.peekToken();
+    if (!tokenItter) {
+      spdlog::error("{}", tokenItter.error().message());
+      return std::unexpected(CompileError{"Failed to peek token in function definition"});
+    }
   }
 
   auto rBraceTokenResult = _lexer.nextToken(); // consume '}'
