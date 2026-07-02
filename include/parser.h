@@ -52,6 +52,7 @@ private:
    */
   Result<std::unique_ptr<ASTNode>> parseStatement();
   Result<std::unique_ptr<ASTNode>> parseExpression();
+  Result<std::unique_ptr<ASTNode>> parseFunctionDefinition(Token defToken);
   Result<std::unique_ptr<ASTNode>> parseAssignment(Token identifier);
   Result<std::unique_ptr<ASTNode>> parseCall(Token identifier);
   Result<std::unique_ptr<ASTNode>> parseVariable(Token identifier = Token{Token::Type::UNKNOWN, "", 0, 0});

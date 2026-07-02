@@ -2,14 +2,12 @@
 
 #include <cstdlib>
 
-#include "spdlog/cfg/env.h"
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Target/LLVMIR/Export.h"
-#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "llvm/IR/Module.h"
@@ -29,7 +27,6 @@ namespace picceler {
 Compiler::Compiler()
     : _cliApp("picceler compiler"), _cliOptions(), _parser(), _context(initRegistry()), _mlirGen(&_context),
       _passManager(&_context) {
-  spdlog::cfg::load_env_levels();
   _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")->required()->check(CLI::ExistingFile);
   _cliApp.add_option("-o,--output", _cliOptions.outputFile, "Output executable file")->default_val("a.out");
 
