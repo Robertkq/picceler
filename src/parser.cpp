@@ -69,8 +69,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     } else if (nextToken == Token::Type::L_PAREN) {
       return parseCall(identifier);
     }
-    return std::unexpected(CompileError{std::format("Unexpected token '{}' after identifier at {}:{}",
-                                                    nextToken.value(), nextToken.line(), nextToken.column())});
+    return std::unexpected(CompileError{std::format("Unexpected token '{}' after identifier", nextToken.value()),
+                                        nextToken.line(), nextToken.column()});
 
   } else if (token == Token::Type::KW_DEF) {
     auto defTokenResult = _lexer.nextToken(); // consume 'def'
@@ -83,7 +83,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return nullptr;
   } else {
     return std::unexpected(
-        CompileError{std::format("Unexpected token '{}' at {}:{}", token.value(), token.line(), token.column())});
+        CompileError{std::format("Unexpected token '{}'", token.value()), token.line(), token.column()});
   }
 }
 
@@ -94,8 +94,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     return std::unexpected(CompileError{"Failed to consume function name token"});
   }
   if (nameTokenResult->type() != Token::Type::IDENTIFIER) {
-    return std::unexpected(CompileError{std::format("Expected function name after 'def' at {}:{}",
-                                                    nameTokenResult->line(), nameTokenResult->column())});
+    return std::unexpected(
+        CompileError{"Expected function name after 'def'", nameTokenResult->line(), nameTokenResult->column()});
   }
   auto funcNode = std::make_unique<FunctionNode>();
   funcNode->name = nameTokenResult->value();
@@ -121,8 +121,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     }
     auto paramToken = *paramTokenResult;
     if (paramToken != Token::Type::IDENTIFIER) {
-      return std::unexpected(
-          CompileError{std::format("Expected parameter name at {}:{}", paramToken.line(), paramToken.column())});
+      return std::unexpected(CompileError{"Expected parameter name", paramToken.line(), paramToken.column()});
     }
     auto colonTokenResult = _lexer.nextToken(); // consume ':'
     if (!colonTokenResult) {
@@ -141,8 +140,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     }
     auto typeToken = *typeTokenResult;
     if (typeToken != Token::Type::TYPE) {
-      return std::unexpected(
-          CompileError{std::format("Expected type after ':' at {}:{}", typeToken.line(), typeToken.column())});
+      return std::unexpected(CompileError{"Expected type after ':'", typeToken.line(), typeToken.column()});
     }
     funcNode->parameters.push_back({paramToken.value(), typeToken.value()});
     tokenItter = _lexer.peekToken();
@@ -170,8 +168,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
   }
   auto rParenToken = *rParenTokenResult;
   if (rParenToken != Token::Type::R_PAREN) {
-    return std::unexpected(
-        CompileError{std::format("Expected ')' after parameters at {}:{}", rParenToken.line(), rParenToken.column())});
+    return std::unexpected(CompileError{"Expected ')' after parameters", rParenToken.line(), rParenToken.column()});
   }
 
   auto lBraceTokenResult = _lexer.nextToken(); // consume '{'
@@ -231,8 +228,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(Token identifier) {
   }
   auto eqToken = *eqTokenResult;
   if (eqToken != Token::Type::ASSIGN) {
-    return std::unexpected(
-        CompileError{std::format("Expected '=' after identifier at {}:{}", eqToken.line(), eqToken.column())});
+    return std::unexpected(CompileError{"Expected '=' after identifier", eqToken.line(), eqToken.column()});
   }
   auto exprResult = parseExpression();
   if (!exprResult) {
@@ -346,7 +342,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
     return parseKernel();
   } else {
     return std::unexpected(
-        CompileError{std::format("Unexpected token '{}' at {}:{}", token.value(), token.line(), token.column())});
+        CompileError{std::format("Unexpected token '{}'", token.value()), token.line(), token.column()});
   }
 }
 
@@ -376,8 +372,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
   }
   auto lbracketToken = *lbracketTokenResult;
   if (lbracketToken != Token::Type::L_BRACKET) {
-    return std::unexpected(
-        CompileError{std::format("Expected '[' at {}:{}", lbracketToken.line(), lbracketToken.column())});
+    return std::unexpected(CompileError{"Expected '['", lbracketToken.line(), lbracketToken.column()});
   }
 
   auto kernelNode = std::make_unique<KernelNode>();
@@ -403,8 +398,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     // Expect a row: '[' NUMBER (',' NUMBER)* ']'
 
     if (!(peekToken == Token::Type::L_BRACKET)) {
-      return std::unexpected(
-          CompileError{std::format("Expected '[' for kernel row at {}:{}", peekToken.line(), peekToken.column())});
+      return std::unexpected(CompileError{"Expected '[' for kernel row", peekToken.line(), peekToken.column()});
     }
 
     // consume inner '['
@@ -436,8 +430,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
 
       // expect a number
       if (innerToken != Token::Type::NUMBER) {
-        return std::unexpected(
-            CompileError{std::format("Expected number in kernel at {}:{}", innerToken.line(), innerToken.column())});
+        return std::unexpected(CompileError{"Expected number in kernel", innerToken.line(), innerToken.column()});
       }
       // consume number
       auto numTokenResult = _lexer.nextToken();
@@ -471,8 +464,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         }
         break;
       } else {
-        return std::unexpected(CompileError{
-            std::format("Expected ',' or ']' in kernel row at {}:{}", afterNum.line(), afterNum.column())});
+        return std::unexpected(CompileError{"Expected ',' or ']' in kernel row", afterNum.line(), afterNum.column()});
       }
     }
 
@@ -502,8 +494,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
       }
       break;
     } else {
-      return std::unexpected(
-          CompileError{std::format("Expected ',' or ']' after kernel row at {}:{}", next.line(), next.column())});
+      return std::unexpected(CompileError{"Expected ',' or ']' after kernel row", next.line(), next.column()});
     }
   }
 
@@ -529,7 +520,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
   }
   auto token = *tokenResult;
   if (token != Token::Type::STRING) {
-    return std::unexpected(CompileError{std::format("Expected string at {}:{}", token.line(), token.column())});
+    return std::unexpected(CompileError{"Expected string", token.line(), token.column()});
   }
   auto strNode = std::make_unique<StringNode>();
   // TODO: Implement a compiler flag to let the user not expand tilde if it is not needed
@@ -546,17 +537,17 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   }
   auto token = *tokenResult;
   if (token != Token::Type::NUMBER) {
-    return std::unexpected(CompileError{std::format("Expected number at {}:{}", token.line(), token.column())});
+    return std::unexpected(CompileError{"Expected number", token.line(), token.column()});
   }
   auto numNode = std::make_unique<NumberNode>();
   try {
     numNode->value = std::stod(token.value());
   } catch (const std::invalid_argument &) {
     return std::unexpected(
-        CompileError{std::format("Invalid double literal '{}' at {}:{}", token.value(), token.line(), token.column())});
+        CompileError{std::format("Invalid double literal '{}'", token.value()), token.line(), token.column()});
   } catch (const std::out_of_range &) {
-    return std::unexpected(CompileError{
-        std::format("Double literal '{}' out of range at {}:{}", token.value(), token.line(), token.column())});
+    return std::unexpected(
+        CompileError{std::format("Double literal '{}' out of range", token.value()), token.line(), token.column()});
   }
   return numNode;
 }
