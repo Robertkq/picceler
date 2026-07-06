@@ -69,7 +69,7 @@ def ElementWiseBinaryOpInterface : OpInterface<"ElementWiseBinaryOpInterface"> {
            "mlir::Location":$loc,
            "mlir::Value":$lhsPixel,
            "mlir::Value":$rhsPixel, 
-		   "int":$offset)
+		   "picceler::Channel":$ch)
     >
   ];
 }

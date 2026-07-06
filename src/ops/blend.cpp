@@ -1,3 +1,4 @@
+#include "channels.h"
 #include "ops.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -20,7 +21,7 @@ mlir::LogicalResult BlendOp::verify() {
 }
 
 mlir::Value BlendOp::transformPixels(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value lhsPixel,
-                                     mlir::Value rhsPixel, int offset) {
+                                     mlir::Value rhsPixel, Channel ch) {
   auto f64Type = builder.getF64Type();
   auto i8Type = builder.getI8Type();
 

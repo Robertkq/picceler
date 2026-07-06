@@ -12,6 +12,7 @@
 
 #include "types.h"
 #include "error.h"
+#include "channels.h"
 #include "piccelerInterfaces.h.inc"
 
 #define GET_OP_CLASSES
