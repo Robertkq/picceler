@@ -1,3 +1,4 @@
 BasedOnStyle: LLVM
 SortIncludes: Never
 ColumnLimit: 120
+AllowShortEnumsOnASingleLine: false

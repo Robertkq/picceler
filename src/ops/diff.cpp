@@ -1,12 +1,13 @@
 #include "ops.h"
+#include "channels.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
 namespace picceler {
 
 mlir::Value DiffOp::transformPixels(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value lhsPixel,
-                                    mlir::Value rhsPixel, int offset) {
-  if (offset == 3) {
+                                    mlir::Value rhsPixel, Channel ch) {
+  if (static_cast<int>(ch) == 3) {
     // For the alpha channel, we will not apply blending and just take the value from the first image.
     return lhsPixel;
   }

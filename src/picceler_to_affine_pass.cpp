@@ -1,4 +1,5 @@
 #include "passes.h"
+#include "channels.h"
 
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -76,8 +77,8 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
     mlir::Value c0 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 0, 32);
     mlir::Value c255 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 255, 32);
 
-    auto processChannel = [&](int offset, bool applyBrightness) {
-      mlir::Value cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto processChannel = [&](Channel ch) {
+      mlir::Value cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       mlir::Value byteAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, cOffset);
       mlir::Value byteAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, rewriter.getI64Type(), byteAddr);
 
@@ -86,7 +87,7 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
       auto inputByte = rewriter.create<mlir::LLVM::LoadOp>(loc, rewriter.getI8Type(), inputBytePtr);
 
       mlir::Value finalValue;
-      if (applyBrightness) {
+      if (ch != Channel::A) {
         auto inputByteI32 = rewriter.create<mlir::arith::ExtUIOp>(loc, rewriter.getI32Type(), inputByte);
         auto brightened = rewriter.create<mlir::arith::AddIOp>(loc, inputByteI32, amountI32);
         auto clampedLow = rewriter.create<mlir::arith::MinSIOp>(loc, brightened, c255);
@@ -102,10 +103,10 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
       auto outputByte = rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
     };
 
-    processChannel(0, true);  // R
-    processChannel(1, true);  // G
-    processChannel(2, true);  // B
-    processChannel(3, false); // A
+    processChannel(Channel::R);
+    processChannel(Channel::G);
+    processChannel(Channel::B);
+    processChannel(Channel::A);
 
     // output
     rewriter.replaceOp(op, output);
@@ -166,8 +167,8 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
 
     auto c255 = rewriter.create<mlir::arith::ConstantIntOp>(loc, rewriter.getI8Type(), 255);
 
-    auto processChannel = [&](int offset, bool applyInvert) {
-      mlir::Value cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto processChannel = [&](Channel ch) {
+      mlir::Value cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       mlir::Value byteAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, cOffset);
       mlir::Value byteAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, rewriter.getI64Type(), byteAddr);
 
@@ -176,7 +177,7 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
       auto inputByte = rewriter.create<mlir::LLVM::LoadOp>(loc, rewriter.getI8Type(), inputBytePtr);
 
       mlir::Value finalValue;
-      if (applyInvert) {
+      if (ch != Channel::A) {
         finalValue = rewriter.create<mlir::arith::SubIOp>(loc, c255, inputByte);
       } else {
         finalValue = inputByte;
@@ -187,10 +188,10 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
       auto outputByte = rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
     };
 
-    processChannel(0, true);  // R
-    processChannel(1, true);  // G
-    processChannel(2, true);  // B
-    processChannel(3, false); // A
+    processChannel(Channel::R);
+    processChannel(Channel::G);
+    processChannel(Channel::B);
+    processChannel(Channel::A);
 
     rewriter.replaceOp(op, output);
     return mlir::success();
@@ -301,15 +302,15 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     mlir::Value srcPixelBaseIndex =
         rewriter.create<mlir::affine::AffineApplyOp>(loc, indexMap, mlir::ValueRange{srcRow, srcCol, inputWidth});
 
-    auto copyChannel = [&](int offset) {
-      auto srcOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto copyChannel = [&](Channel ch) {
+      auto srcOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto srcAddr = rewriter.create<mlir::arith::AddIOp>(loc, srcPixelBaseIndex, srcOffset);
       auto srcAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, srcAddr);
       auto srcPtr =
           rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, i8Type, inputDataPtr, mlir::ValueRange{srcAddrI64});
       auto srcVal = rewriter.create<mlir::LLVM::LoadOp>(loc, i8Type, srcPtr);
 
-      auto dstOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+      auto dstOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto dstAddr = rewriter.create<mlir::arith::AddIOp>(loc, dstPixelBaseIndex, dstOffset);
       auto dstAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, dstAddr);
       auto dstPtr =
@@ -317,10 +318,10 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
       rewriter.create<mlir::LLVM::StoreOp>(loc, srcVal, dstPtr);
     };
 
-    copyChannel(0);
-    copyChannel(1);
-    copyChannel(2);
-    copyChannel(3);
+    copyChannel(Channel::R);
+    copyChannel(Channel::G);
+    copyChannel(Channel::B);
+    copyChannel(Channel::A);
 
     rewriter.setInsertionPointAfter(rowLoop);
     rewriter.replaceOp(op, output);
@@ -465,8 +466,8 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       kernelWeight = rewriter.create<mlir::memref::LoadOp>(loc, kernelOperand, mlir::ValueRange{kRowIndex, kColIndex});
     }
 
-    auto accumulateChannel = [&](int offset, mlir::Value sumAlloca) {
-      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto accumulateChannel = [&](Channel ch, mlir::Value sumAlloca) {
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto byteAddr = rewriter.create<mlir::arith::AddIOp>(loc, sampleBaseIndex, cOffset);
       auto byteAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, byteAddr);
 
@@ -480,13 +481,13 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       rewriter.create<mlir::LLVM::StoreOp>(loc, nextAcc, sumAlloca);
     };
 
-    accumulateChannel(0, sumR);
-    accumulateChannel(1, sumG);
-    accumulateChannel(2, sumB);
+    accumulateChannel(Channel::R, sumR);
+    accumulateChannel(Channel::G, sumG);
+    accumulateChannel(Channel::B, sumB);
 
     rewriter.setInsertionPointAfter(kRowLoop);
 
-    auto finalizeChannel = [&](int offset, mlir::Value sumAlloca) {
+    auto finalizeChannel = [&](Channel ch, mlir::Value sumAlloca) {
       auto currentAcc = rewriter.create<mlir::LLVM::LoadOp>(loc, f64Type, sumAlloca);
       auto finalizedAcc = op.finalizeAccumulator(rewriter, loc, currentAcc);
 
@@ -496,7 +497,7 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255F64);
       auto byteVal = rewriter.create<mlir::arith::FPToUIOp>(loc, i8Type, clampedHigh);
 
-      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto outAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, cOffset);
       auto outAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, outAddr);
       auto outPtr =
@@ -504,9 +505,9 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       rewriter.create<mlir::LLVM::StoreOp>(loc, byteVal, outPtr);
     };
 
-    finalizeChannel(0, sumR);
-    finalizeChannel(1, sumG);
-    finalizeChannel(2, sumB);
+    finalizeChannel(Channel::R, sumR);
+    finalizeChannel(Channel::G, sumG);
+    finalizeChannel(Channel::B, sumB);
 
     auto c3 = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 3);
     auto alphaAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, c3);
@@ -603,8 +604,8 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
     auto pixelBaseIndex = rewriter.create<mlir::affine::AffineApplyOp>(
         loc, indexMap, mlir::ValueRange{pixelRowIndex, pixelColIndex, width});
 
-    auto processChannel = [&](int offset) {
-      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto processChannel = [&](Channel ch) {
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto byteAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, cOffset);
       auto byteAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, byteAddr);
 
@@ -616,7 +617,7 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
           rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, i8Type, rhsDataPtr, mlir::ValueRange{byteAddrI64});
       auto rhsByte = rewriter.create<mlir::LLVM::LoadOp>(loc, i8Type, rhsBytePtr);
 
-      auto resultByte = op.transformPixels(rewriter, loc, lhsByte, rhsByte, offset);
+      auto resultByte = op.transformPixels(rewriter, loc, lhsByte, rhsByte, ch);
 
       auto outAddr = rewriter.create<mlir::arith::AddIOp>(loc, pixelBaseIndex, cOffset);
       auto outAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, outAddr);
@@ -625,10 +626,10 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
       rewriter.create<mlir::LLVM::StoreOp>(loc, resultByte, outPtr);
     };
 
-    processChannel(0);
-    processChannel(1);
-    processChannel(2);
-    processChannel(3);
+    processChannel(Channel::R);
+    processChannel(Channel::G);
+    processChannel(Channel::B);
+    processChannel(Channel::A);
 
     rewriter.setInsertionPointAfter(rowLoop);
     rewriter.replaceOp(rawOp, output);
@@ -707,8 +708,8 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
     mlir::Value srcPixelBaseIndex =
         rewriter.create<mlir::affine::AffineApplyOp>(loc, indexMap, mlir::ValueRange{srcRow, srcCol, inputWidth});
 
-    auto copyChannel = [&](int offset) {
-      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, offset);
+    auto copyChannel = [&](Channel ch) {
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
 
       auto srcAddr = rewriter.create<mlir::arith::AddIOp>(loc, srcPixelBaseIndex, cOffset);
       auto srcAddrI64 = rewriter.create<mlir::arith::IndexCastOp>(loc, i64Type, srcAddr);
@@ -723,10 +724,10 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
       rewriter.create<mlir::LLVM::StoreOp>(loc, srcVal, dstPtr);
     };
 
-    copyChannel(0);
-    copyChannel(1);
-    copyChannel(2);
-    copyChannel(3);
+    copyChannel(Channel::R);
+    copyChannel(Channel::G);
+    copyChannel(Channel::B);
+    copyChannel(Channel::A);
 
     rewriter.setInsertionPointAfter(rowLoop);
     rewriter.replaceOp(op, output);
