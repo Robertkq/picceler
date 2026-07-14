@@ -6,34 +6,34 @@ protected:
   void SetUp() override {}
   void TearDown() override {}
 
-  picceler::Lexer lexer;
+  picceler::Lexer _lexer;
 };
 
 TEST_F(LexerTest, EmptyInput) {
-  auto res = lexer.setSource("data/empty.pic");
+  auto res = _lexer.setSource("data/empty.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
-  auto res = lexer.setSource("data/load_image.pic");
+  auto res = _lexer.setSource("data/load_image.pic");
   if (!res)
     FAIL() << res.error().message();
 
   // file contents:
   // img = load_image("cat.jpg")
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   ASSERT_GE(tokens.size(), 7); // img, =, load_image, (, "cat.jpg", ), EOF
 
@@ -59,14 +59,14 @@ TEST_F(LexerTest, LoadImageStatement) {
 }
 
 TEST_F(LexerTest, NumbersParsing) {
-  auto res = lexer.setSource("data/numbers.pic");
+  auto res = _lexer.setSource("data/numbers.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   std::vector<std::string> numbers;
   for (const auto &t : tokens) {
@@ -81,31 +81,31 @@ TEST_F(LexerTest, NumbersParsing) {
 }
 
 TEST_F(LexerTest, KernelTokenSequence) {
-  auto res = lexer.setSource("data/kernel.pic");
+  auto res = _lexer.setSource("data/kernel.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   // Expect sequence: IDENTIFIER, '=', '[', '[', NUMBER(1), ',', NUMBER(2), ']', ',', '[', NUMBER(3), ',', NUMBER(4),
   // ']', ']', EOF
   std::vector<std::string> seq;
   for (const auto &t : tokens) {
-    if (t.type() == picceler::Token::Type::L_BRACKET)
+    switch (t.type()) {
+    case picceler::Token::Type::IDENTIFIER:
+    case picceler::Token::Type::ASSIGN:
+    case picceler::Token::Type::L_BRACKET:
+    case picceler::Token::Type::R_BRACKET:
+    case picceler::Token::Type::COMMA:
+    case picceler::Token::Type::NUMBER:
       seq.push_back(t.value());
-    else if (t.type() == picceler::Token::Type::R_BRACKET)
-      seq.push_back(t.value());
-    else if (t.type() == picceler::Token::Type::COMMA)
-      seq.push_back(t.value());
-    else if (t.type() == picceler::Token::Type::NUMBER)
-      seq.push_back(t.value());
-    else if (t.type() == picceler::Token::Type::IDENTIFIER)
-      seq.push_back(t.value());
-    else if (t.type() == picceler::Token::Type::ASSIGN)
-      seq.push_back(t.value());
+      break;
+    default:
+      break;
+    }
   }
 
   std::vector<std::string> expected = {"k", "=", "[", "[", "1", ",", "2", "]", ",", "[", "3", ",", "4", "]", "]"};
@@ -117,14 +117,14 @@ TEST_F(LexerTest, KernelTokenSequence) {
 }
 
 TEST_F(LexerTest, IdentifiersAndUnderscores) {
-  auto res = lexer.setSource("data/identifiers.pic");
+  auto res = _lexer.setSource("data/identifiers.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   // Check presence of identifier names
   bool foundMyVar = false;
@@ -146,18 +146,18 @@ TEST_F(LexerTest, IdentifiersAndUnderscores) {
 }
 
 TEST_F(LexerTest, StringParsingAndPeek) {
-  auto res = lexer.setSource("data/strings.pic");
+  auto res = _lexer.setSource("data/strings.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto peekRes = lexer.peekToken();
+  auto peekRes = _lexer.peekToken();
   if (!peekRes)
     FAIL() << peekRes.error().message();
   // peek should return first token (identifier 's') without consuming
   EXPECT_EQ(peekRes->type(), picceler::Token::Type::IDENTIFIER);
   EXPECT_EQ(peekRes->value(), "s");
 
-  auto nextRes = lexer.nextToken();
+  auto nextRes = _lexer.nextToken();
   if (!nextRes)
     FAIL() << nextRes.error().message();
   EXPECT_EQ(nextRes->type(), picceler::Token::Type::IDENTIFIER);
@@ -165,10 +165,10 @@ TEST_F(LexerTest, StringParsingAndPeek) {
 
   // advance to string token
   // consume '=', identifier already consumed
-  auto eqToken = lexer.nextToken(); // consume '='
+  auto eqToken = _lexer.nextToken(); // consume '='
   if (!eqToken)
     FAIL() << eqToken.error().message();
-  auto strRes = lexer.nextToken();
+  auto strRes = _lexer.nextToken();
   if (!strRes)
     FAIL() << strRes.error().message();
   EXPECT_EQ(strRes->type(), picceler::Token::Type::STRING);
@@ -176,14 +176,14 @@ TEST_F(LexerTest, StringParsingAndPeek) {
 }
 
 TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
-  auto res = lexer.setSource("data/weird.pic");
+  auto res = _lexer.setSource("data/weird.pic");
   if (!res)
     FAIL() << res.error().message();
 
-  auto tokensRes = lexer.tokenizeAll();
+  auto tokensRes = _lexer.tokenizeAll();
   if (!tokensRes)
     FAIL() << tokensRes.error().message();
-  auto tokens = tokensRes.value();
+  const auto &tokens = tokensRes.value();
 
   bool foundUnknown = false;
   for (const auto &t : tokens) {

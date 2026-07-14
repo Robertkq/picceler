@@ -26,8 +26,8 @@ namespace picceler {
  */
 class CLIOptions {
 public:
-  std::string inputFile;
-  std::string outputFile;
+  std::string _inputFile;
+  std::string _outputFile;
 };
 
 /**

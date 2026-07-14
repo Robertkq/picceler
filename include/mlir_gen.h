@@ -36,7 +36,7 @@ public:
   MLIRGen &operator=(const MLIRGen &) = default;
   MLIRGen(MLIRGen &&) = default;
   MLIRGen &operator=(MLIRGen &&) = default;
-  ~MLIRGen();
+  ~MLIRGen() noexcept;
 
   /**
    * @brief Generates MLIR code from the given AST root node.
@@ -98,7 +98,7 @@ private:
   /**
    * @brief Exits the current scope.
    */
-  void exitScope();
+  void exitScope() noexcept;
 
   /**
    * @brief Emits MLIR code for a given AST node.

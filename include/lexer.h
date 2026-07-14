@@ -26,7 +26,7 @@ namespace picceler {
  */
 struct Token {
   /** @brief The type of the token. */
-  enum class Type : size_t {
+  enum class Type : uint8_t {
     IDENTIFIER, // Represents identifiers (user defined names)
     NUMBER,     // Represents numeric literals (e.g., integers, floats)
     STRING,     // Represents string literals
@@ -47,21 +47,18 @@ struct Token {
     UNKNOWN     // Represents unknown tokens
   };
 
-  Token() : _type(Type::UNKNOWN), _value(""), _line(0), _column(0) {}
+  Token() : _type(Type::UNKNOWN), _value(""), _location() {}
 
-  Token(Type type, std::string value, size_t line, size_t column)
-      : _type(type), _value(std::move(value)), _line(line), _column(column) {}
+  Token(Type type, std::string value, Location location) : _type(type), _value(std::move(value)), _location(location) {}
 
-  Token(const Token &other) : _type(other._type), _value(other._value), _line(other._line), _column(other._column) {}
-  Token(Token &&other) noexcept
-      : _type(other._type), _value(std::move(other._value)), _line(other._line), _column(other._column) {}
+  Token(const Token &other) : _type(other._type), _value(other._value), _location(other._location) {}
+  Token(Token &&other) noexcept : _type(other._type), _value(std::move(other._value)), _location(other._location) {}
   ~Token() = default;
   Token &operator=(const Token &other) {
     if (this != &other) {
       _type = other._type;
       _value = other._value;
-      _line = other._line;
-      _column = other._column;
+      _location = other._location;
     }
     return *this;
   }
@@ -69,8 +66,7 @@ struct Token {
     if (this != &other) {
       _type = other._type;
       _value = std::move(other._value);
-      _line = other._line;
-      _column = other._column;
+      _location = other._location;
     }
     return *this;
   }
@@ -86,13 +82,14 @@ struct Token {
    * @return The string representation of the token.
    */
   std::string toString() const {
-    return std::format("Token(type: {}, value: '{}', line: {}, column: {})", typeToString(), _value, _line, _column);
+    return std::format("Token(type: {}, value: '{}', line: {}, column: {})", typeToString(), _value, _location.line(),
+                       _location.column());
   }
 
   Type type() const { return _type; }
   const std::string &value() const { return _value; }
-  size_t line() const { return _line; }
-  size_t column() const { return _column; }
+  size_t line() const { return _location.line(); }
+  size_t column() const { return _location.column(); }
 
   /*
    * @brief Compares a token to a token type for easy checking in parsing.
@@ -105,8 +102,7 @@ struct Token {
 private:
   Type _type;
   std::string _value;
-  size_t _line;
-  size_t _column;
+  Location _location;
 };
 
 /**

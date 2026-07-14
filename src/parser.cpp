@@ -37,7 +37,7 @@ Result<std::unique_ptr<ModuleNode>> Parser::parse() {
       break;
     }
     spdlog::info("Parsed statement: {}", statement->toString());
-    module->statements.push_back(std::move(statement));
+    module->addStatement(std::move(statement));
   }
   spdlog::info("Finished parsing process");
   return module;
@@ -49,7 +49,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     spdlog::error("{}", tokenResult.error().message());
     return std::unexpected(CompileError{"parseStatement unexpected stop of parsing"});
   }
-  auto token = *tokenResult;
+  const auto &token = *tokenResult;
   if (token == Token::Type::IDENTIFIER) {
     spdlog::debug("Parsing statement starting with identifier '{}'", token.value());
     auto identifierResult = _lexer.nextToken();
@@ -57,13 +57,13 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
       spdlog::error("{}", identifierResult.error().message());
       return std::unexpected(CompileError{"Failed to consume identifier token"});
     }
-    auto identifier = *identifierResult;
+    const auto &identifier = *identifierResult;
     auto nextTokenResult = _lexer.peekToken();
     if (!nextTokenResult) {
       spdlog::error("{}", nextTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek next token"});
     }
-    auto nextToken = *nextTokenResult;
+    const auto &nextToken = *nextTokenResult;
     if (nextToken == Token::Type::ASSIGN) {
       return parseAssignment(identifier);
     } else if (nextToken == Token::Type::L_PAREN) {
@@ -78,7 +78,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
       spdlog::error("{}", defTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to consume 'def' token"});
     }
-    return parseFunctionDefinition(*defTokenResult);
+    auto defToken = std::move(*defTokenResult);
+    return parseFunctionDefinition(defToken);
   } else if (token == Token::Type::EOF_TOKEN) {
     return nullptr;
   } else {
@@ -87,8 +88,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
   }
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]] Token defToken) {
-  auto nameTokenResult = _lexer.nextToken(); // consume function name
+Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]] const Token &defToken) {
+  const auto &nameTokenResult = _lexer.nextToken(); // consume function name
   if (!nameTokenResult) {
     spdlog::error("{}", nameTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume function name token"});
@@ -97,14 +98,14 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     return std::unexpected(
         CompileError{"Expected function name after 'def'", nameTokenResult->line(), nameTokenResult->column()});
   }
-  auto funcNode = std::make_unique<FunctionNode>();
-  funcNode->name = nameTokenResult->value();
-  auto lParenTokenResult = _lexer.nextToken(); // consume '('
+  auto funcName = nameTokenResult->value();
+  auto funcNode = std::make_unique<FunctionNode>(funcName);
+  const auto &lParenTokenResult = _lexer.nextToken(); // consume '('
   if (!lParenTokenResult) {
     spdlog::error("{}", lParenTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '(' token in function definition"});
   }
-  auto lParenToken = *lParenTokenResult;
+  const auto &lParenToken = *lParenTokenResult;
   if (lParenToken.type() != Token::Type::L_PAREN) {
     return std::unexpected(CompileError{"Expected '(' in function definition"});
   }
@@ -119,7 +120,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
       spdlog::error("{}", paramTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to consume parameter token in function definition"});
     }
-    auto paramToken = *paramTokenResult;
+    const auto &paramToken = *paramTokenResult;
     if (paramToken != Token::Type::IDENTIFIER) {
       return std::unexpected(CompileError{"Expected parameter name", paramToken.line(), paramToken.column()});
     }
@@ -128,7 +129,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
       spdlog::error("{}", colonTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to consume ':' token in function definition"});
     }
-    auto colonToken = *colonTokenResult;
+    const auto &colonToken = *colonTokenResult;
     if (colonToken != Token::Type::COLON) {
       return std::unexpected(CompileError{
           std::format("Expected ':' after parameter name at {}:{}", colonToken.line(), colonToken.column())});
@@ -138,11 +139,11 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
       spdlog::error("{}", typeTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to consume type token in function definition"});
     }
-    auto typeToken = *typeTokenResult;
+    const auto &typeToken = *typeTokenResult;
     if (typeToken != Token::Type::TYPE) {
       return std::unexpected(CompileError{"Expected type after ':'", typeToken.line(), typeToken.column()});
     }
-    funcNode->parameters.push_back({paramToken.value(), typeToken.value()});
+    funcNode->addParameter(paramToken.value(), typeToken.value());
     tokenItter = _lexer.peekToken();
     if (!tokenItter) {
       spdlog::error("{}", tokenItter.error().message());
@@ -166,7 +167,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     spdlog::error("{}", rParenTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume ')' token in function definition"});
   }
-  auto rParenToken = *rParenTokenResult;
+  const auto &rParenToken = *rParenTokenResult;
   if (rParenToken != Token::Type::R_PAREN) {
     return std::unexpected(CompileError{"Expected ')' after parameters", rParenToken.line(), rParenToken.column()});
   }
@@ -176,7 +177,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     spdlog::error("{}", lBraceTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '{' token in function definition"});
   }
-  auto lBraceToken = *lBraceTokenResult;
+  const auto &lBraceToken = *lBraceTokenResult;
   if (lBraceToken != Token::Type::L_BRACE) {
     return std::unexpected(CompileError{
         std::format("Expected '{{' after function signature at {}:{}", lBraceToken.line(), lBraceToken.column())});
@@ -197,7 +198,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     if (!stmt) {
       return std::unexpected(CompileError{"Unexpected end of function body"});
     }
-    funcNode->body.push_back(std::move(stmt));
+    funcNode->addBodyStatement(std::move(stmt));
     tokenItter = _lexer.peekToken();
     if (!tokenItter) {
       spdlog::error("{}", tokenItter.error().message());
@@ -210,7 +211,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     spdlog::error("{}", rBraceTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '}' token in function definition"});
   }
-  auto rBraceToken = *rBraceTokenResult;
+  const auto &rBraceToken = *rBraceTokenResult;
   if (rBraceToken != Token::Type::R_BRACE) {
     return std::unexpected(CompileError{
         std::format("Expected '}}' after function body at {}:{}", rBraceToken.line(), rBraceToken.column())});
@@ -219,14 +220,14 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
   return funcNode;
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(Token identifier) {
+Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier) {
   spdlog::debug("Parsing assignment for identifier '{}'", identifier.value());
   auto eqTokenResult = _lexer.nextToken(); // consume '='
   if (!eqTokenResult) {
     spdlog::error("{}", eqTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '=' token in assignment"});
   }
-  auto eqToken = *eqTokenResult;
+  const auto &eqToken = *eqTokenResult;
   if (eqToken != Token::Type::ASSIGN) {
     return std::unexpected(CompileError{"Expected '=' after identifier", eqToken.line(), eqToken.column()});
   }
@@ -235,32 +236,34 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(Token identifier) {
     spdlog::error("{}", exprResult.error().message());
     return std::unexpected(CompileError{"Failed to parse expression in assignment"});
   }
-  auto assignNode = std::make_unique<AssignmentNode>();
+  auto exprVar = std::move(exprResult.value());
   auto leftVarResult = parseVariable(identifier);
   if (!leftVarResult) {
     spdlog::error("{}", leftVarResult.error().message());
     return std::unexpected(CompileError{"Failed to parse variable in assignment"});
   }
   auto leftVar = std::move(leftVarResult.value());
-  assignNode->lhs = std::unique_ptr<VariableNode>(dynamic_cast<VariableNode *>(leftVar.release()));
-  assignNode->rhs = std::move(exprResult.value());
+  if (dynamic_cast<VariableNode *>(leftVar.get()) == nullptr) {
+    return std::unexpected(CompileError{"Left-hand side of assignment must be a variable"});
+  }
+  auto leftVarNode = std::unique_ptr<VariableNode>(static_cast<VariableNode *>(leftVar.release()));
+  auto assignNode = std::make_unique<AssignmentNode>(std::move(leftVarNode), std::move(exprVar));
   return assignNode;
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseCall(Token identifier) {
+Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
   spdlog::debug("Parsing function call for identifier '{}'", identifier.value());
   auto lparenTokenResult = _lexer.nextToken(); // consume '('
   if (!lparenTokenResult) {
     spdlog::error("{}", lparenTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '(' token in function call"});
   }
-  auto lparenToken = *lparenTokenResult;
+  const auto &lparenToken = *lparenTokenResult;
   if (lparenToken != Token::Type::L_PAREN) {
     return std::unexpected(CompileError{
         std::format("Expected '(' after function name at {}:{}", lparenToken.line(), lparenToken.column())});
   }
-  auto callNode = std::make_unique<CallNode>();
-  callNode->callee = identifier.value();
+  auto callNode = std::make_unique<CallNode>(identifier.value());
 
   while (true) {
     auto nextTokenResult = _lexer.peekToken();
@@ -268,7 +271,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(Token identifier) {
       spdlog::error("{}", nextTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek next token in function call"});
     }
-    auto nextToken = *nextTokenResult;
+    auto &nextToken = *nextTokenResult;
     if (nextToken == Token::Type::R_PAREN) {
       auto rparenTokenResult = _lexer.nextToken(); // consume ')'
       if (!rparenTokenResult) {
@@ -283,7 +286,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(Token identifier) {
       return std::unexpected(CompileError{"Failed to parse argument in function call"});
     }
     auto arg = std::move(argResult.value());
-    callNode->arguments.push_back(std::move(arg));
+    callNode->addArgument(std::move(arg));
 
     nextTokenResult = _lexer.peekToken();
     if (!nextTokenResult) {
@@ -315,20 +318,20 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
     spdlog::error("{}", tokenResult.error().message());
     return std::unexpected(CompileError{"parseExpression unexpected stop of parsing"});
   }
-  auto token = *tokenResult;
+  const auto &token = *tokenResult;
   if (token == Token::Type::IDENTIFIER) {
     auto currentTokenResult = _lexer.nextToken();
     if (!currentTokenResult) {
       spdlog::error("{}", currentTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to consume identifier token in expression"});
     }
-    auto currentToken = *currentTokenResult;
+    const auto &currentToken = *currentTokenResult;
     auto nextTokenResult = _lexer.peekToken();
     if (!nextTokenResult) {
       spdlog::error("{}", nextTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek next token in expression"});
     }
-    auto nextToken = *nextTokenResult;
+    const auto &nextToken = *nextTokenResult;
     if (nextToken == Token::Type::L_PAREN) {
       return parseCall(currentToken);
     } else {
@@ -346,8 +349,9 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
   }
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseVariable(Token identifier) {
+Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
   spdlog::debug("Parsing variable");
+  std::string varName = identifier.value();
   // If the passed token is not an identifier, consume the next token
   if (identifier != Token::Type::IDENTIFIER) {
     auto identifierResult = _lexer.nextToken();
@@ -355,11 +359,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseVariable(Token identifier) {
       spdlog::error("{}", identifierResult.error().message());
       return std::unexpected(CompileError{"Failed to consume identifier token in variable"});
     }
-    identifier = *identifierResult;
+    varName = identifierResult->value();
   }
 
-  auto varNode = std::make_unique<VariableNode>();
-  varNode->name = identifier.value();
+  auto varNode = std::make_unique<VariableNode>(varName, std::nullopt);
   return varNode;
 }
 
@@ -370,7 +373,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     spdlog::error("{}", lbracketTokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume '[' token in kernel"});
   }
-  auto lbracketToken = *lbracketTokenResult;
+  const auto &lbracketToken = *lbracketTokenResult;
   if (lbracketToken != Token::Type::L_BRACKET) {
     return std::unexpected(CompileError{"Expected '['", lbracketToken.line(), lbracketToken.column()});
   }
@@ -383,7 +386,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
       spdlog::error("{}", peekedtokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek token in kernel"});
     }
-    auto peekToken = *peekedtokenResult;
+    const auto &peekToken = *peekedtokenResult;
 
     // End of kernel
     if (peekToken == Token::Type::R_BRACKET) {
@@ -416,7 +419,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         spdlog::error("{}", innerTokenResult.error().message());
         return std::unexpected(CompileError{"Failed to peek token in kernel"});
       }
-      auto innerToken = *innerTokenResult;
+      const auto &innerToken = *innerTokenResult;
 
       if (innerToken == Token::Type::R_BRACKET) {
         // empty row allowed? treat as end of row
@@ -438,7 +441,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         spdlog::error("{}", numTokenResult.error().message());
         return std::unexpected(CompileError{"Failed to consume number token in kernel"});
       }
-      auto numToken = *numTokenResult;
+      const auto &numToken = *numTokenResult;
       row.push_back(std::stod(numToken.value()));
 
       // after a number, expect ',' or ']'
@@ -447,7 +450,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         spdlog::error("{}", afterNumResult.error().message());
         return std::unexpected(CompileError{"Failed to peek token in kernel"});
       }
-      auto afterNum = *afterNumResult;
+      const auto &afterNum = *afterNumResult;
       if (afterNum == Token::Type::COMMA) {
         auto commaTokenResult = _lexer.nextToken(); // consume comma
         if (!commaTokenResult) {
@@ -469,7 +472,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     }
 
     // push parsed row
-    kernelNode->rows.push_back(row);
+    kernelNode->addRow(row);
 
     // after a row, look for either ',' (another row) or ']' (end of kernel)
     auto nextResult = _lexer.peekToken();
@@ -477,7 +480,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
       spdlog::error("{}", nextResult.error().message());
       return std::unexpected(CompileError{"Failed to peek token in kernel"});
     }
-    auto next = *nextResult;
+    const auto &next = *nextResult;
     if (next == Token::Type::COMMA) {
       auto commaTokenResult = _lexer.nextToken(); // consume comma between rows
       if (!commaTokenResult) {
@@ -499,9 +502,9 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
   }
 
   // Validate dimensions: only 2D kernels supported; ensure all rows same length
-  if (!kernelNode->rows.empty()) {
-    size_t cols = kernelNode->rows[0].size();
-    for (const auto &row : kernelNode->rows) {
+  if (!kernelNode->rows().empty()) {
+    size_t cols = kernelNode->rows()[0].size();
+    for (const auto &row : kernelNode->rows()) {
       if (row.size() != cols) {
         return std::unexpected(CompileError{"All rows in kernel must have same length"});
       }
@@ -518,13 +521,12 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
     spdlog::error("{}", tokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume string token"});
   }
-  auto token = *tokenResult;
+  const auto &token = *tokenResult;
   if (token != Token::Type::STRING) {
     return std::unexpected(CompileError{"Expected string", token.line(), token.column()});
   }
-  auto strNode = std::make_unique<StringNode>();
   // TODO: Implement a compiler flag to let the user not expand tilde if it is not needed
-  strNode->value = utils::expandTilde(token.value());
+  auto strNode = std::make_unique<StringNode>(utils::expandTilde(token.value()));
   return strNode;
 }
 
@@ -535,13 +537,13 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
     spdlog::error("{}", tokenResult.error().message());
     return std::unexpected(CompileError{"Failed to consume number token"});
   }
-  auto token = *tokenResult;
+  const auto &token = *tokenResult;
   if (token != Token::Type::NUMBER) {
     return std::unexpected(CompileError{"Expected number", token.line(), token.column()});
   }
-  auto numNode = std::make_unique<NumberNode>();
+  std::unique_ptr<NumberNode> numNode = nullptr;
   try {
-    numNode->value = std::stod(token.value());
+    numNode = std::make_unique<NumberNode>(std::stod(token.value()));
   } catch (const std::invalid_argument &) {
     return std::unexpected(
         CompileError{std::format("Invalid double literal '{}'", token.value()), token.line(), token.column()});
@@ -555,9 +557,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
 void Parser::printAST(const std::unique_ptr<ModuleNode> &node, int indent) {
   if (!node)
     return;
-  std::string indentStr(indent, ' ');
   spdlog::info("{}", node->toString());
-  for (const auto &stmt : node->statements) {
+  for (const auto &stmt : node->statements()) {
     spdlog::info("{}", stmt->toString());
   }
 }

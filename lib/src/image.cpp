@@ -1,23 +1,24 @@
 #include "image.h"
-
 #include "spdlog/spdlog.h"
+
+#include <print>
 
 namespace picceler {
 
 void internalDebugImage(const picceler::Image &image, const std::string &caller) {
-  std::cout << "[Runtime Debug from " << caller << "]\n"
-            << "  Addr of struct: " << &image << "\n"
-            << "  Width:    " << image._width << "\n"
-            << "  Height:   " << image._height << "\n"
-            << "  Data Ptr: " << (void *)image._data << std::endl;
+  spdlog::info("[Runtime Debug from {}]\n"
+               "  Addr of struct: {}\n"
+               "  Width:    {}\n"
+               "  Height:   {}\n"
+               "  Data Ptr: {}",
+               caller, (void *)&image, image._width, image._height, (void *)image._data);
 
   if (image._data != nullptr && image._width > 0 && image._height > 0) {
-    std::cout << "  First 4 bytes (RGBA): " << (int)image._data[0] << " " << (int)image._data[1] << " "
-              << (int)image._data[2] << " " << (int)image._data[3] << std::endl;
-  } else {
-    std::cout << "  WARNING: Image metadata or pointer is INVALID!" << std::endl;
+    spdlog::info("\tFirst 4 pixels (RGBA): {} {} {} {}", (int)image._data[0], (int)image._data[1], (int)image._data[2],
+                 (int)image._data[3]);
   }
-  std::cout << "--------------------------------------" << std::endl;
+  spdlog::info("\tWidth: {}, Height: {}, Data Ptr: {}", image._width, image._height, (void *)image._data);
+  spdlog::info("--------------------------------------");
 }
 
 Image *loadImage(const std::string &filename) {
@@ -45,7 +46,7 @@ Image *loadImage(const std::string &filename) {
 
 void saveImage(const Image &image, const std::string &filename) {
   internalDebugImage(image, "saveImage");
-  cv::Mat rgbaMat(image._height, image._width, CV_8UC4, image._data);
+  cv::Mat rgbaMat(static_cast<int>(image._height), static_cast<int>(image._width), CV_8UC4, image._data);
 
   cv::Mat bgrMat;
   cv::cvtColor(rgbaMat, bgrMat, cv::COLOR_RGBA2BGR);
@@ -58,7 +59,7 @@ void saveImage(const Image &image, const std::string &filename) {
 
 void showImage(const Image &image) {
   internalDebugImage(image, "showImage");
-  cv::Mat rgbaMat(image._height, image._width, CV_8UC4, image._data);
+  cv::Mat rgbaMat(static_cast<int>(image._height), static_cast<int>(image._width), CV_8UC4, image._data);
 
   cv::Mat bgrMat;
   cv::cvtColor(rgbaMat, bgrMat, cv::COLOR_RGBA2BGR);
