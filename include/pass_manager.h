@@ -6,10 +6,9 @@
 
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/FileSystem.h"
 #include "mlir/Pass/PassInstrumentation.h"
-
-#include "passes.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/IR/BuiltinOps.h"
 
 namespace picceler {
 

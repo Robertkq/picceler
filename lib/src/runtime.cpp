@@ -34,7 +34,7 @@ picceler::Image *piccelerCreateImage(uint32_t width, uint32_t height) {
   newImage->_width = width;
   newImage->_height = height;
   constexpr auto channels = 4;
-  newImage->_data = new unsigned char[static_cast<size_t>(width * height * channels)];
+  newImage->_data = new unsigned char[static_cast<size_t>(width) * height * channels];
 
   return newImage;
 }

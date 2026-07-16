@@ -1,10 +1,69 @@
 #include <format>
+#include "spdlog/spdlog.h"
 
 #include "ast.h"
 
 namespace picceler {
 
 std::string ModuleNode::toString() const { return std::format("Module: {} statements", statements().size()); }
+
+void ModuleNode::normalizeTopLevelStatements() {
+  spdlog::info("Printing all statements in the AST:\n");
+  for (auto stmt : statements()) {
+    spdlog::info("{}\n", stmt->toString());
+  }
+  auto modified = wrapTopLevelStatementsInMain();
+  if (modified) {
+    spdlog::info("AST normalization modified the graph. Final AST:\n");
+    for (auto stmt : statements()) {
+      spdlog::info("{}\n", stmt->toString());
+    }
+  }
+}
+
+bool ModuleNode::wrapTopLevelStatementsInMain() {
+  bool hasMain = false;
+  bool onlyFunctions = true;
+
+  for (auto stmt : statements()) {
+    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
+      if (funcNode->name() == "main") {
+        hasMain = true;
+      }
+    } else {
+      onlyFunctions = false;
+    }
+  }
+
+  if (!hasMain) {
+    if (!onlyFunctions) {
+      spdlog::warn("No 'main' functions found, implicit 'main' will be generated to wrap the top-level statements");
+      auto mainFunc = std::make_unique<FunctionNode>("main");
+      for (auto &stmt : _statements) {
+        auto stmtPtr = stmt.get();
+        if (!dynamic_cast<FunctionNode *>(stmtPtr)) {
+          mainFunc->addBodyStatement(std::move(stmt));
+        }
+      }
+      _statements.erase(std::remove_if(_statements.begin(), _statements.end(),
+                                       [&](const std::unique_ptr<ASTNode> &stmt) {
+                                         return !dynamic_cast<FunctionNode *>(stmt.get());
+                                       }),
+                        _statements.end());
+      _statements.push_back(std::move(mainFunc));
+    } else {
+      spdlog::error("No 'main' function found and no top-level statements to wrap.");
+      return false;
+    }
+  } else {
+    if (!onlyFunctions) {
+      spdlog::warn("Found 'main' function, but also found top-level statements. Not allowed.");
+      return false;
+    }
+  }
+
+  return true;
+}
 
 std::string FunctionNode::toString() const {
   std::string params;

@@ -4,18 +4,12 @@
 #include <string>
 #include <optional>
 #include <memory>
-
-#include "lexer.h"
+#include <ranges>
 
 namespace picceler {
 
-template <typename T> std::vector<T *> getRawPointers(const std::vector<std::unique_ptr<T>> &vec) {
-  std::vector<T *> rawPointers;
-  rawPointers.reserve(vec.size());
-  for (const auto &item : vec) {
-    rawPointers.push_back(item.get());
-  }
-  return rawPointers;
+template <typename T> auto getRawPointers(const std::vector<std::unique_ptr<T>> &vec) {
+  return vec | std::views::transform([](const std::unique_ptr<T> &ptr) { return ptr.get(); });
 }
 
 /**
@@ -40,9 +34,11 @@ public:
 
 class ModuleNode : public ASTNode {
 public:
-  std::vector<ASTNode *> statements() const { return getRawPointers(_statements); }
-  std::vector<std::unique_ptr<ASTNode>> &mutableStatements() { return _statements; }
+  auto statements() const { return getRawPointers(_statements); }
 
+  void normalizeTopLevelStatements();
+
+  bool wrapTopLevelStatementsInMain();
   void addStatement(std::unique_ptr<ASTNode> statement) { _statements.push_back(std::move(statement)); }
 
   std::string toString() const override;
@@ -60,7 +56,7 @@ public:
 
   const std::string &name() const { return _name; }
   const auto &parameters() const { return _parameters; }
-  std::vector<ASTNode *> body() const { return getRawPointers(_body); }
+  auto body() const { return getRawPointers(_body); }
 
   void addParameter(const std::string &paramName, const std::string &paramType) {
     _parameters.emplace_back(paramName, paramType);
@@ -150,7 +146,7 @@ public:
   CallNode(std::string callee) : _callee(std::move(callee)), _arguments() {}
 
   const std::string &callee() const { return _callee; }
-  std::vector<ASTNode *> arguments() const { return getRawPointers(_arguments); }
+  auto arguments() const { return getRawPointers(_arguments); }
 
   void addArgument(std::unique_ptr<ASTNode> arg) { _arguments.push_back(std::move(arg)); }
 

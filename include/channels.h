@@ -1,7 +1,10 @@
 #pragma once
+
+#include <cstdint>
+
 namespace picceler {
 
-enum class Channel : int {
+enum class Channel : uint8_t {
   R = 0,
   G = 1,
   B = 2,

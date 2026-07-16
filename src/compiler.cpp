@@ -21,6 +21,10 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Target/TargetOptions.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dialect.h"
 
 namespace picceler {
 
@@ -77,15 +81,17 @@ bool Compiler::run() {
     spdlog::error("Failed to reset source file: {}", resetResult.error().message());
     return false;
   }
-  auto ast = _parser.parse();
-  if (!ast) {
-    spdlog::error("{}", ast.error().message());
+  auto astResult = _parser.parse();
+  if (!astResult) {
+    spdlog::error("{}", astResult.error().message());
     return false;
   }
-  _parser.printAST(ast.value());
+  auto ast = std::move(astResult.value());
+  _parser.printAST(ast);
+  ast->normalizeTopLevelStatements();
 
   spdlog::info("Generating initial MLIR");
-  auto module = _mlirGen.generate(ast.value().get());
+  auto module = _mlirGen.generate(ast.get());
   spdlog::info("Finished generating initial MLIR");
   module->dump();
   spdlog::info("Running pass manager");

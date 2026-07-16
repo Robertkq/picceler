@@ -1,8 +1,6 @@
 #include "image.h"
 #include "spdlog/spdlog.h"
 
-#include <print>
-
 namespace picceler {
 
 void internalDebugImage(const picceler::Image &image, const std::string &caller) {

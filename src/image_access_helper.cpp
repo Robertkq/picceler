@@ -1,4 +1,5 @@
 #include "image_access_helper.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace picceler {
 ImageAccessHelper::ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l)

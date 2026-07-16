@@ -1,17 +1,7 @@
 #pragma once
 
-#include <format>
-#include <iostream>
-
 #include "CLI/CLI.hpp"
-#include "spdlog/spdlog.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/Pass.h"
 #include "llvm/IR/Module.h"
 
 #include "dialect.h"

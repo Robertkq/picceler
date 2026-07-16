@@ -1,8 +1,6 @@
 #pragma once
 
-#include <filesystem>
 #include <string>
-#include <cstdlib>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -28,6 +26,6 @@ namespace picceler::utils {
  * @return A string where a leading '~' has been replaced by the user's home
  *         directory, or the original inputPath if no expansion is performed.
  */
-std::string expandTilde(const std::string& inputPath);
+std::string expandTilde(const std::string &inputPath);
 
 } // namespace picceler::utils

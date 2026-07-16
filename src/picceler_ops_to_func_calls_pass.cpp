@@ -1,11 +1,8 @@
 #include "passes.h"
 
-#include "spdlog/spdlog.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/IR/SymbolTable.h"
 
 #include "ops.h"
 #include "types.h"

@@ -75,61 +75,10 @@ MLIRGen::~MLIRGen() noexcept {
   exitScope(); // Exit the global scope
 }
 
-bool MLIRGen::normalizeASTMain(mlir::ModuleOp module, ModuleNode *root) {
-  bool hasMain = false;
-  bool onlyFunctions = true;
-  spdlog::info("Printing all statements in the AST:\n");
-  for (const auto &stmt : root->statements()) {
-    spdlog::info("{}\n", stmt->toString());
-  }
-
-  for (const auto &stmt : root->statements()) {
-    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
-      if (funcNode->name() == "main") {
-        hasMain = true;
-      }
-    } else {
-      onlyFunctions = false;
-    }
-  }
-
-  if (!hasMain) {
-    if (!onlyFunctions) {
-      spdlog::warn("No 'main' functions found, implicit 'main' will be generated to wrap the top-level statements");
-      auto mainFunc = std::make_unique<FunctionNode>("main");
-      for (auto &stmt : root->mutableStatements()) {
-        if (!dynamic_cast<FunctionNode *>(stmt.get())) {
-          mainFunc->addBodyStatement(std::move(stmt));
-        }
-      }
-      root->mutableStatements().erase(std::remove_if(root->mutableStatements().begin(), root->mutableStatements().end(),
-                                                     [&](const std::unique_ptr<ASTNode> &stmt) {
-                                                       return !dynamic_cast<FunctionNode *>(stmt.get());
-                                                     }),
-                                      root->mutableStatements().end());
-      root->mutableStatements().push_back(std::move(mainFunc));
-    } else {
-      spdlog::error("No 'main' function found and no top-level statements to wrap.");
-      return false;
-    }
-  } else {
-    if (!onlyFunctions) {
-      spdlog::warn("Found 'main' function, but also found top-level statements. Not allowed.");
-      return false;
-    }
-  }
-
-  spdlog::info("AST normalization complete. Final AST:\n");
-  for (const auto &stmt : root->statements()) {
-    spdlog::info("{}\n", stmt->toString());
-  }
-  return true;
-}
-
 void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
   spdlog::debug("Declaring user-defined functions in the MLIR module");
   _builder.setInsertionPointToStart(module.getBody());
-  for (const auto &stmt : root->statements()) {
+  for (auto stmt : root->statements()) {
     if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
       spdlog::debug("Declaring function: {}", funcNode->name());
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
@@ -165,7 +114,7 @@ std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
 
 void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
   spdlog::debug("Defining user-defined functions in the MLIR module");
-  for (const auto &stmt : root->statements()) {
+  for (auto stmt : root->statements()) {
     if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
       auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcNode->name());
       if (!funcOp) {
@@ -186,7 +135,7 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
         ++argIndex;
       }
 
-      for (const auto &bodyStmt : funcNode->body()) {
+      for (auto bodyStmt : funcNode->body()) {
         emitStatement(bodyStmt);
       }
 
@@ -209,10 +158,6 @@ mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   registerBuiltinFunctions();
 
-  bool result = normalizeASTMain(module, root);
-  if (!result) {
-    return nullptr;
-  }
   declareUserFunctions(module, root);
   defineUserFunctions(module, root);
 
@@ -333,7 +278,7 @@ mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
 mlir::Value MLIRGen::emitCall(CallNode *node) {
   spdlog::debug("Emitting MLIR for call: {}", node->toString());
   std::vector<mlir::Value> args;
-  for (auto &arg : node->arguments()) {
+  for (auto arg : node->arguments()) {
     args.push_back(emitExpression(arg));
   }
   auto op = emitCallExpression(node, args);

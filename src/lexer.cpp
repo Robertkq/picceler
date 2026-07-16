@@ -1,6 +1,5 @@
 #include "lexer.h"
 
-#include <iostream>
 #include <format>
 
 #include "spdlog/spdlog.h"
