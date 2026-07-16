@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/IR/BuiltinOps.h"
 
 namespace picceler {
 

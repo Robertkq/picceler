@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 set(RUNTIME_LIB_NAME "PiccelerRuntime")
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 find_package(OpenCV REQUIRED)
 find_package(spdlog REQUIRED)

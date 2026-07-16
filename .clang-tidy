@@ -1,10 +1,31 @@
 HeaderFilterRegex: '.*picceler/.*'
-ExcludeHeaderFilterRegex: '.*/build/tablegen/.*'
+ExcludeHeaderFilterRegex: '.*/build/.*'
 
-Checks: 'cppcoreguidelines-*,readability-identifier-naming'
-
+Checks: >-
+  -*,
+  bugprone-*,
+  performance-*,
+  misc-definitions-in-headers,
+  misc-unconventional-assign-operator,
+  readability-identifier-naming,
+  -bugprone-easily-swappable-parameters
 CheckOptions:
+  # --- Class / Struct Naming ---
   - key: readability-identifier-naming.ClassCase
     value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+
+  # --- Function Naming ---
   - key: readability-identifier-naming.FunctionCase
     value: camelBack
+
+  # --- Local Variables ---
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+
+  # --- Member Variables (Enforce private/protected prefix or suffix) ---
+  - key: readability-identifier-naming.MemberCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberPrefix
+    value: '_'

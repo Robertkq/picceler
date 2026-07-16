@@ -22,7 +22,12 @@ if (ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES clang-tidy)
     if(CLANG_TIDY_EXE)
         message(STATUS "clang-tidy found: ${CLANG_TIDY_EXE}")
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-extra-arg=-std=c++${CMAKE_CXX_STANDARD}")
+        set(CMAKE_CXX_CLANG_TIDY 
+            "${CLANG_TIDY_EXE}"
+            "-warnings-as-errors=*"
+            "-extra-arg=-std=c++${CMAKE_CXX_STANDARD}"
+            "-extra-arg=-Werror"
+        )
     else()
         message(WARNING "clang-tidy option enabled but clang-tidy executable not found!")
     endif()

@@ -5,13 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Pass/Pass.h"
 
 #include "dialect.h"
 #include "types.h"
@@ -36,7 +33,7 @@ public:
   MLIRGen &operator=(const MLIRGen &) = default;
   MLIRGen(MLIRGen &&) = default;
   MLIRGen &operator=(MLIRGen &&) = default;
-  ~MLIRGen();
+  ~MLIRGen() noexcept;
 
   /**
    * @brief Generates MLIR code from the given AST root node.
@@ -46,14 +43,6 @@ public:
   mlir::ModuleOp generate(ModuleNode *root);
 
 private:
-  /**
-   * @brief Normalizes the AST by processing all top-level statements in the module and assign to main if not found.
-   * @param module The MLIR module operation.
-   * @param root The root node of the AST.
-   * @return True if normalization is successful, false otherwise.
-   */
-  bool normalizeASTMain(mlir::ModuleOp module, ModuleNode *root);
-
   /**
    * @brief Declares user-defined functions in the MLIR module.
    * @param module The MLIR module operation.
@@ -98,7 +87,7 @@ private:
   /**
    * @brief Exits the current scope.
    */
-  void exitScope();
+  void exitScope() noexcept;
 
   /**
    * @brief Emits MLIR code for a given AST node.

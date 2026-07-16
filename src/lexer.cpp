@@ -1,6 +1,5 @@
 #include "lexer.h"
 
-#include <iostream>
 #include <format>
 
 #include "spdlog/spdlog.h"
@@ -71,7 +70,7 @@ Result<Token> Lexer::nextToken() {
   skipWhitespace();
 
   if (eof()) {
-    return Token{Token::Type::EOF_TOKEN, "", _line, _column};
+    return Token{Token::Type::EOF_TOKEN, "", Location{{_line, _column}}};
   }
 
   char ch;
@@ -90,7 +89,7 @@ Result<Token> Lexer::nextToken() {
   }
 
   get(); // consume unknown character
-  return Token{Token::Type::UNKNOWN, "", _line, _column};
+  return Token{Token::Type::UNKNOWN, "", Location{{_line, _column}}};
 }
 
 Result<Token> Lexer::peekToken() {
@@ -145,8 +144,8 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string _symbols = "=():,[]{}->=";
-  return _symbols.find(ch) != std::string::npos;
+  static const std::string symbols = "=():,[]{}->=";
+  return symbols.find(ch) != std::string::npos;
 }
 
 Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
@@ -158,7 +157,7 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   if (it != keywords.end()) {
     return it->second;
   }
-  return std::unexpected(CompileError{std::format("Not a keyword: {}", value), _line, _column});
+  return std::unexpected(CompileError{std::format("Not a keyword: {}", value), Location{_line, _column}});
 }
 
 Result<Token::Type> Lexer::isType(const std::string &value) const {
@@ -172,7 +171,7 @@ Result<Token::Type> Lexer::isType(const std::string &value) const {
   if (it != types.end()) {
     return it->second;
   }
-  return std::unexpected(CompileError{std::format("Not a type: {}", value), _line, _column});
+  return std::unexpected(CompileError{std::format("Not a type: {}", value), Location{_line, _column}});
 }
 
 Result<Token> Lexer::readIdentifierOrKeywordOrType(std::pair<size_t, size_t> start) {
@@ -183,14 +182,14 @@ Result<Token> Lexer::readIdentifierOrKeywordOrType(std::pair<size_t, size_t> sta
   auto result = isKeyword(value);
   if (result) {
     Token::Type keywordType = *result;
-    return Token{keywordType, value, start.first, start.second};
+    return Token{keywordType, value, Location{start}};
   }
   result = isType(value);
   if (result) {
     Token::Type typeType = *result;
-    return Token{typeType, value, start.first, start.second};
+    return Token{typeType, value, Location{start}};
   }
-  return Token{Token::Type::IDENTIFIER, value, start.first, start.second};
+  return Token{Token::Type::IDENTIFIER, value, Location{start}};
 }
 
 Result<Token> Lexer::readNumber(std::pair<size_t, size_t> start) {
@@ -206,8 +205,7 @@ Result<Token> Lexer::readNumber(std::pair<size_t, size_t> start) {
       value += get();
     } else if (ch == '.') {
       if (hasDot) {
-        return std::unexpected(
-            CompileError{"Invalid number format: multiple decimal points", start.first, start.second});
+        return std::unexpected(CompileError{"Invalid number format: multiple decimal points", Location{start}});
       }
       hasDot = true;
       value += get();
@@ -215,7 +213,7 @@ Result<Token> Lexer::readNumber(std::pair<size_t, size_t> start) {
       break;
     }
   }
-  return Token{Token::Type::NUMBER, value, start.first, start.second};
+  return Token{Token::Type::NUMBER, value, Location{start}};
 }
 
 Result<Token> Lexer::readString(std::pair<size_t, size_t> start) {
@@ -227,38 +225,38 @@ Result<Token> Lexer::readString(std::pair<size_t, size_t> start) {
   }
   if (!eof())
     get(); // consume the closing quote
-  return Token{Token::Type::STRING, value, start.first, start.second};
+  return Token{Token::Type::STRING, value, Location{start}};
 }
 
 Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
   char ch = get();
   switch (ch) {
   case '(':
-    return Token{Token::Type::L_PAREN, "(", start.first, start.second};
+    return Token{Token::Type::L_PAREN, "(", Location{start}};
   case ')':
-    return Token{Token::Type::R_PAREN, ")", start.first, start.second};
+    return Token{Token::Type::R_PAREN, ")", Location{start}};
   case '[':
-    return Token{Token::Type::L_BRACKET, "[", start.first, start.second};
+    return Token{Token::Type::L_BRACKET, "[", Location{start}};
   case ']':
-    return Token{Token::Type::R_BRACKET, "]", start.first, start.second};
+    return Token{Token::Type::R_BRACKET, "]", Location{start}};
   case '{':
-    return Token{Token::Type::L_BRACE, "{", start.first, start.second};
+    return Token{Token::Type::L_BRACE, "{", Location{start}};
   case '}':
-    return Token{Token::Type::R_BRACE, "}", start.first, start.second};
+    return Token{Token::Type::R_BRACE, "}", Location{start}};
   case ',':
-    return Token{Token::Type::COMMA, ",", start.first, start.second};
+    return Token{Token::Type::COMMA, ",", Location{start}};
   case ':':
-    return Token{Token::Type::COLON, ":", start.first, start.second};
+    return Token{Token::Type::COLON, ":", Location{start}};
   case '-':
     if (!eof() && peek() == '>') {
       get(); // consume '>'
-      return Token{Token::Type::ARROW, "->", start.first, start.second};
+      return Token{Token::Type::ARROW, "->", Location{start}};
     }
-    return Token{Token::Type::UNKNOWN, std::string(1, ch), start.first, start.second};
+    return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   case '=':
-    return Token{Token::Type::ASSIGN, "=", start.first, start.second};
+    return Token{Token::Type::ASSIGN, "=", Location{start}};
   default:
-    return Token{Token::Type::UNKNOWN, std::string(1, ch), start.first, start.second};
+    return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   }
 }
 

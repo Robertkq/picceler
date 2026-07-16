@@ -1,6 +1,5 @@
 #pragma once
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -17,11 +16,8 @@ namespace picceler {
  *   unsigned char *_data; // Offset 8
  * };
  */
-struct ImageAccessHelper {
-  mlir::Value structPtr; // !llvm.ptr (Opaque pointer to the Image struct)
-  mlir::OpBuilder &builder;
-  mlir::Location loc;
-
+class ImageAccessHelper {
+public:
   ImageAccessHelper(mlir::Value ptr, mlir::OpBuilder &b, mlir::Location l);
 
   /**
@@ -58,6 +54,11 @@ struct ImageAccessHelper {
    * @return MLIR value representing the data pointer.
    */
   mlir::Value getDataPtr();
+
+private:
+  mlir::Value _structPtr; // !llvm.ptr (Opaque pointer to the Image struct)
+  mlir::OpBuilder &_builder;
+  mlir::Location _loc;
 };
 
 } // namespace picceler

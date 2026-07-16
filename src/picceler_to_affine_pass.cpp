@@ -100,7 +100,7 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
 
       auto outputBytePtr =
           rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, rewriter.getI8Type(), outputDataPtr, byteAddrI64);
-      auto outputByte = rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
     };
 
     processChannel(Channel::R);
@@ -185,7 +185,7 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
 
       auto outputBytePtr =
           rewriter.create<mlir::LLVM::GEPOp>(loc, ptrType, rewriter.getI8Type(), outputDataPtr, byteAddrI64);
-      auto outputByte = rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
+      rewriter.create<mlir::LLVM::StoreOp>(loc, finalValue, outputBytePtr);
     };
 
     processChannel(Channel::R);
@@ -661,12 +661,12 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
 
     mlir::Value xI32 = adaptor.getX();
     mlir::Value yI32 = adaptor.getY();
-    mlir::Value cropW_I32 = rewriter.create<mlir::arith::TruncIOp>(loc, rewriter.getI32Type(), adaptor.getWidth());
-    mlir::Value cropH_I32 = rewriter.create<mlir::arith::TruncIOp>(loc, rewriter.getI32Type(), adaptor.getHeight());
+    mlir::Value cropWI32 = rewriter.create<mlir::arith::TruncIOp>(loc, rewriter.getI32Type(), adaptor.getWidth());
+    mlir::Value cropHI32 = rewriter.create<mlir::arith::TruncIOp>(loc, rewriter.getI32Type(), adaptor.getHeight());
 
     // create output image with crop size
-    auto createCall = rewriter.create<mlir::func::CallOp>(loc, ptrType, "piccelerCreateImage",
-                                                          mlir::ValueRange{cropW_I32, cropH_I32});
+    auto createCall =
+        rewriter.create<mlir::func::CallOp>(loc, ptrType, "piccelerCreateImage", mlir::ValueRange{cropWI32, cropHI32});
     mlir::Value output = createCall.getResult(0);
 
     ImageAccessHelper outputImage(output, rewriter, loc);
@@ -679,8 +679,8 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
 
     mlir::Value xIndex = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, xI32);
     mlir::Value yIndex = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, yI32);
-    mlir::Value cropW = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, cropW_I32);
-    mlir::Value cropH = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, cropH_I32);
+    mlir::Value cropW = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, cropWI32);
+    mlir::Value cropH = rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, cropHI32);
 
     auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
 

@@ -59,7 +59,7 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
     return builder.create<mlir::arith::ConstantIntOp>(loc, static_cast<int64_t>(numericValue), intBitWidth);
   }
 
-  if (auto isRuntimeFloat = mlir::isa<mlir::FloatType>(value.getType())) {
+  if (mlir::isa<mlir::FloatType>(value.getType())) {
     return builder.create<mlir::arith::FPToSIOp>(loc, builder.getI64Type(), value);
   }
 
@@ -71,72 +71,20 @@ MLIRGen::MLIRGen(mlir::MLIRContext *context)
   enterScope("Global"); // Enter the global scope
 }
 
-MLIRGen::~MLIRGen() {
+MLIRGen::~MLIRGen() noexcept {
   exitScope(); // Exit the global scope
-}
-
-bool MLIRGen::normalizeASTMain(mlir::ModuleOp module, ModuleNode *root) {
-  bool hasMain = false;
-  bool onlyFunctions = true;
-  spdlog::info("Printing all statements in the AST:\n");
-  for (const auto &stmt : root->statements) {
-    spdlog::info("{}\n", stmt->toString());
-  }
-
-  for (const auto &stmt : root->statements) {
-    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt.get())) {
-      if (funcNode->name == "main") {
-        hasMain = true;
-      }
-    } else {
-      onlyFunctions = false;
-    }
-  }
-
-  if (!hasMain) {
-    if (!onlyFunctions) {
-      spdlog::warn("No 'main' functions found, implicit 'main' will be generated to wrap the top-level statements");
-      auto mainFunc = std::make_unique<FunctionNode>();
-      mainFunc->name = "main";
-      for (auto &stmt : root->statements) {
-        if (!dynamic_cast<FunctionNode *>(stmt.get())) {
-          mainFunc->body.push_back(std::move(stmt));
-        }
-      }
-      root->statements.erase(std::remove_if(root->statements.begin(), root->statements.end(),
-                                            [&](const std::unique_ptr<ASTNode> &stmt) {
-                                              return !dynamic_cast<FunctionNode *>(stmt.get());
-                                            }),
-                             root->statements.end());
-      root->statements.push_back(std::move(mainFunc));
-    } else {
-      spdlog::error("No 'main' function found and no top-level statements to wrap.");
-      return false;
-    }
-  } else {
-    if (!onlyFunctions) {
-      spdlog::warn("Found 'main' function, but also found top-level statements. Not allowed.");
-      return false;
-    }
-  }
-
-  spdlog::info("AST normalization complete. Final AST:\n");
-  for (const auto &stmt : root->statements) {
-    spdlog::info("{}\n", stmt->toString());
-  }
-  return true;
 }
 
 void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
   spdlog::debug("Declaring user-defined functions in the MLIR module");
   _builder.setInsertionPointToStart(module.getBody());
-  for (const auto &stmt : root->statements) {
-    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt.get())) {
-      spdlog::debug("Declaring function: {}", funcNode->name);
+  for (auto stmt : root->statements()) {
+    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
+      spdlog::debug("Declaring function: {}", funcNode->name());
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
       auto funcType = _builder.getFunctionType(funcArgTypes, {});
-      auto funcOp = _builder.create<mlir::func::FuncOp>(_builder.getUnknownLoc(), funcNode->name, funcType);
-      _functionTable[funcNode->name] = [&, funcOp](mlir::Location loc, const std::vector<mlir::Value> &args) {
+      auto funcOp = _builder.create<mlir::func::FuncOp>(_builder.getUnknownLoc(), funcNode->name(), funcType);
+      _functionTable[funcNode->name()] = [&, funcOp](mlir::Location loc, const std::vector<mlir::Value> &args) {
         auto callOp = _builder.create<mlir::func::CallOp>(loc, funcOp, args);
         return callOp.getNumResults() > 0 ? callOp.getResult(0) : mlir::Value();
       };
@@ -148,7 +96,7 @@ void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 
 std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
   std::vector<mlir::Type> argTypes;
-  for (const auto &[paramName, paramType] : funcNode->parameters) {
+  for (const auto &[paramName, paramType] : funcNode->parameters()) {
     if (paramType == "image") {
       argTypes.push_back(_builder.getType<ImageType>());
     } else if (paramType == "string") {
@@ -166,29 +114,29 @@ std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
 
 void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
   spdlog::debug("Defining user-defined functions in the MLIR module");
-  for (const auto &stmt : root->statements) {
-    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt.get())) {
-      auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcNode->name);
+  for (auto stmt : root->statements()) {
+    if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
+      auto funcOp = module.lookupSymbol<mlir::func::FuncOp>(funcNode->name());
       if (!funcOp) {
-        throw std::runtime_error("Function not declared: " + funcNode->name);
+        throw std::runtime_error("Function not declared: " + funcNode->name());
       }
-      spdlog::debug("Defining function: {}", funcNode->name);
+      spdlog::debug("Defining function: {}", funcNode->name());
 
       mlir::OpBuilder::InsertionGuard guard(_builder);
       _builder.setInsertionPointToStart(funcOp.addEntryBlock());
 
-      enterScope(funcNode->name);
+      enterScope(funcNode->name());
 
       int argIndex = 0;
-      for (const auto &[paramName, paramType] : funcNode->parameters) {
+      for (const auto &[paramName, paramType] : funcNode->parameters()) {
         (void)paramType; // Suppress unused variable warning
         auto argValue = funcOp.getArgument(argIndex);
         declareVariable(paramName, argValue);
         ++argIndex;
       }
 
-      for (const auto &bodyStmt : funcNode->body) {
-        emitStatement(bodyStmt.get());
+      for (auto bodyStmt : funcNode->body()) {
+        emitStatement(bodyStmt);
       }
 
       exitScope();
@@ -210,10 +158,6 @@ mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   registerBuiltinFunctions();
 
-  bool result = normalizeASTMain(module, root);
-  if (!result) {
-    return nullptr;
-  }
   declareUserFunctions(module, root);
   defineUserFunctions(module, root);
 
@@ -233,8 +177,8 @@ void MLIRGen::emitStatement(ASTNode *node) {
 mlir::Value MLIRGen::emitKernel(KernelNode *node) {
   spdlog::debug("Emitting MLIR for kernel: {}", node->toString());
 
-  int rows = node->rows.size();
-  int cols = rows > 0 ? node->rows[0].size() : 0;
+  size_t rows = node->rows().size();
+  size_t cols = rows > 0 ? node->rows()[0].size() : 0;
 
   if (rows == 0 || cols == 0) {
     throw std::runtime_error("Empty kernel is not allowed");
@@ -242,7 +186,7 @@ mlir::Value MLIRGen::emitKernel(KernelNode *node) {
 
   std::vector<double> flatValues;
   flatValues.reserve(rows * cols);
-  for (const auto &row : node->rows) {
+  for (const auto &row : node->rows()) {
     flatValues.insert(flatValues.end(), row.begin(), row.end());
   }
 
@@ -251,7 +195,7 @@ mlir::Value MLIRGen::emitKernel(KernelNode *node) {
 
   auto valuesAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef<double>(flatValues));
 
-  auto resultType = KernelType::get(_context, rows, cols);
+  auto resultType = KernelType::get(_context, static_cast<int>(rows), static_cast<int>(cols));
 
   auto op = _builder.create<KernelConstOp>(_builder.getUnknownLoc(), resultType, valuesAttr);
 
@@ -301,11 +245,11 @@ void MLIRGen::enterScope(const std::string &name) {
   _scopedVariableTable.emplace_back(name, VariableTable());
 }
 
-void MLIRGen::exitScope() {
+void MLIRGen::exitScope() noexcept {
   if (!_scopedVariableTable.empty()) {
     _scopedVariableTable.pop_back();
   } else {
-    throw std::runtime_error("Attempted to exit scope when no scopes are active");
+    spdlog::warn("Attempted to exit scope, but no scopes are currently active.");
   }
 }
 
@@ -320,8 +264,8 @@ void MLIRGen::exitScope() {
  */
 mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
   spdlog::debug("Emitting MLIR for assignment: {}", node->toString());
-  auto rhs = emitExpression(node->rhs.get());
-  auto varName = node->lhs->name;
+  auto rhs = emitExpression(node->rhs());
+  auto varName = node->lhs()->name();
 
   auto var = lookupVariable(varName);
   if (var) {
@@ -334,8 +278,8 @@ mlir::Value MLIRGen::emitAssignment(AssignmentNode *node) {
 mlir::Value MLIRGen::emitCall(CallNode *node) {
   spdlog::debug("Emitting MLIR for call: {}", node->toString());
   std::vector<mlir::Value> args;
-  for (auto &arg : node->arguments) {
-    args.push_back(emitExpression(arg.get()));
+  for (auto arg : node->arguments()) {
+    args.push_back(emitExpression(arg));
   }
   auto op = emitCallExpression(node, args);
   return op;
@@ -343,27 +287,27 @@ mlir::Value MLIRGen::emitCall(CallNode *node) {
 
 mlir::Value MLIRGen::emitVariable(VariableNode *node) {
   spdlog::debug("Emitting MLIR for variable: {}", node->toString());
-  auto var = lookupVariable(node->name);
+  auto var = lookupVariable(node->name());
   if (var) {
     return var.value();
   } else {
     spdlog::error("lookupVariable failed with error message {}", var.error().message());
-    spdlog::error("Undefined variable: {}", node->name);
+    spdlog::error("Undefined variable: {}", node->name());
   }
-  throw std::runtime_error("Undefined variable: " + node->name);
+  throw std::runtime_error("Undefined variable: " + node->name());
 }
 
 mlir::Value MLIRGen::emitString(StringNode *node) {
   spdlog::debug("Emitting MLIR for string: {}", node->toString());
   auto stringType = _builder.getType<StringType>();
-  auto valueAttr = mlir::StringAttr::get(_context, node->value);
+  auto valueAttr = mlir::StringAttr::get(_context, node->value());
   return _builder.create<StringConstOp>(_builder.getUnknownLoc(), stringType, valueAttr);
 }
 
 mlir::Value MLIRGen::emitNumber(NumberNode *node) {
   spdlog::debug("Emitting MLIR for number: {}", node->toString());
   return _builder.create<mlir::arith::ConstantFloatOp>(_builder.getUnknownLoc(), _builder.getF64Type(),
-                                                       llvm::APFloat(node->value));
+                                                       llvm::APFloat(node->value()));
 }
 
 void MLIRGen::registerBuiltinFunctions() {
@@ -484,10 +428,10 @@ void MLIRGen::registerBuiltinFunctions() {
 }
 
 mlir::Value MLIRGen::emitCallExpression(CallNode *node, const std::vector<mlir::Value> &args) {
-  const auto &name = node->callee;
+  const auto &name = node->callee();
   mlir::Location loc = _builder.getUnknownLoc();
 
-  auto expectedArgCount = node->arguments.size();
+  auto expectedArgCount = node->arguments().size();
   if (args.size() != expectedArgCount) {
     // TODO: replace with Result<T> and proper error handling, more info on mismatch
     throw std::runtime_error("Function call argument count mismatch for function: " + name);

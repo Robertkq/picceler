@@ -6,97 +6,97 @@ protected:
   void SetUp() override {}
   void TearDown() override {}
 
-  picceler::Parser parser;
+  picceler::Parser _parser;
 };
 
 TEST_F(ParserTest, BadKernelMissingCommaFails) {
-  auto result = parser.setSource("data/bad_kernel_missing_comma.pic");
+  auto result = _parser.setSource("data/bad_kernel_missing_comma.pic");
   if (!result)
     FAIL() << result.error().message();
 
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelMissingBracketFails) {
-  auto result = parser.setSource("data/bad_kernel_missing_bracket.pic");
+  auto result = _parser.setSource("data/bad_kernel_missing_bracket.pic");
   if (!result)
     FAIL() << result.error().message();
 
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelBadNumberFails) {
-  auto result = parser.setSource("data/bad_kernel_bad_number.pic");
+  auto result = _parser.setSource("data/bad_kernel_bad_number.pic");
   if (!result)
     FAIL() << result.error().message();
 
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, EmptyInput) {
-  auto result = parser.setSource("data/empty.pic");
+  auto result = _parser.setSource("data/empty.pic");
   if (!result)
     FAIL() << result.error().message();
 
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   if (!astRes)
     FAIL() << astRes.error().message();
   auto ast = std::move(astRes.value());
 
   ASSERT_NE(ast, nullptr);
-  EXPECT_EQ(ast->statements.size(), 0);
+  EXPECT_EQ(ast->statements().size(), 0);
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
-  auto result = parser.setSource("data/load_image.pic");
+  auto result = _parser.setSource("data/load_image.pic");
   if (!result)
     FAIL() << result.error().message();
 
   // file contents:
   // img = load_image("cat.jpg")
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   if (!astRes)
     FAIL() << astRes.error().message();
   auto ast = std::move(astRes.value());
 
   ASSERT_NE(ast, nullptr);
-  ASSERT_EQ(ast->statements.size(), 1);
-  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
+  ASSERT_EQ(ast->statements().size(), 1);
+  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements()[0]);
   ASSERT_NE(assignment, nullptr);
-  EXPECT_EQ(assignment->lhs->name, "img");
-  auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs.get());
+  EXPECT_EQ(assignment->lhs()->name(), "img");
+  auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs());
   ASSERT_NE(call, nullptr);
-  EXPECT_EQ(call->callee, "load_image");
-  ASSERT_EQ(call->arguments.size(), 1);
-  auto strArg = dynamic_cast<picceler::StringNode *>(call->arguments[0].get());
+  EXPECT_EQ(call->callee(), "load_image");
+  ASSERT_EQ(call->arguments().size(), 1);
+  auto strArg = dynamic_cast<picceler::StringNode *>(call->arguments()[0]);
   ASSERT_NE(strArg, nullptr);
-  EXPECT_EQ(strArg->value, "cat.jpg");
+  EXPECT_EQ(strArg->value(), "cat.jpg");
 }
 
 TEST_F(ParserTest, RotateNegativeAngleParses) {
-  auto result = parser.setSource("data/rotate_negative.pic");
+  auto result = _parser.setSource("data/rotate_negative.pic");
   if (!result)
     FAIL() << result.error().message();
 
-  auto astRes = parser.parse();
+  auto astRes = _parser.parse();
   if (!astRes)
     FAIL() << astRes.error().message();
   auto ast = std::move(astRes.value());
 
   ASSERT_NE(ast, nullptr);
-  ASSERT_EQ(ast->statements.size(), 1);
-  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements[0].get());
+  ASSERT_EQ(ast->statements().size(), 1);
+  auto assignment = dynamic_cast<picceler::AssignmentNode *>(ast->statements()[0]);
   ASSERT_NE(assignment, nullptr);
 
-  auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs.get());
+  auto call = dynamic_cast<picceler::CallNode *>(assignment->rhs());
   ASSERT_NE(call, nullptr);
-  EXPECT_EQ(call->callee, "rotate");
-  ASSERT_EQ(call->arguments.size(), 2);
+  EXPECT_EQ(call->callee(), "rotate");
+  ASSERT_EQ(call->arguments().size(), 2);
 
-  auto angleNode = dynamic_cast<picceler::NumberNode *>(call->arguments[1].get());
+  auto angleNode = dynamic_cast<picceler::NumberNode *>(call->arguments()[1]);
   ASSERT_NE(angleNode, nullptr);
-  EXPECT_EQ(angleNode->value, -90);
+  EXPECT_EQ(angleNode->value(), -90);
 }

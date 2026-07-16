@@ -1,6 +1,5 @@
 #include "passes.h"
 
-#include "spdlog/spdlog.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Builders.h"
@@ -14,10 +13,19 @@
 
 namespace picceler {
 
-struct KernelData {
-  int64_t rows;
-  int64_t cols;
-  std::vector<double> values;
+class KernelData {
+public:
+  KernelData(int64_t rows, int64_t cols, std::vector<double> values)
+      : _rows(rows), _cols(cols), _values(std::move(values)) {}
+
+  int64_t rows() const { return _rows; }
+  int64_t cols() const { return _cols; }
+  const std::vector<double> &values() const { return _values; }
+
+private:
+  int64_t _rows;
+  int64_t _cols;
+  std::vector<double> _values;
 };
 
 mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor) {
@@ -43,7 +51,7 @@ mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdapto
     op.emitError("Box blur supports only constant integer radius values.");
     return mlir::failure();
   }
-  int radius = constOp.value();
+  int64_t radius = constOp.value();
 
   if (radius < 1) {
     op.emitError("Box blur radius must be at least 1. Given: " + std::to_string(radius));
@@ -70,7 +78,7 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
     op.emitError("Gaussian blur supports only constant integer radius values.");
     return mlir::failure();
   }
-  int radius = constOp.value();
+  int64_t radius = constOp.value();
 
   if (radius < 1) {
     op.emitError("Gaussian blur radius must be at least 1. Given: " + std::to_string(radius));
@@ -92,9 +100,9 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
 
   double sum = 0.0;
 
-  for (int y = -radius; y <= radius; ++y) {
-    for (int x = -radius; x <= radius; ++x) {
-      double exponent = -(x * x + y * y) / (2 * sigma * sigma);
+  for (int64_t y = -radius; y <= radius; ++y) {
+    for (int64_t x = -radius; x <= radius; ++x) {
+      double exponent = static_cast<double>(-(x * x + y * y)) / (2 * sigma * sigma);
       double value = std::exp(exponent) / (2 * std::numbers::pi * sigma * sigma);
       values.push_back(value);
       sum += value;
@@ -119,10 +127,8 @@ mlir::FailureOr<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor a
 template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
   using KernelCalculator = std::function<mlir::FailureOr<KernelData>(OpTy, typename OpTy::Adaptor)>;
 
-  KernelCalculator kernelCalc;
-
   FilterToConvolutionPattern(mlir::MLIRContext *ctx, KernelCalculator calc)
-      : mlir::OpConversionPattern<OpTy>(ctx), kernelCalc(calc) {}
+      : mlir::OpConversionPattern<OpTy>(ctx), _kernelCalc(std::move(calc)) {}
 
   mlir::LogicalResult matchAndRewrite(OpTy op, OpTy::Adaptor adaptor,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
@@ -130,27 +136,32 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
     mlir::Value input = adaptor.getInput();
     auto f64Type = rewriter.getF64Type();
 
-    auto kernelRes = kernelCalc(op, adaptor);
+    auto kernelRes = _kernelCalc(op, adaptor);
     if (mlir::failed(kernelRes)) {
       return mlir::failure();
     }
 
-    KernelData kData = *kernelRes;
-    if (kData.values.size() != kData.rows * kData.cols) {
+    // TODO: remove NOLINT comment once we return Result<T>, clang-tidy should be able to understand that we checked for
+    // failure above.
+    const KernelData &kData = *kernelRes; // NOLINT(bugprone-unchecked-optional-access)
+    if (kData.values().size() != kData.rows() * kData.cols()) {
       op.emitError("Kernel dimensions do not match the number of elements.");
       return mlir::failure();
     }
 
-    auto tensorType = mlir::RankedTensorType::get({kData.rows, kData.cols}, f64Type);
-    auto dataAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef(kData.values));
+    auto tensorType = mlir::RankedTensorType::get({kData.rows(), kData.cols()}, f64Type);
+    auto dataAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef(kData.values()));
 
-    auto kernelType = picceler::KernelType::get(op.getContext(), kData.rows, kData.cols);
+    auto kernelType = picceler::KernelType::get(op.getContext(), kData.rows(), kData.cols());
     auto kernelOp = rewriter.create<picceler::KernelConstOp>(loc, kernelType, dataAttr);
 
     rewriter.replaceOpWithNewOp<ConvolutionOp>(op, op.getType(), input, kernelOp.getResult());
 
     return mlir::success();
   }
+
+private:
+  KernelCalculator _kernelCalc;
 };
 
 #define GEN_PASS_DEF_PICCELERFILTERSTOCONV

@@ -7,8 +7,10 @@
  * and performance analysis.
  */
 
+#include "passes.h"
 #include "pass_manager.h"
 
+#include "llvm/Support/FileSystem.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"

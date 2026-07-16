@@ -21,14 +21,18 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Target/TargetOptions.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dialect.h"
 
 namespace picceler {
 
 Compiler::Compiler()
     : _cliApp("picceler compiler"), _cliOptions(), _parser(), _context(initRegistry()), _mlirGen(&_context),
       _passManager(&_context) {
-  _cliApp.add_option("input_file", _cliOptions.inputFile, "Input source file")->required()->check(CLI::ExistingFile);
-  _cliApp.add_option("-o,--output", _cliOptions.outputFile, "Output executable file")->default_val("a.out");
+  _cliApp.add_option("input_file", _cliOptions._inputFile, "Input source file")->required()->check(CLI::ExistingFile);
+  _cliApp.add_option("-o,--output", _cliOptions._outputFile, "Output executable file")->default_val("a.out");
 
   _context.loadAllAvailableDialects();
   spdlog::debug("Initialized MLIR Dialects:");
@@ -52,9 +56,8 @@ mlir::DialectRegistry Compiler::initRegistry() {
 }
 
 bool Compiler::run() {
-  auto &cliOptions = getCliOptions();
-  const auto &inputFile = _cliOptions.inputFile;
-  const auto &outputFile = _cliOptions.outputFile;
+  const auto &inputFile = _cliOptions._inputFile;
+  const auto &outputFile = _cliOptions._outputFile;
 
   auto sourceResult = _parser.setSource(inputFile);
   if (!sourceResult) {
@@ -78,15 +81,17 @@ bool Compiler::run() {
     spdlog::error("Failed to reset source file: {}", resetResult.error().message());
     return false;
   }
-  auto ast = _parser.parse();
-  if (!ast) {
-    spdlog::error("{}", ast.error().message());
+  auto astResult = _parser.parse();
+  if (!astResult) {
+    spdlog::error("{}", astResult.error().message());
     return false;
   }
-  _parser.printAST(ast.value());
+  auto ast = std::move(astResult.value());
+  _parser.printAST(ast);
+  ast->normalizeTopLevelStatements();
 
   spdlog::info("Generating initial MLIR");
-  auto module = _mlirGen.generate(ast.value().get());
+  auto module = _mlirGen.generate(ast.get());
   spdlog::info("Finished generating initial MLIR");
   module->dump();
   spdlog::info("Running pass manager");
@@ -135,10 +140,10 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule, const std::string &objFi
   llvmModule->setDataLayout(targetMachine->createDataLayout());
   llvmModule->setTargetTriple(llvm::Triple(targetTriple));
 
-  std::error_code EC;
-  llvm::raw_fd_ostream dest(objFilename, EC, llvm::sys::fs::OF_None);
-  if (EC) {
-    spdlog::error("Could not open file: {}", EC.message());
+  std::error_code ec;
+  llvm::raw_fd_ostream dest(objFilename, ec, llvm::sys::fs::OF_None);
+  if (ec) {
+    spdlog::error("Could not open file: {}", ec.message());
     return false;
   }
 
@@ -159,7 +164,7 @@ bool Compiler::linkWithLLD(const std::string &objFile, const std::string &runtim
       "clang++ " + objFile + " " + runtimeLib + " -o " + outputExe + " -no-pie $(pkg-config --libs opencv4)";
   spdlog::debug("Linking with command: {}", cmd);
 
-  int ret = std::system(cmd.c_str());
+  int ret = std::system(cmd.c_str()); // NOLINT(bugprone-command-processor)
   if (ret == 0) {
     spdlog::info("Successfully linked executable: {}", outputExe);
     return true;
