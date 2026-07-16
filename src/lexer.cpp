@@ -158,7 +158,7 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   if (it != keywords.end()) {
     return it->second;
   }
-  return std::unexpected(CompileError{std::format("Not a keyword: {}", value), _line, _column});
+  return std::unexpected(CompileError{std::format("Not a keyword: {}", value), Location{_line, _column}});
 }
 
 Result<Token::Type> Lexer::isType(const std::string &value) const {
@@ -172,7 +172,7 @@ Result<Token::Type> Lexer::isType(const std::string &value) const {
   if (it != types.end()) {
     return it->second;
   }
-  return std::unexpected(CompileError{std::format("Not a type: {}", value), _line, _column});
+  return std::unexpected(CompileError{std::format("Not a type: {}", value), Location{_line, _column}});
 }
 
 Result<Token> Lexer::readIdentifierOrKeywordOrType(std::pair<size_t, size_t> start) {

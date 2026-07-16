@@ -69,8 +69,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     } else if (nextToken == Token::Type::L_PAREN) {
       return parseCall(identifier);
     }
-    return std::unexpected(CompileError{std::format("Unexpected token '{}' after identifier", nextToken.value()),
-                                        nextToken.line(), nextToken.column()});
+    return std::unexpected(
+        CompileError{std::format("Unexpected token '{}' after identifier", nextToken.value()), nextToken.location()});
 
   } else if (token == Token::Type::KW_DEF) {
     auto defTokenResult = _lexer.nextToken(); // consume 'def'
@@ -83,8 +83,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
   } else if (token == Token::Type::EOF_TOKEN) {
     return nullptr;
   } else {
-    return std::unexpected(
-        CompileError{std::format("Unexpected token '{}'", token.value()), token.line(), token.column()});
+    return std::unexpected(CompileError{std::format("Unexpected token '{}'", token.value()), token.location()});
   }
 }
 
@@ -95,8 +94,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     return std::unexpected(CompileError{"Failed to consume function name token"});
   }
   if (nameTokenResult->type() != Token::Type::IDENTIFIER) {
-    return std::unexpected(
-        CompileError{"Expected function name after 'def'", nameTokenResult->line(), nameTokenResult->column()});
+    return std::unexpected(CompileError{"Expected function name after 'def'", nameTokenResult->location()});
   }
   auto funcName = nameTokenResult->value();
   auto funcNode = std::make_unique<FunctionNode>(funcName);
@@ -122,7 +120,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     }
     const auto &paramToken = *paramTokenResult;
     if (paramToken != Token::Type::IDENTIFIER) {
-      return std::unexpected(CompileError{"Expected parameter name", paramToken.line(), paramToken.column()});
+      return std::unexpected(CompileError{"Expected parameter name", paramToken.location()});
     }
     auto colonTokenResult = _lexer.nextToken(); // consume ':'
     if (!colonTokenResult) {
@@ -131,8 +129,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     }
     const auto &colonToken = *colonTokenResult;
     if (colonToken != Token::Type::COLON) {
-      return std::unexpected(CompileError{
-          std::format("Expected ':' after parameter name at {}:{}", colonToken.line(), colonToken.column())});
+      return std::unexpected(CompileError{std::format("Expected ':' after parameter name"), colonToken.location()});
     }
     auto typeTokenResult = _lexer.nextToken(); // consume type
     if (!typeTokenResult) {
@@ -141,7 +138,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     }
     const auto &typeToken = *typeTokenResult;
     if (typeToken != Token::Type::TYPE) {
-      return std::unexpected(CompileError{"Expected type after ':'", typeToken.line(), typeToken.column()});
+      return std::unexpected(CompileError{"Expected type after ':'", typeToken.location()});
     }
     funcNode->addParameter(paramToken.value(), typeToken.value());
     tokenItter = _lexer.peekToken();
@@ -169,7 +166,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
   }
   const auto &rParenToken = *rParenTokenResult;
   if (rParenToken != Token::Type::R_PAREN) {
-    return std::unexpected(CompileError{"Expected ')' after parameters", rParenToken.line(), rParenToken.column()});
+    return std::unexpected(CompileError{"Expected ')' after parameters", rParenToken.location()});
   }
 
   auto lBraceTokenResult = _lexer.nextToken(); // consume '{'
@@ -179,8 +176,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
   }
   const auto &lBraceToken = *lBraceTokenResult;
   if (lBraceToken != Token::Type::L_BRACE) {
-    return std::unexpected(CompileError{
-        std::format("Expected '{{' after function signature at {}:{}", lBraceToken.line(), lBraceToken.column())});
+    return std::unexpected(CompileError{std::format("Expected '{{' after function signature"), lBraceToken.location()});
   }
 
   tokenItter = _lexer.peekToken();
@@ -213,8 +209,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
   }
   const auto &rBraceToken = *rBraceTokenResult;
   if (rBraceToken != Token::Type::R_BRACE) {
-    return std::unexpected(CompileError{
-        std::format("Expected '}}' after function body at {}:{}", rBraceToken.line(), rBraceToken.column())});
+    return std::unexpected(CompileError{std::format("Expected '}}' after function body"), rBraceToken.location()});
   }
 
   return funcNode;
@@ -229,7 +224,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier
   }
   const auto &eqToken = *eqTokenResult;
   if (eqToken != Token::Type::ASSIGN) {
-    return std::unexpected(CompileError{"Expected '=' after identifier", eqToken.line(), eqToken.column()});
+    return std::unexpected(CompileError{"Expected '=' after identifier", eqToken.location()});
   }
   auto exprResult = parseExpression();
   if (!exprResult) {
@@ -260,8 +255,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
   }
   const auto &lparenToken = *lparenTokenResult;
   if (lparenToken != Token::Type::L_PAREN) {
-    return std::unexpected(CompileError{
-        std::format("Expected '(' after function name at {}:{}", lparenToken.line(), lparenToken.column())});
+    return std::unexpected(CompileError{std::format("Expected '(' after function name"), lparenToken.location()});
   }
   auto callNode = std::make_unique<CallNode>(identifier.value());
 
@@ -303,8 +297,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
     } else if (nextToken == Token::Type::R_PAREN) {
       continue;
     } else {
-      return std::unexpected(CompileError{
-          std::format("Expected ',' or ')' in function call at {}:{}", nextToken.line(), nextToken.column())});
+      return std::unexpected(CompileError{std::format("Expected ',' or ')' in function call "), nextToken.location()});
     }
   }
 
@@ -344,8 +337,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
   } else if (token == Token::Type::L_BRACKET) {
     return parseKernel();
   } else {
-    return std::unexpected(
-        CompileError{std::format("Unexpected token '{}'", token.value()), token.line(), token.column()});
+    return std::unexpected(CompileError{std::format("Unexpected token '{}'", token.value()), token.location()});
   }
 }
 
@@ -375,7 +367,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
   }
   const auto &lbracketToken = *lbracketTokenResult;
   if (lbracketToken != Token::Type::L_BRACKET) {
-    return std::unexpected(CompileError{"Expected '['", lbracketToken.line(), lbracketToken.column()});
+    return std::unexpected(CompileError{"Expected '['", lbracketToken.location()});
   }
 
   auto kernelNode = std::make_unique<KernelNode>();
@@ -401,7 +393,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     // Expect a row: '[' NUMBER (',' NUMBER)* ']'
 
     if (!(peekToken == Token::Type::L_BRACKET)) {
-      return std::unexpected(CompileError{"Expected '[' for kernel row", peekToken.line(), peekToken.column()});
+      return std::unexpected(CompileError{"Expected '[' for kernel row", peekToken.location()});
     }
 
     // consume inner '['
@@ -433,7 +425,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
 
       // expect a number
       if (innerToken != Token::Type::NUMBER) {
-        return std::unexpected(CompileError{"Expected number in kernel", innerToken.line(), innerToken.column()});
+        return std::unexpected(CompileError{"Expected number in kernel", innerToken.location()});
       }
       // consume number
       auto numTokenResult = _lexer.nextToken();
@@ -467,7 +459,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
         }
         break;
       } else {
-        return std::unexpected(CompileError{"Expected ',' or ']' in kernel row", afterNum.line(), afterNum.column()});
+        return std::unexpected(CompileError{"Expected ',' or ']' in kernel row", afterNum.location()});
       }
     }
 
@@ -497,7 +489,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
       }
       break;
     } else {
-      return std::unexpected(CompileError{"Expected ',' or ']' after kernel row", next.line(), next.column()});
+      return std::unexpected(CompileError{"Expected ',' or ']' after kernel row", next.location()});
     }
   }
 
@@ -523,7 +515,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
   }
   const auto &token = *tokenResult;
   if (token != Token::Type::STRING) {
-    return std::unexpected(CompileError{"Expected string", token.line(), token.column()});
+    return std::unexpected(CompileError{"Expected string", token.location()});
   }
   // TODO: Implement a compiler flag to let the user not expand tilde if it is not needed
   auto strNode = std::make_unique<StringNode>(utils::expandTilde(token.value()));
@@ -539,17 +531,16 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   }
   const auto &token = *tokenResult;
   if (token != Token::Type::NUMBER) {
-    return std::unexpected(CompileError{"Expected number", token.line(), token.column()});
+    return std::unexpected(CompileError{"Expected number", token.location()});
   }
   std::unique_ptr<NumberNode> numNode = nullptr;
   try {
     numNode = std::make_unique<NumberNode>(std::stod(token.value()));
   } catch (const std::invalid_argument &) {
-    return std::unexpected(
-        CompileError{std::format("Invalid double literal '{}'", token.value()), token.line(), token.column()});
+    return std::unexpected(CompileError{std::format("Invalid double literal '{}'", token.value()), token.location()});
   } catch (const std::out_of_range &) {
     return std::unexpected(
-        CompileError{std::format("Double literal '{}' out of range", token.value()), token.line(), token.column()});
+        CompileError{std::format("Double literal '{}' out of range", token.value()), token.location()});
   }
   return numNode;
 }

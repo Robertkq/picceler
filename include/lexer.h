@@ -90,7 +90,7 @@ struct Token {
   const std::string &value() const { return _value; }
   size_t line() const { return _location.line(); }
   size_t column() const { return _location.column(); }
-
+  Location location() const { return _location; }
   /*
    * @brief Compares a token to a token type for easy checking in parsing.
    * @param lhs The token to compare.

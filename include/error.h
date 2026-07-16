@@ -11,6 +11,7 @@ class Location {
 public:
   Location() : _line(0), _column(0) {}
   explicit Location(std::pair<size_t, size_t> line_column) : _line(line_column.first), _column(line_column.second) {}
+  explicit Location(size_t line, size_t column) : _line(line), _column(column) {}
 
   size_t line() const { return _line; }
   size_t column() const { return _column; }
