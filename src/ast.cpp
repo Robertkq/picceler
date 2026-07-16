@@ -1,8 +1,9 @@
-#include <format>
-#include "spdlog/spdlog.h"
-
 #include "ast.h"
 
+#include "spdlog/spdlog.h"
+
+#include <format>
+#include <algorithm>
 namespace picceler {
 
 std::string ModuleNode::toString() const { return std::format("Module: {} statements", statements().size()); }

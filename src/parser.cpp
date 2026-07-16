@@ -264,7 +264,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
       spdlog::error("{}", nextTokenResult.error().message());
       return std::unexpected(CompileError{"Failed to peek next token in function call"});
     }
-    auto &nextToken = *nextTokenResult;
+    auto nextToken = *nextTokenResult;
     if (nextToken == Token::Type::R_PAREN) {
       auto rparenTokenResult = _lexer.nextToken(); // consume ')'
       if (!rparenTokenResult) {
