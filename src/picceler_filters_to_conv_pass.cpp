@@ -36,7 +36,6 @@ Result<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor
 
   auto constOp = strengthValue.getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    // op.emitError("Sharpen supports only constant integer strength values.");
     return std::unexpected(CompileError("Sharpen supports only constant integer strength values."));
   }
 
@@ -51,19 +50,17 @@ Result<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    // op.emitError("Box blur supports only constant integer radius values.");
     return std::unexpected(CompileError("Box blur supports only constant integer radius values."));
   }
   int64_t radius = constOp.value();
 
   if (radius < 1) {
-    // op.emitError("Box blur radius must be at least 1. Given: " + std::to_string(radius));
+
     return std::unexpected(
         CompileError(std::format("Box blur radius must be at least 1. Given: {}", std::to_string(radius))));
   }
 
   if (radius > 500) {
-    // op.emitError("Box blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
     return std::unexpected(CompileError(
         std::format("Box blur radius is too large ({}). Maximum allowed is 500.", std::to_string(radius))));
   }
@@ -80,19 +77,16 @@ Result<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdap
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    // op.emitError("Gaussian blur supports only constant integer radius values.");
     return std::unexpected(CompileError("Gaussian blur supports only constant integer radius values."));
   }
   int64_t radius = constOp.value();
 
   if (radius < 1) {
-    // op.emitError("Gaussian blur radius must be at least 1. Given: " + std::to_string(radius));
     return std::unexpected(
         CompileError(std::format("Gaussian blur radius must be at least 1. Given: {}", std::to_string(radius))));
   }
 
   if (radius > 500) {
-    // op.emitError("Gaussian blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
     return std::unexpected(CompileError(
         std::format("Gaussian blur radius is too large ({}). Maximum allowed is 500.", std::to_string(radius))));
   }
