@@ -12,9 +12,15 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
-`.pic` file to reproduce
-command line to reproduce
-conditions to reproduce
+`*.pic` file to reproduce:
+```python
+
+```
+
+Command line to run:
+```
+./picceler <...>
+```
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
