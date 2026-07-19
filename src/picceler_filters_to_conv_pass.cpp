@@ -6,6 +6,8 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/IR/BuiltinOps.h"
 
+#include "spdlog/spdlog.h"
+
 #include "ops.h"
 #include "types.h"
 
@@ -137,7 +139,7 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
     mlir::Value input = adaptor.getInput();
     auto f64Type = rewriter.getF64Type();
 
-    auto kernelRes = kernelCalc(op, adaptor);
+    auto kernelRes = _kernelCalc(op, adaptor);
     if (!kernelRes) {
       spdlog::error("Couldnt get kernel calculater function: {}", kernelRes.error().message());
       return mlir::failure();
