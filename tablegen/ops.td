@@ -101,12 +101,16 @@ def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [NeighbourhoodOpInterface, D
   let summary = "Apply erosion to an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
 }
 
 def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
   let summary = "Apply dilation to an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
 }
 
 def Picceler_DiffOp : Op<PiccelerDialect, "diff", [ElementWiseBinaryOpInterface, DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {

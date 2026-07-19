@@ -95,8 +95,11 @@ bool Compiler::run() {
   spdlog::info("Finished generating initial MLIR");
   module->dump();
   spdlog::info("Running pass manager");
-  _passManager.run(module);
-  spdlog::info("Finished running pass manager");
+  bool result = _passManager.run(module);
+  if (!result) {
+    spdlog::error("Failed to run pass manager!");
+    return false;
+  }
 
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);

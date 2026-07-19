@@ -43,8 +43,9 @@ public:
   /**
    * @brief Runs the pass manager on the given MLIR module.
    * @param module The MLIR module to run the passes on.
+   * @return true if successful, false otherwise.
    */
-  void run(mlir::ModuleOp module);
+  bool run(mlir::ModuleOp module);
 
 private:
   /**
