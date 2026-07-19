@@ -1,10 +1,39 @@
 #include "ops.h"
+#include "spdlog/spdlog.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 
 #include <limits>
 
 namespace picceler {
+
+mlir::LogicalResult ErodeOp::verify() {
+
+  auto radius = getRadius();
+
+  auto producer = radius.getDefiningOp();
+
+  if (auto constant = mlir::dyn_cast<mlir::arith::ConstantOp>(producer)) {
+    auto valueAttr = constant.getValue();
+    if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr)) {
+      int64_t value = intAttr.getInt();
+      if (value < 0) {
+        // TODO: can we print location of the ErodeOp that has this issue / can we report the location of the constant
+        // that is given to this?
+        spdlog::error("ErodeOp expects constant integers in range (0, n) negative integer given. ");
+
+        return mlir::failure();
+      }
+    } else {
+      spdlog::error("Radius of ErodeOp is non-integer constant, not allowed!");
+      return mlir::failure();
+    }
+  } else {
+    // value of radius is given as runtime integer, cannot verify this
+  }
+
+  return mlir::success();
+}
 
 mlir::Value ErodeOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {
   return createFloatConstant(builder, loc, std::numeric_limits<double>::infinity());
