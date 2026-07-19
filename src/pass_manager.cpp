@@ -38,11 +38,7 @@ IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context)
   addPasses();
 };
 
-void IRPassManager::run(mlir::ModuleOp module) {
-  if (mlir::failed(_passManager.run(module))) {
-    throw std::runtime_error("Failed to run pass manager");
-  }
-}
+bool IRPassManager::run(mlir::ModuleOp module) { return !mlir::failed(_passManager.run(module)); }
 
 void IRPassManager::addPasses() {
   addRuntimeLoweringPasses();
