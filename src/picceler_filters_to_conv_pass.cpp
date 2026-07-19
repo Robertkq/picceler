@@ -6,9 +6,14 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/IR/BuiltinOps.h"
 
+#include "spdlog/spdlog.h"
+
 #include "ops.h"
 #include "types.h"
 
+#include <error.h>
+#include <expected>
+#include <format>
 #include <numbers>
 
 namespace picceler {
@@ -28,13 +33,12 @@ private:
   std::vector<double> _values;
 };
 
-mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor) {
+Result<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdaptor adaptor) {
   mlir::Value strengthValue = adaptor.getValue();
 
   auto constOp = strengthValue.getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    op.emitError("Sharpen supports only constant integer strength values.");
-    return mlir::failure();
+    return std::unexpected(CompileError("Sharpen supports only constant integer strength values."));
   }
 
   double strength = static_cast<double>(constOp.value()) / 25.0;
@@ -44,23 +48,23 @@ mlir::FailureOr<KernelData> calculateSharpenKernel(SharpenOp op, SharpenOpAdapto
   return KernelData{3, 3, {0.0, neighbor, 0.0, neighbor, center, neighbor, 0.0, neighbor, 0.0}};
 }
 
-mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
+Result<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdaptor adaptor) {
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    op.emitError("Box blur supports only constant integer radius values.");
-    return mlir::failure();
+    return std::unexpected(CompileError("Box blur supports only constant integer radius values."));
   }
   int64_t radius = constOp.value();
 
   if (radius < 1) {
-    op.emitError("Box blur radius must be at least 1. Given: " + std::to_string(radius));
-    return mlir::failure();
+
+    return std::unexpected(
+        CompileError(std::format("Box blur radius must be at least 1. Given: {}", std::to_string(radius))));
   }
 
   if (radius > 500) {
-    op.emitError("Box blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
-    return mlir::failure();
+    return std::unexpected(CompileError(
+        std::format("Box blur radius is too large ({}). Maximum allowed is 500.", std::to_string(radius))));
   }
 
   int64_t size = 2 * radius + 1;
@@ -71,23 +75,22 @@ mlir::FailureOr<KernelData> calculateBoxBlurKernel(BoxBlurOp op, BoxBlurOpAdapto
   return KernelData{size, size, std::move(values)};
 }
 
-mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
+Result<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor) {
 
   auto constOp = adaptor.getRadius().getDefiningOp<mlir::arith::ConstantIntOp>();
   if (!constOp) {
-    op.emitError("Gaussian blur supports only constant integer radius values.");
-    return mlir::failure();
+    return std::unexpected(CompileError("Gaussian blur supports only constant integer radius values."));
   }
   int64_t radius = constOp.value();
 
   if (radius < 1) {
-    op.emitError("Gaussian blur radius must be at least 1. Given: " + std::to_string(radius));
-    return mlir::failure();
+    return std::unexpected(
+        CompileError(std::format("Gaussian blur radius must be at least 1. Given: {}", std::to_string(radius))));
   }
 
   if (radius > 500) {
-    op.emitError("Gaussian blur radius is too large (" + std::to_string(radius) + "). Maximum allowed is 500.");
-    return mlir::failure();
+    return std::unexpected(CompileError(
+        std::format("Gaussian blur radius is too large ({}). Maximum allowed is 500.", std::to_string(radius))));
   }
 
   int64_t size = 2 * radius + 1;
@@ -116,16 +119,16 @@ mlir::FailureOr<KernelData> calculateGaussianKernel(GaussianBlurOp op, GaussianB
   return KernelData{size, size, std::move(values)};
 }
 
-mlir::FailureOr<KernelData> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
+Result<KernelData> calculateEdgeDetectKernel(EdgeDetectOp op, EdgeDetectOpAdaptor adaptor) {
   return KernelData{3, 3, {-1.0, -1.0, -1.0, -1.0, 8.0, -1.0, -1.0, -1.0, -1.0}};
 }
 
-mlir::FailureOr<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
+Result<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
   return KernelData{3, 3, {-2.0, -1.0, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0, 2.0}};
 }
 
 template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
-  using KernelCalculator = std::function<mlir::FailureOr<KernelData>(OpTy, typename OpTy::Adaptor)>;
+  using KernelCalculator = std::function<Result<KernelData>(OpTy, typename OpTy::Adaptor)>;
 
   FilterToConvolutionPattern(mlir::MLIRContext *ctx, KernelCalculator calc)
       : mlir::OpConversionPattern<OpTy>(ctx), _kernelCalc(std::move(calc)) {}
@@ -137,7 +140,8 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
     auto f64Type = rewriter.getF64Type();
 
     auto kernelRes = _kernelCalc(op, adaptor);
-    if (mlir::failed(kernelRes)) {
+    if (!kernelRes) {
+      spdlog::error("Couldnt get kernel calculater function: {}", kernelRes.error().message());
       return mlir::failure();
     }
 
