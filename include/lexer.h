@@ -114,12 +114,14 @@ public:
    * @brief Constructs a Lexer
    */
   Lexer();
-
+  ////////
+  void setSourceString(std::string_view source);
+  ////////
   /**
    * @brief Sets the source file for the lexer.
    * @param source The source file to read from.
    */
-  Result<void> setSource(const std::string &source);
+  Result<void> setSource(const std::string &filepath);
 
   /**
    * @brief Returns the next token from the input.
@@ -145,6 +147,9 @@ public:
   Result<std::vector<Token>> tokenizeAll();
 
 private:
+  /////////
+  void resetState();
+  /////////
   /** @brief Checks if the end of the file has been reached.
    * @return True if the end of the file is reached, false otherwise.
    */
