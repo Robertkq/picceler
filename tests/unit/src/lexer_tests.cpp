@@ -10,7 +10,7 @@ protected:
 };
 
 TEST_F(LexerTest, EmptyInput) {
-  _lexer.setSourceString("");
+  _lexer.setSourceString(R"()");
 
   auto tokensRes = _lexer.tokenizeAll();
   ASSERT_TRUE(tokensRes.has_value());
