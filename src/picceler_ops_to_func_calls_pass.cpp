@@ -1,5 +1,7 @@
 #include "passes.h"
 
+#include "spdlog/spdlog.h"
+
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -161,6 +163,91 @@ struct ReadStringToCall : mlir::OpConversionPattern<ReadStringOp> {
   }
 };
 
+struct PrintToCalls : mlir::OpConversionPattern<PrintOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(PrintOp op, PrintOpAdaptor adaptor,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
+    auto module = op->getParentOfType<mlir::ModuleOp>();
+    auto ctx = rewriter.getContext();
+    auto loc = op.getLoc();
+
+    auto stringType = StringType::get(ctx);
+
+    auto fmtValue = adaptor.getFmt();
+    auto stringProducer = fmtValue.getDefiningOp<StringConstOp>();
+    if (!stringProducer) {
+      spdlog::error("PrintOp format value is not a StringConstOp");
+      return mlir::failure();
+    }
+    auto args = adaptor.getArgs();
+
+    std::string fmt = stringProducer.getValue().str();
+    spdlog::debug("PrintOp format value: {}", fmt);
+
+    std::vector<std::string> splitFmt = splitFormatString(fmt);
+    size_t argsIndex = 0;
+    for (const auto &part : splitFmt) {
+      spdlog::debug("Split format part: {}", part);
+      if (!part.empty()) {
+        callFormatStringLiteral(rewriter, loc, part);
+      }
+      if (argsIndex < args.size()) {
+        auto rawVal = args[argsIndex];
+        auto type = rawVal.getType();
+        if (auto floatVal = llvm::dyn_cast<mlir::TypedValue<mlir::Float64Type>>(rawVal)) {
+          callFormatFloat64(rewriter, loc, floatVal);
+        } else if (auto stringVal = llvm::dyn_cast<mlir::TypedValue<StringType>>(rawVal)) {
+          callFormatString(rewriter, loc, stringVal);
+        } else {
+          op.emitOpError("Unsupported argument type for print format!");
+          return mlir::failure();
+        }
+        argsIndex++;
+      }
+    }
+    rewriter.eraseOp(stringProducer);
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
+  void callFormatStringLiteral(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+                               const std::string &str) const {
+    auto stringType = StringType::get(rewriter.getContext());
+    auto string = rewriter.create<StringConstOp>(loc, stringType, mlir::StringAttr::get(rewriter.getContext(), str));
+    callFormatString(rewriter, loc, string.getResult());
+  }
+  void callFormatString(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+                        mlir::TypedValue<StringType> value) const {
+    auto module = rewriter.getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    auto funcOp = ensureRuntimeFunc(module, "piccelerPrintString", {value.getType()}, {}, rewriter, loc);
+    rewriter.create<mlir::func::CallOp>(loc, funcOp, mlir::ValueRange{value});
+  }
+  void callFormatFloat64(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
+                         mlir::TypedValue<mlir::Float64Type> value) const {
+    auto module = rewriter.getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    auto funcOp = ensureRuntimeFunc(module, "piccelerPrintFloat64", {value.getType()}, {}, rewriter, loc);
+    rewriter.create<mlir::func::CallOp>(loc, funcOp, mlir::ValueRange{value});
+  }
+
+  std::vector<std::string> splitFormatString(const std::string &fmt) const {
+    std::vector<std::string> parts;
+    size_t start = 0;
+
+    while (start < fmt.size()) {
+      size_t pos = fmt.find("{}", start);
+      if (pos == std::string::npos) {
+        parts.push_back(fmt.substr(start));
+        break;
+      }
+
+      parts.push_back(fmt.substr(start, pos - start));
+      start = pos + 2;
+    }
+    return parts;
+  }
+};
+
 #define GEN_PASS_DEF_PICCELEROPSTOFUNCCALLS
 #include "piccelerPasses.h.inc"
 
@@ -174,12 +261,13 @@ struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<Picc
     mlir::ModuleOp module = getOperation();
 
     mlir::ConversionTarget target(getContext());
-    target.addLegalOp<mlir::ModuleOp>();
+    target.addLegalOp<mlir::ModuleOp, StringConstOp>();
     target.addLegalDialect<mlir::func::FuncDialect>();
-    target.addIllegalOp<LoadImageOp, ShowImageOp, SaveImageOp, ReadNumberOp, ReadStringOp>();
+    target.addIllegalOp<LoadImageOp, ShowImageOp, SaveImageOp, ReadNumberOp, ReadStringOp, PrintOp>();
 
     mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, ReadNumberToCall, ReadStringToCall>(&getContext());
+    patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, ReadNumberToCall, ReadStringToCall, PrintToCalls>(
+        &getContext());
 
     if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();

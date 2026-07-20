@@ -39,7 +39,7 @@ bool ModuleNode::wrapTopLevelStatementsInMain() {
   if (!hasMain) {
     if (!onlyFunctions) {
       spdlog::warn("No 'main' functions found, implicit 'main' will be generated to wrap the top-level statements");
-      auto mainFunc = std::make_unique<FunctionNode>("main");
+      auto mainFunc = std::make_unique<FunctionNode>(Location(0, 0), "main");
       for (auto &stmt : _statements) {
         auto stmtPtr = stmt.get();
         if (!dynamic_cast<FunctionNode *>(stmtPtr)) {

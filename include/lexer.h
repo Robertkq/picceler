@@ -217,6 +217,9 @@ private:
   Result<Token> readSymbol(std::pair<size_t, size_t> start);
 
 private:
+  std::string unescapeString(std::string &&string) const;
+
+private:
   std::ifstream _file;
   std::string _buffer;
   size_t _position;
