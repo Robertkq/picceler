@@ -48,7 +48,6 @@ std::string Token::typeToString() const {
 }
 
 Lexer::Lexer() : _file(), _buffer(), _position(0), _line(1), _column(1) {}
-//////////
 void Lexer::resetState() {
   _position = 0;
   _line = 1;
@@ -76,7 +75,6 @@ Result<void> Lexer::setSource(const std::string &filepath) {
   resetState();
   return {};
 }
-////////////
 Result<Token> Lexer::nextToken() {
   skipWhitespace();
 

@@ -37,9 +37,7 @@ TEST_F(ParserTest, BadKernelBadNumberFails) {
 }
 
 TEST_F(ParserTest, EmptyInput) {
-  auto result = _parser.setSource("data/empty.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"()");
 
   auto astRes = _parser.parse();
   if (!astRes)
@@ -51,12 +49,8 @@ TEST_F(ParserTest, EmptyInput) {
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
-  auto result = _parser.setSource("data/load_image.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString("img = load_image(\"cat.jpg\")");
 
-  // file contents:
-  // img = load_image("cat.jpg")
   auto astRes = _parser.parse();
   if (!astRes)
     FAIL() << astRes.error().message();
