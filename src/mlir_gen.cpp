@@ -67,7 +67,7 @@ mlir::Value coerceValueToInt64(mlir::OpBuilder &builder, mlir::Location loc, mli
 }
 
 MLIRGen::MLIRGen(mlir::MLIRContext *context)
-    : _context(context), _builder(_context), _scopedVariableTable(), _functionTable() {
+    : _context(context), _builder(_context), _scopedVariableTable(), _functionTable(), _sourceFile("Undefined") {
   enterScope("Global"); // Enter the global scope
 }
 
@@ -149,12 +149,8 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
   }
 }
 
-/**
- * @brief Generates MLIR code from the given AST root node.
- * @param root The root node of the AST.
- * @return The generated MLIR module operation.
- */
-mlir::ModuleOp MLIRGen::generate(ModuleNode *root) {
+mlir::ModuleOp MLIRGen::generate(ModuleNode *root, const std::string &sourceFile) {
+  _sourceFile = sourceFile;
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   registerBuiltinFunctions();
 
@@ -301,7 +297,8 @@ mlir::Value MLIRGen::emitString(StringNode *node) {
   spdlog::debug("Emitting MLIR for string: {}", node->toString());
   auto stringType = _builder.getType<StringType>();
   auto valueAttr = mlir::StringAttr::get(_context, node->value());
-  return _builder.create<StringConstOp>(_builder.getUnknownLoc(), stringType, valueAttr);
+  auto someLocation = mlir::FileLineColLoc::get(_context, "source.pic", 0, 0); // Placeholder location
+  return _builder.create<StringConstOp>(someLocation, stringType, valueAttr);
 }
 
 mlir::Value MLIRGen::emitNumber(NumberNode *node) {
@@ -424,6 +421,13 @@ void MLIRGen::registerBuiltinFunctions() {
     auto &prompt = args[0];
     auto callOp = _builder.create<ReadStringOp>(loc, resultType, prompt);
     return callOp.getResult();
+  };
+  _functionTable["print"] = [&](mlir::Location loc, const std::vector<mlir::Value> &args) {
+    auto &fmt = args[0];
+    llvm::ArrayRef<mlir::Value> variadicArgs(args.data() + 1, args.size() - 1);
+
+    _builder.create<PrintOp>(loc, fmt, variadicArgs);
+    return mlir::Value(); // Return an empty value for void functions
   };
 }
 

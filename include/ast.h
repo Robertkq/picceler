@@ -1,5 +1,7 @@
 #pragma once
 
+#include "error.h"
+
 #include <vector>
 #include <string>
 #include <optional>
@@ -17,8 +19,9 @@ template <typename T> auto getRawPointers(const std::vector<std::unique_ptr<T>> 
  */
 class ASTNode {
 public:
-  ASTNode() = default;
+  ASTNode() : _location() {}
   virtual ~ASTNode() = default;
+  ASTNode(Location loc) : _location(loc) {}
 
   ASTNode(const ASTNode &) = delete;
   ASTNode &operator=(const ASTNode &) = delete;
@@ -26,6 +29,11 @@ public:
   ASTNode &operator=(ASTNode &&) = default;
 
   virtual std::string toString() const = 0;
+
+  Location location() const { return _location; }
+
+private:
+  Location _location;
 };
 
 /**
@@ -34,6 +42,8 @@ public:
 
 class ModuleNode : public ASTNode {
 public:
+  ModuleNode(Location loc) : ASTNode(loc), _statements() {}
+
   auto statements() const { return getRawPointers(_statements); }
 
   void normalizeTopLevelStatements();
@@ -52,7 +62,7 @@ private:
  */
 class FunctionNode : public ASTNode {
 public:
-  FunctionNode(std::string name) : _name(std::move(name)) {}
+  FunctionNode(Location loc, std::string name) : ASTNode(loc), _name(std::move(name)) {}
 
   const std::string &name() const { return _name; }
   const auto &parameters() const { return _parameters; }
@@ -77,8 +87,8 @@ private:
  */
 class VariableNode : public ASTNode {
 public:
-  VariableNode(std::string name, std::optional<std::string> type = std::nullopt)
-      : _name(std::move(name)), _type(std::move(type)) {}
+  VariableNode(Location loc, std::string name, std::optional<std::string> type = std::nullopt)
+      : ASTNode(loc), _name(std::move(name)), _type(std::move(type)) {}
 
   const std::string &name() const { return _name; }
   const std::optional<std::string> &type() const { return _type; }
@@ -95,7 +105,7 @@ private:
  */
 class StringNode : public ASTNode {
 public:
-  StringNode(std::string value) : _value(std::move(value)) {}
+  StringNode(Location loc, std::string value) : ASTNode(loc), _value(std::move(value)) {}
 
   const std::string &value() const { return _value; }
 
@@ -110,7 +120,7 @@ private:
  */
 class NumberNode : public ASTNode {
 public:
-  NumberNode(double value) : _value(value) {}
+  NumberNode(Location loc, double value) : ASTNode(loc), _value(value) {}
 
   double value() const { return _value; }
 
@@ -125,8 +135,8 @@ private:
  */
 class AssignmentNode : public ASTNode {
 public:
-  AssignmentNode(std::unique_ptr<VariableNode> lhs, std::unique_ptr<ASTNode> rhs)
-      : _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
+  AssignmentNode(Location loc, std::unique_ptr<VariableNode> lhs, std::unique_ptr<ASTNode> rhs)
+      : ASTNode(loc), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
 
   VariableNode *lhs() const { return _lhs.get(); }
   ASTNode *rhs() const { return _rhs.get(); }
@@ -143,7 +153,7 @@ private:
  */
 class CallNode : public ASTNode {
 public:
-  CallNode(std::string callee) : _callee(std::move(callee)), _arguments() {}
+  CallNode(Location loc, std::string callee) : ASTNode(loc), _callee(std::move(callee)), _arguments() {}
 
   const std::string &callee() const { return _callee; }
   auto arguments() const { return getRawPointers(_arguments); }
@@ -163,6 +173,7 @@ private:
 
 class KernelNode : public ASTNode {
 public:
+  KernelNode(Location loc) : ASTNode(loc), _rows() {}
   const std::vector<std::vector<double>> &rows() const { return _rows; }
 
   void addRow(const std::vector<double> &row) { _rows.push_back(row); }

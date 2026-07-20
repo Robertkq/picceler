@@ -18,6 +18,10 @@ picceler::Image *piccelerCreateImage(uint32_t width, uint32_t height);
 void *piccelerReadString(const char *prompt);
 double piccelerReadNumber(const char *prompt);
 
+void piccelerPrintString(const char *str);
+
+void piccelerPrintFloat64(double value);
+
 /**
  * \}
  */

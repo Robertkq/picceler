@@ -23,7 +23,7 @@ Result<std::vector<Token>> Parser::getTokens() {
 
 Result<std::unique_ptr<ModuleNode>> Parser::parse() {
   spdlog::info("Starting parsing process");
-  auto module = std::make_unique<ModuleNode>();
+  auto module = std::make_unique<ModuleNode>(Location(0, 0));
   while (true) {
     auto stmt = parseStatement();
     if (!stmt) {
@@ -96,7 +96,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition([[maybe_unused]
     return std::unexpected(CompileError{"Expected function name after 'def'", nameTokenResult->location()});
   }
   auto funcName = nameTokenResult->value();
-  auto funcNode = std::make_unique<FunctionNode>(funcName);
+  auto funcNode = std::make_unique<FunctionNode>(nameTokenResult->location(), funcName);
   const auto &lParenTokenResult = _lexer.nextToken(); // consume '('
   if (!lParenTokenResult) {
     spdlog::error("{}", lParenTokenResult.error().message());
@@ -241,7 +241,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier
     return std::unexpected(CompileError{"Left-hand side of assignment must be a variable"});
   }
   auto leftVarNode = std::unique_ptr<VariableNode>(static_cast<VariableNode *>(leftVar.release()));
-  auto assignNode = std::make_unique<AssignmentNode>(std::move(leftVarNode), std::move(exprVar));
+  auto assignNode =
+      std::make_unique<AssignmentNode>(leftVarNode->location(), std::move(leftVarNode), std::move(exprVar));
   return assignNode;
 }
 
@@ -256,7 +257,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
   if (lparenToken != Token::Type::L_PAREN) {
     return std::unexpected(CompileError{std::format("Expected '(' after function name"), lparenToken.location()});
   }
-  auto callNode = std::make_unique<CallNode>(identifier.value());
+  auto callNode = std::make_unique<CallNode>(identifier.location(), identifier.value());
 
   while (true) {
     auto nextTokenResult = _lexer.peekToken();
@@ -343,6 +344,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
 Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
   spdlog::debug("Parsing variable");
   std::string varName = identifier.value();
+  Location loc = identifier.location();
   // If the passed token is not an identifier, consume the next token
   if (identifier != Token::Type::IDENTIFIER) {
     auto identifierResult = _lexer.nextToken();
@@ -351,9 +353,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) 
       return std::unexpected(CompileError{"Failed to consume identifier token in variable"});
     }
     varName = identifierResult->value();
+    loc = identifierResult->location();
   }
 
-  auto varNode = std::make_unique<VariableNode>(varName, std::nullopt);
+  auto varNode = std::make_unique<VariableNode>(loc, varName, std::nullopt);
   return varNode;
 }
 
@@ -369,7 +372,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
     return std::unexpected(CompileError{"Expected '['", lbracketToken.location()});
   }
 
-  auto kernelNode = std::make_unique<KernelNode>();
+  auto kernelNode = std::make_unique<KernelNode>(lbracketToken.location());
 
   while (true) {
     auto peekedtokenResult = _lexer.peekToken();
@@ -517,7 +520,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
     return std::unexpected(CompileError{"Expected string", token.location()});
   }
   // TODO: Implement a compiler flag to let the user not expand tilde if it is not needed
-  auto strNode = std::make_unique<StringNode>(utils::expandTilde(token.value()));
+  auto strNode = std::make_unique<StringNode>(token.location(), utils::expandTilde(token.value()));
   return strNode;
 }
 
@@ -534,7 +537,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   }
   std::unique_ptr<NumberNode> numNode = nullptr;
   try {
-    numNode = std::make_unique<NumberNode>(std::stod(token.value()));
+    numNode = std::make_unique<NumberNode>(token.location(), std::stod(token.value()));
   } catch (const std::invalid_argument &) {
     return std::unexpected(CompileError{std::format("Invalid double literal '{}'", token.value()), token.location()});
   } catch (const std::out_of_range &) {

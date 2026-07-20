@@ -68,3 +68,101 @@ func.func @ReadStringAndNumber() {
 // CHECK-NEXT: %[[READ_NUM:.*]] = call @piccelerReadNumber(%[[PROMPT2]]) : (!picceler.string) -> f64
 // CHECK-NEXT: return
 
+// -----
+
+func.func @PrintSimpleString() {
+    %fmt = "picceler.string.const"() <{ value = "Hello, World!" }> : () -> !picceler.string
+    "picceler.print"(%fmt) : (!picceler.string) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @PrintSimpleString()
+// CHECK-DAG: %[[STR:.*]] = "picceler.string.const"() <{value = "Hello, World!"}>
+// CHECK:     call @piccelerPrintString(%[[STR]])
+// CHECK:     return
+
+// -----
+
+func.func @Print2Parts1ArgString() {
+    %fmt1 = "picceler.string.const"() <{ value = "Hello, {}!" }> : () -> !picceler.string
+    %fmt2 = "picceler.string.const"() <{ value = "World" }> : () -> !picceler.string
+    "picceler.print"(%fmt1, %fmt2) : (!picceler.string, !picceler.string) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @Print2Parts1ArgString()
+// CHECK-DAG: %[[PART2:.*]] = "picceler.string.const"() <{value = "World"}>
+// CHECK-DAG: %[[PART1:.*]] = "picceler.string.const"() <{value = "Hello, "}>
+// CHECK:      call @piccelerPrintString(%[[PART1]])
+// CHECK-NEXT: call @piccelerPrintString(%[[PART2]])
+// CHECK-NEXT: %[[PART3:.*]] = "picceler.string.const"() <{value = "!"}>
+// CHECK-NEXT: call @piccelerPrintString(%[[PART3]])
+// CHECK-NEXT: return
+
+// -----
+
+func.func @Print2Parts1FloatNewlineTerminated() {
+    %fp64 = arith.constant 3.14159 : f64
+    %fmt1 = "picceler.string.const"() <{ value = "The value of pi is approximately: {}\n" }> : () -> !picceler.string
+    "picceler.print"(%fmt1, %fp64) : (!picceler.string, f64) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @Print2Parts1FloatNewlineTerminated()
+// CHECK-DAG: %[[FP:.*]] = arith.constant 3.141590e+00 : f64
+// CHECK-DAG: %[[PART1:.*]] = "picceler.string.const"() <{value = "The value of pi is approximately: "}>
+// CHECK:      call @piccelerPrintString(%[[PART1]])
+// CHECK-NEXT: call @piccelerPrintFloat64(%[[FP]])
+// CHECK-NEXT: %[[NL:.*]] = "picceler.string.const"() <{value = "\0A"}>
+// CHECK-NEXT: call @piccelerPrintString(%[[NL]])
+// CHECK-NEXT: return
+
+// -----
+
+func.func @PrintAdjacentPlaceholders() {
+    %arg1 = "picceler.string.const"() <{ value = "Foo" }> : () -> !picceler.string
+    %arg2 = "picceler.string.const"() <{ value = "Bar" }> : () -> !picceler.string
+    %fmt = "picceler.string.const"() <{ value = "{}{}\n" }> : () -> !picceler.string
+    "picceler.print"(%fmt, %arg1, %arg2) : (!picceler.string, !picceler.string, !picceler.string) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @PrintAdjacentPlaceholders()
+// CHECK-DAG: %[[ARG1:.*]] = "picceler.string.const"() <{value = "Foo"}>
+// CHECK-DAG: %[[ARG2:.*]] = "picceler.string.const"() <{value = "Bar"}>
+// CHECK:      call @piccelerPrintString(%[[ARG1]])
+// CHECK-NEXT: call @piccelerPrintString(%[[ARG2]])
+// CHECK:      call @piccelerPrintString
+// CHECK:      return
+
+// -----
+
+func.func @PrintAdjacentNoNewline() {
+    %arg1 = "picceler.string.const"() <{ value = "A" }> : () -> !picceler.string
+    %arg2 = "picceler.string.const"() <{ value = "B" }> : () -> !picceler.string
+    %fmt = "picceler.string.const"() <{ value = "{}{}" }> : () -> !picceler.string
+    "picceler.print"(%fmt, %arg1, %arg2) : (!picceler.string, !picceler.string, !picceler.string) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @PrintAdjacentNoNewline()
+// CHECK-DAG: %[[ARG1:.*]] = "picceler.string.const"() <{value = "A"}>
+// CHECK-DAG: %[[ARG2:.*]] = "picceler.string.const"() <{value = "B"}>
+// CHECK:      call @piccelerPrintString(%[[ARG1]])
+// CHECK-NEXT: call @piccelerPrintString(%[[ARG2]])
+// CHECK-NEXT: return
+
+// -----
+
+func.func @PrintLeadingPlaceholder(%arg0: f64) {
+    %fmt = "picceler.string.const"() <{ value = "{} is the output\n" }> : () -> !picceler.string
+    "picceler.print"(%fmt, %arg0) : (!picceler.string, f64) -> ()
+    return
+}
+
+// CHECK-LABEL: func.func @PrintLeadingPlaceholder(
+// CHECK-SAME:                                     %[[ARG0:.*]]: f64)
+// CHECK:      call @piccelerPrintFloat64(%[[ARG0]])
+// CHECK-NEXT: %[[SUFFIX:.*]] = "picceler.string.const"() <{value = " is the output\0A"}>
+// CHECK-NEXT: call @piccelerPrintString(%[[SUFFIX]])
+// CHECK-NEXT: return

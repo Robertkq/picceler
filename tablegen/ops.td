@@ -43,6 +43,17 @@ def Picceler_ShowImageOp : Op<PiccelerDialect, "show_image", []> {
   let results = (outs);
 }
 
+def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
+  let summary = "Print anything to the console, alike std::format";
+  let arguments = (ins 
+  Picceler_StringType:$fmt, 
+  Variadic<AnyType>:$args
+  );
+  let results = (outs);
+
+  let hasVerifier = 1;
+}
+
 def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", []> {
   let summary = "Adjust the brightness of an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$value);
@@ -144,15 +155,5 @@ def Picceler_ReadNumberOp : Op<PiccelerDialect, "read_number", []> {
   let arguments = (ins Picceler_StringType:$prompt);
   let results = (outs F64:$result);
 }
-
-def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
-  let summary = "Print anything to the console, alike std::format";
-  let arguments = (ins AnyType:$input);
-  let results = (outs);
-
-  // let hasVerifier = 1;
-}
-
-
 
 #endif

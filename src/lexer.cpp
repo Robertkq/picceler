@@ -223,6 +223,7 @@ Result<Token> Lexer::readString(std::pair<size_t, size_t> start) {
   while (!eof() && peek() != '"') {
     value += get();
   }
+  value = unescapeString(std::move(value));
   if (!eof())
     get(); // consume the closing quote
   return Token{Token::Type::STRING, value, Location{start}};
@@ -258,6 +259,49 @@ Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
   default:
     return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   }
+}
+
+std::string Lexer::unescapeString(std::string &&string) const {
+  std::string unescaped;
+  unescaped.reserve(string.size());
+
+  for (size_t i = 0; i < string.size(); ++i) {
+    if (string[i] == '\\' && i + 1 < string.size()) {
+      switch (string[i + 1]) {
+      case 'n':
+        unescaped += '\n';
+        break; // Newline (0x0A)
+      case 't':
+        unescaped += '\t';
+        break; // Tab (0x09)
+      case 'r':
+        unescaped += '\r';
+        break; // Carriage Return (0x0D)
+      case '\\':
+        unescaped += '\\';
+        break; // Literal Backslash
+      case '"':
+        unescaped += '"';
+        break; // Double Quote
+      case '\'':
+        unescaped += '\'';
+        break; // Single Quote
+      case '0':
+        unescaped += '\0';
+        break; // Null Byte
+      default:
+        // If it's an unrecognized escape (e.g. \a), keep the backslash and character
+        unescaped += '\\';
+        unescaped += string[i + 1];
+        break;
+      }
+      ++i;
+    } else {
+      unescaped += string[i];
+    }
+  }
+
+  return unescaped;
 }
 
 std::ostream &operator<<(std::ostream &os, const Token &token) {

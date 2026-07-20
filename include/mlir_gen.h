@@ -38,9 +38,10 @@ public:
   /**
    * @brief Generates MLIR code from the given AST root node.
    * @param root The root node of the AST.
+   * @param sourceFile The source file name for location tracking.
    * @return The generated MLIR module operation.
    */
-  mlir::ModuleOp generate(ModuleNode *root);
+  mlir::ModuleOp generate(ModuleNode *root, const std::string &sourceFile);
 
 private:
   /**
@@ -122,6 +123,7 @@ private:
   mlir::OpBuilder _builder;
   std::vector<NamedVariableTable> _scopedVariableTable;
   std::unordered_map<std::string, GeneratorFunction> _functionTable;
+  std::string _sourceFile;
 };
 
 } // namespace picceler

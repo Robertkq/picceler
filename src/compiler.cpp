@@ -91,7 +91,7 @@ bool Compiler::run() {
   ast->normalizeTopLevelStatements();
 
   spdlog::info("Generating initial MLIR");
-  auto module = _mlirGen.generate(ast.get());
+  auto module = _mlirGen.generate(ast.get(), inputFile);
   spdlog::info("Finished generating initial MLIR");
   module->dump();
   spdlog::info("Running pass manager");
