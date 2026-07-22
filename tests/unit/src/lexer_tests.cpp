@@ -179,3 +179,94 @@ TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
   }
   EXPECT_TRUE(foundUnknown);
 }
+////////
+TEST_F(LexerTest, FullLineCommentsAreIgnored) {
+  _lexer.setSourceString(R"(
+# This is a full line comment
+a = 1
+      # Another comment
+b = 2
+)");
+
+  auto tokensRes = _lexer.tokenizeAll();
+  ASSERT_TRUE(tokensRes.has_value());
+  const auto &tokens = tokensRes.value();
+
+  std::vector<std::string> expected = {"a", "=", "1", "b", "=", "2"};
+  std::vector<std::string> actual;
+
+  for (const auto &t : tokens) {
+    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
+      actual.push_back(t.value());
+    }
+  }
+
+  EXPECT_EQ(actual, expected);
+}
+
+TEST_F(LexerTest, ConsecutiveComments) {
+  _lexer.setSourceString(R"(
+# Comment 1
+# Comment 2
+# Comment 3
+a = 5
+)");
+
+  auto tokensRes = _lexer.tokenizeAll();
+  ASSERT_TRUE(tokensRes.has_value());
+  const auto &tokens = tokensRes.value();
+
+  std::vector<std::string> actual;
+  for (const auto &t : tokens) {
+    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
+      actual.push_back(t.value());
+    }
+  }
+
+  std::vector<std::string> expected = {"a", "=", "5"};
+  EXPECT_EQ(actual, expected);
+}
+
+TEST_F(LexerTest, CommentAtEndOfFile) {
+  _lexer.setSourceString(R"(
+a = 1 
+# This is the last line, no newline at the end
+)");
+
+  auto tokensRes = _lexer.tokenizeAll();
+  ASSERT_TRUE(tokensRes.has_value());
+  const auto &tokens = tokensRes.value();
+
+  std::vector<std::string> actual;
+  for (const auto &t : tokens) {
+    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
+      actual.push_back(t.value());
+    }
+  }
+
+  std::vector<std::string> expected = {"a", "=", "1"};
+  EXPECT_EQ(actual, expected);
+}
+
+TEST_F(LexerTest, InlineComments) {
+  _lexer.setSourceString(R"(
+    img = load_image("cat.jpg") # load the cat image
+    blurred = blur(img, 3)      # apply blur
+  )");
+
+  auto tokensRes = _lexer.tokenizeAll();
+  ASSERT_TRUE(tokensRes.has_value());
+  const auto &tokens = tokensRes.value();
+
+  std::vector<std::string> values;
+  for (const auto &t : tokens) {
+    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
+      values.push_back(t.value());
+    }
+  }
+
+  std::vector<std::string> expected = {"img", "=",    "load_image", "(",   "cat.jpg", ")", "blurred",
+                                       "=",   "blur", "(",          "img", ",",       "3", ")"};
+
+  EXPECT_EQ(values, expected);
+}
