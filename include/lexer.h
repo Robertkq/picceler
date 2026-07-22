@@ -145,6 +145,11 @@ public:
   void skipWhitespace();
 
   /**
+   * @brief Skips comments in the input.
+   */
+  void skipComment();
+
+  /**
    * @brief Tokenizes the entire input.
    * @return A vector of all tokens.
    */

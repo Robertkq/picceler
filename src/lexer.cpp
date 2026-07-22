@@ -1,6 +1,8 @@
 #include "lexer.h"
 
 #include <format>
+#include <llvm/ADT/StringExtras.h>
+#include <string>
 
 #include "spdlog/spdlog.h"
 
@@ -84,6 +86,7 @@ Result<Token> Lexer::nextToken() {
 
   char ch;
   ch = peek();
+
   if (isIdentifier(ch)) {
     return readIdentifierOrKeywordOrType({_line, _column});
   }
@@ -114,6 +117,17 @@ Result<Token> Lexer::peekToken() {
 
 void Lexer::skipWhitespace() {
   while (!eof() && isspace(peek())) {
+    get();
+    if (peek() == '#') {
+      while (!eof() && peek() != '\n') {
+        get();
+      }
+    }
+  }
+}
+
+void Lexer::skipComment() {
+  while (!eof() && peek() != '\n') {
     get();
   }
 }
