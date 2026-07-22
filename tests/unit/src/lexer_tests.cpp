@@ -21,7 +21,7 @@ TEST_F(LexerTest, EmptyInput) {
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
-  _lexer.setSourceString("img = load_image(\"cat.jpg\")");
+  _lexer.setSourceString(R"(img = load_image("cat.jpg"))");
 
   auto tokensRes = _lexer.tokenizeAll();
   ASSERT_TRUE(tokensRes.has_value());
