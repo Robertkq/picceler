@@ -179,7 +179,7 @@ TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
   }
   EXPECT_TRUE(foundUnknown);
 }
-////////
+
 TEST_F(LexerTest, FullLineCommentsAreIgnored) {
   _lexer.setSourceString(R"(
 # This is a full line comment
