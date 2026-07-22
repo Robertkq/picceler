@@ -116,10 +116,16 @@ public:
   Lexer();
 
   /**
-   * @brief Sets the source file for the lexer.
-   * @param source The source file to read from.
+   * @brief Sets the source string for the lexer.
+   * @param source The source string to read from.
    */
-  Result<void> setSource(const std::string &source);
+  void setSourceString(std::string_view source);
+
+  /**
+   * @brief Sets the source file for the lexer.
+   * @param filepath The source file to read from.
+   */
+  Result<void> setSource(const std::string &filepath);
 
   /**
    * @brief Returns the next token from the input.
@@ -145,6 +151,12 @@ public:
   Result<std::vector<Token>> tokenizeAll();
 
 private:
+  /** @brief Resets the internal state of the lexer.
+   * Resets the position, line, and column counters to their initial values,
+   * preparing the lexer to process a new source string.
+   */
+  void resetState();
+
   /** @brief Checks if the end of the file has been reached.
    * @return True if the end of the file is reached, false otherwise.
    */

@@ -48,24 +48,33 @@ std::string Token::typeToString() const {
 }
 
 Lexer::Lexer() : _file(), _buffer(), _position(0), _line(1), _column(1) {}
-
-Result<void> Lexer::setSource(const std::string &source) {
-  if (_file.is_open()) {
-    _file.close();
-  }
-  _file.open(source);
-  if (!_file.is_open()) {
-    return std::unexpected(CompileError(std::format("Cannot open source file {}", source)));
-  }
-  _buffer.assign((std::istreambuf_iterator<char>(_file)), std::istreambuf_iterator<char>());
-  _file.close();
+void Lexer::resetState() {
   _position = 0;
   _line = 1;
   _column = 1;
-
-  return {};
 }
 
+void Lexer::setSourceString(std::string_view source) {
+  _buffer = std::string(source);
+  resetState();
+}
+
+Result<void> Lexer::setSource(const std::string &filepath) {
+  if (_file.is_open()) {
+    _file.close();
+  }
+
+  _file.open(filepath);
+  if (!_file.is_open()) {
+    return std::unexpected(CompileError(std::format("Cannot open source file {}", filepath)));
+  }
+
+  _buffer.assign((std::istreambuf_iterator<char>(_file)), std::istreambuf_iterator<char>());
+  _file.close();
+
+  resetState();
+  return {};
+}
 Result<Token> Lexer::nextToken() {
   skipWhitespace();
 

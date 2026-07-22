@@ -10,36 +10,28 @@ protected:
 };
 
 TEST_F(ParserTest, BadKernelMissingCommaFails) {
-  auto result = _parser.setSource("data/bad_kernel_missing_comma.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"(k = [[1 2],[3,4]])");
 
   auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelMissingBracketFails) {
-  auto result = _parser.setSource("data/bad_kernel_missing_bracket.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"(k = [[1,2],[3,4])");
 
   auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, BadKernelBadNumberFails) {
-  auto result = _parser.setSource("data/bad_kernel_bad_number.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"(k = [[1,2.2.3],[3,4]])");
 
   auto astRes = _parser.parse();
   EXPECT_FALSE(astRes.has_value());
 }
 
 TEST_F(ParserTest, EmptyInput) {
-  auto result = _parser.setSource("data/empty.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"()");
 
   auto astRes = _parser.parse();
   if (!astRes)
@@ -51,12 +43,8 @@ TEST_F(ParserTest, EmptyInput) {
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
-  auto result = _parser.setSource("data/load_image.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"(img = load_image("cat.jpg"))");
 
-  // file contents:
-  // img = load_image("cat.jpg")
   auto astRes = _parser.parse();
   if (!astRes)
     FAIL() << astRes.error().message();
@@ -77,9 +65,7 @@ TEST_F(ParserTest, LoadImageStatement) {
 }
 
 TEST_F(ParserTest, RotateNegativeAngleParses) {
-  auto result = _parser.setSource("data/rotate_negative.pic");
-  if (!result)
-    FAIL() << result.error().message();
+  _parser.setSourceString(R"(img = rotate(input, -90))");
 
   auto astRes = _parser.parse();
   if (!astRes)

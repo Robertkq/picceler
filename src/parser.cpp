@@ -11,7 +11,8 @@ using namespace picceler;
 
 Parser::Parser() : _lexer() {}
 
-Result<void> Parser::setSource(const std::string &source) { return _lexer.setSource(source); }
+Result<void> Parser::setSource(const std::string &filepath) { return _lexer.setSource(filepath); }
+void Parser::setSourceString(std::string_view source) { _lexer.setSourceString(source); }
 
 Result<std::vector<Token>> Parser::getTokens() {
   auto tokens = _lexer.tokenizeAll();

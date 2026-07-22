@@ -19,10 +19,3 @@ set_target_properties(unittests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
-add_custom_target(copy-unit-data ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/data"
-        "${CMAKE_BINARY_DIR}/data"
-    COMMENT "Copying data folder to build directory..."
-)
-
