@@ -140,9 +140,9 @@ public:
   Result<Token> peekToken();
 
   /**
-   * @brief Skips whitespace characters in the input.
+   * @brief Skips whitespace characters and comment lines in the input.
    */
-  void skipWhitespace();
+  void skipWhitespaceAndComment();
 
   /**
    * @brief Tokenizes the entire input.

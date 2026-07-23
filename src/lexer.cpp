@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include <format>
+#include <string>
 
 #include "spdlog/spdlog.h"
 
@@ -76,7 +77,7 @@ Result<void> Lexer::setSource(const std::string &filepath) {
   return {};
 }
 Result<Token> Lexer::nextToken() {
-  skipWhitespace();
+  skipWhitespaceAndComment();
 
   if (eof()) {
     return Token{Token::Type::EOF_TOKEN, "", Location{{_line, _column}}};
@@ -84,6 +85,7 @@ Result<Token> Lexer::nextToken() {
 
   char ch;
   ch = peek();
+
   if (isIdentifier(ch)) {
     return readIdentifierOrKeywordOrType({_line, _column});
   }
@@ -112,9 +114,14 @@ Result<Token> Lexer::peekToken() {
   return token;
 }
 
-void Lexer::skipWhitespace() {
+void Lexer::skipWhitespaceAndComment() {
   while (!eof() && isspace(peek())) {
     get();
+    if (peek() == '#') {
+      while (!eof() && peek() != '\n') {
+        get();
+      }
+    }
   }
 }
 
