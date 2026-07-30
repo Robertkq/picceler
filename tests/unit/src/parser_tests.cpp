@@ -98,4 +98,47 @@ TEST_F(ParserTest, RotateNegativeAngleParses) {
   EXPECT_EQ(angleNode->value(), -90);
 }
 
+TEST_F(ParserTest, NestedFunctionCalls) {
+  auto ast = parseSuccessfully(R"(out = blur(load_image("cat.jpg"), 5))");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *assign = as<AssignmentNode>(ast->statements()[0]);
+  ASSERT_NE(assign, nullptr);
+  EXPECT_EQ(assign->lhs()->name(), "out");
+
+  const auto *outerCall = as<CallNode>(assign->rhs());
+  ASSERT_NE(outerCall, nullptr);
+  EXPECT_EQ(outerCall->callee(), "blur");
+  ASSERT_EQ(outerCall->arguments().size(), 2);
+
+  const auto *innerCall = as<CallNode>(outerCall->arguments()[0]);
+  ASSERT_NE(innerCall, nullptr);
+  EXPECT_EQ(innerCall->callee(), "load_image");
+  ASSERT_EQ(innerCall->arguments().size(), 1);
+
+  const auto *strArg = as<StringNode>(innerCall->arguments()[0]);
+  ASSERT_NE(strArg, nullptr);
+  EXPECT_EQ(strArg->value(), "cat.jpg");
+}
+
+TEST_F(ParserTest, MultipleStatements) {
+  auto ast = parseSuccessfully(R"(
+      a = 1
+      b = a
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 2);
+
+  const auto *stmt1 = as<AssignmentNode>(ast->statements()[0]);
+  ASSERT_NE(stmt1, nullptr);
+  EXPECT_EQ(stmt1->lhs()->name(), "a");
+
+  const auto *stmt2 = as<AssignmentNode>(ast->statements()[1]);
+  ASSERT_NE(stmt2, nullptr);
+  EXPECT_EQ(stmt2->lhs()->name(), "b");
+}
+
+TEST_F(ParserTest, UnclosedParenFails) { assertParseFails(R"(img = load_image("cat.jpg")"); }
+
 } // namespace picceler
