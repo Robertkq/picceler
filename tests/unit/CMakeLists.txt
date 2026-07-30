@@ -1,21 +1,8 @@
 
-file(GLOB_RECURSE LEXER_TEST_SOURCES
-    src/lexer/*.cpp
-)
-
-file(GLOB_RECURSE PARSER_TEST_SOURCES
-    src/parser/*.cpp
-)
-
-file(GLOB_RECURSE AST_TEST_SOURCES
-    src/ast/*.cpp
-)
-
 add_executable(unittests
     src/main.cpp
-    ${LEXER_TEST_SOURCES}
-    ${PARSER_TEST_SOURCES}
-    ${AST_TEST_SOURCES}
+    src/lexer_tests.cpp
+    src/parser_tests.cpp
 )
 
 find_package(GTest REQUIRED)

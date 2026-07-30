@@ -11,13 +11,13 @@ std::string ModuleNode::toString() const { return std::format("Module: {} statem
 void ModuleNode::normalizeTopLevelStatements() {
   spdlog::debug("Printing all statements in the AST:\n");
   for (auto stmt : statements()) {
-    spdlog::debug("{}\n", stmt->toString());
+    spdlog::debug("{}", stmt->toString());
   }
   auto modified = wrapTopLevelStatementsInMain();
   if (modified) {
     spdlog::debug("AST normalization modified the graph. Final AST:\n");
     for (auto stmt : statements()) {
-      spdlog::debug("{}\n", stmt->toString());
+      spdlog::debug("{}", stmt->toString());
     }
   }
 }

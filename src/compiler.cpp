@@ -29,7 +29,7 @@
 namespace picceler {
 
 Compiler::Compiler()
-    : _cliApp("picceler compiler"), _cliOptions(), _parser(), _context(initRegistry()), _mlirGen(&_context),
+    : _cliApp("picceler compiler"), _cliOptions(), _lexer(), _parser(), _context(initRegistry()), _mlirGen(&_context),
       _passManager(&_context) {
   _cliApp.add_option("input_file", _cliOptions._inputFile, "Input source file")->required()->check(CLI::ExistingFile);
   _cliApp.add_option("-o,--output", _cliOptions._outputFile, "Output executable file")->default_val("a.out");
@@ -59,55 +59,55 @@ bool Compiler::run() {
   const auto &inputFile = _cliOptions._inputFile;
   const auto &outputFile = _cliOptions._outputFile;
 
-  auto sourceResult = _parser.setSource(inputFile);
+  auto sourceResult = _lexer.setSource(inputFile);
   if (!sourceResult) {
     spdlog::error("Failed to set source file: {}", sourceResult.error().message());
     return false;
   }
 
-  spdlog::trace("Finished tokenizing source file");
-  spdlog::trace("Resetting lexer");
-  auto resetResult = _parser.setSource(inputFile);
-  if (!resetResult) {
-    spdlog::error("Failed to reset source file: {}", resetResult.error().message());
+  auto tokensResult = _lexer.getTokens();
+  if (!tokensResult) {
+    spdlog::error("Failed to retrieve tokens: {}", tokensResult.error().message());
     return false;
   }
+  _parser.setTokens(std::move(tokensResult.value()));
   auto astResult = _parser.parse();
   if (!astResult) {
-    spdlog::error("{}", astResult.error().message());
+    spdlog::error("Failed to parse AST: {}", astResult.error().message());
     return false;
   }
   auto ast = std::move(astResult.value());
   _parser.printAST(ast);
   ast->normalizeTopLevelStatements();
 
-  spdlog::trace("Generating initial MLIR");
+  spdlog::debug("Generating initial MLIR");
   auto module = _mlirGen.generate(ast.get(), inputFile);
-  spdlog::trace("Finished generating initial MLIR");
-  spdlog::trace("Running pass manager");
+  spdlog::debug("Finished generating initial MLIR");
+  spdlog::debug("Running pass manager");
   bool result = _passManager.run(module);
   if (!result) {
     spdlog::error("Failed to run pass manager!");
     return false;
   }
+  spdlog::debug("Finished running pass manager");
 
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
 
-  spdlog::trace("Finished translating MLIR to LLVM IR");
+  spdlog::debug("Finished translating MLIR to LLVM IR");
   if (!llvmModule) {
     spdlog::error("Failed to translate MLIR module to LLVM IR");
     return false;
   }
 
-  spdlog::trace("Emitting object file");
+  spdlog::debug("Emitting object file");
   auto success = emitObjectFile(llvmModule.get(), "picceler.o");
   if (!success) {
     spdlog::error("Failed to emit an object file");
     return false;
   }
 
-  spdlog::trace("Linking with LLD");
+  spdlog::debug("Linking with LLD");
   success = linkWithLLD("picceler.o", "lib/libPiccelerRuntime.a", outputFile);
   if (!success) {
     spdlog::error("Failed to link an executable");

@@ -148,7 +148,7 @@ public:
    * @brief Tokenizes the entire input.
    * @return A vector of all tokens.
    */
-  Result<std::vector<Token>> tokenizeAll();
+  Result<std::vector<Token>> getTokens();
 
 private:
   /** @brief Resets the internal state of the lexer.

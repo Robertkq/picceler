@@ -100,7 +100,7 @@ Result<Token> Lexer::nextToken() {
   }
 
   get(); // consume unknown character
-  return Token{Token::Type::UNKNOWN, "", Location{{_line, _column}}};
+  return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{{_line, _column}}};
 }
 
 Result<Token> Lexer::peekToken() {
@@ -125,13 +125,15 @@ void Lexer::skipWhitespaceAndComment() {
   }
 }
 
-Result<std::vector<Token>> Lexer::tokenizeAll() {
+Result<std::vector<Token>> Lexer::getTokens() {
   std::vector<Token> tokens;
   Result<Token> token;
+  std::size_t index = 0;
   do {
     token = nextToken();
     if (token) {
       tokens.push_back(*token);
+      spdlog::debug("Token {}: {}", index++, token->toString());
     } else {
       spdlog::error(token.error().message());
       return std::unexpected(CompileError{"Failed to tokenize the entire source file"});

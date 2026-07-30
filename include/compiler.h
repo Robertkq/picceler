@@ -63,6 +63,7 @@ private:
 private:
   CLI::App _cliApp;
   CLIOptions _cliOptions;
+  Lexer _lexer;
   Parser _parser;
 
   mlir::MLIRContext _context;
