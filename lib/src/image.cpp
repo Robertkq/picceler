@@ -4,19 +4,19 @@
 namespace picceler {
 
 void internalDebugImage(const picceler::Image &image, const std::string &caller) {
-  spdlog::info("[Runtime Debug from {}]\n"
-               "  Addr of struct: {}\n"
-               "  Width:    {}\n"
-               "  Height:   {}\n"
-               "  Data Ptr: {}",
-               caller, (void *)&image, image._width, image._height, (void *)image._data);
+  spdlog::debug("[Runtime Debug from {}]\n"
+                "  Addr of struct: {}\n"
+                "  Width:    {}\n"
+                "  Height:   {}\n"
+                "  Data Ptr: {}",
+                caller, (void *)&image, image._width, image._height, (void *)image._data);
 
   if (image._data != nullptr && image._width > 0 && image._height > 0) {
-    spdlog::info("\tFirst 4 pixels (RGBA): {} {} {} {}", (int)image._data[0], (int)image._data[1], (int)image._data[2],
-                 (int)image._data[3]);
+    spdlog::debug("\tFirst 4 pixels (RGBA): {} {} {} {}", (int)image._data[0], (int)image._data[1], (int)image._data[2],
+                  (int)image._data[3]);
   }
-  spdlog::info("\tWidth: {}, Height: {}, Data Ptr: {}", image._width, image._height, (void *)image._data);
-  spdlog::info("--------------------------------------");
+  spdlog::debug("\tWidth: {}, Height: {}, Data Ptr: {}", image._width, image._height, (void *)image._data);
+  spdlog::debug("--------------------------------------");
 }
 
 Image *loadImage(const std::string &filename) {
@@ -35,9 +35,9 @@ Image *loadImage(const std::string &filename) {
   img->_data = new unsigned char[rgba.total() * rgba.elemSize()];
   std::memcpy(img->_data, rgba.data, rgba.total() * rgba.elemSize());
 
-  spdlog::info("Loaded image: {} ({}x{})", filename, img->_width, img->_height);
-  spdlog::info("OpenCV image details - cols: {}, rows: {}, channels: {}, total: {}", rgba.cols, rgba.rows,
-               rgba.channels(), rgba.total());
+  spdlog::debug("Loaded image: {} ({}x{})", filename, img->_width, img->_height);
+  spdlog::debug("OpenCV image details - cols: {}, rows: {}, channels: {}, total: {}", rgba.cols, rgba.rows,
+                rgba.channels(), rgba.total());
 
   return img;
 }
@@ -52,7 +52,7 @@ void saveImage(const Image &image, const std::string &filename) {
     spdlog::error("Failed to save image: {}", filename);
     return;
   }
-  spdlog::info("Saved image: {}", filename);
+  spdlog::debug("Saved image: {}", filename);
 }
 
 void showImage(const Image &image) {

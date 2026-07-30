@@ -23,7 +23,7 @@ Result<std::vector<Token>> Parser::getTokens() {
 }
 
 Result<std::unique_ptr<ModuleNode>> Parser::parse() {
-  spdlog::info("Starting parsing process");
+  spdlog::debug("Starting parsing process");
   auto module = std::make_unique<ModuleNode>(Location(0, 0));
   while (true) {
     auto stmt = parseStatement();
@@ -36,10 +36,10 @@ Result<std::unique_ptr<ModuleNode>> Parser::parse() {
       // Reached EOF: parseStatement returned a successful nullptr to signal end
       break;
     }
-    spdlog::info("Parsed statement: {}", statement->toString());
+    spdlog::debug("Parsed statement: {}", statement->toString());
     module->addStatement(std::move(statement));
   }
-  spdlog::info("Finished parsing process");
+  spdlog::debug("Finished parsing process");
   return module;
 }
 
@@ -551,8 +551,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
 void Parser::printAST(const std::unique_ptr<ModuleNode> &node, int indent) {
   if (!node)
     return;
-  spdlog::info("{}", node->toString());
+  spdlog::debug("{}", node->toString());
   for (const auto &stmt : node->statements()) {
-    spdlog::info("{}", stmt->toString());
+    spdlog::debug("{}", stmt->toString());
   }
 }

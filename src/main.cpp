@@ -11,5 +11,9 @@ int main(int argc, char **argv) {
   bool result = compiler.run();
   if (!result) {
     spdlog::error("Compilation failed");
+    return result;
   }
+  spdlog::info("Compilation finished successfully, executable generated: {}", compiler.getCliOptions()._outputFile);
+
+  return 0;
 }

@@ -18,10 +18,10 @@ namespace picceler {
  */
 struct PassLogger : public mlir::PassInstrumentation {
   void runBeforePass(mlir::Pass *pass, mlir::Operation *op) override {
-    spdlog::info("Started pass: {}", pass->getName().str());
+    spdlog::debug("Started pass: {}", pass->getName().str());
   }
   void runAfterPass(mlir::Pass *pass, mlir::Operation *op) override {
-    spdlog::info("Finished pass: {}", pass->getName().str());
+    spdlog::debug("Finished pass: {}", pass->getName().str());
   }
   void runAfterPassFailed(mlir::Pass *pass, mlir::Operation *op) override {
     spdlog::error("Failed pass: {}", pass->getName().str());

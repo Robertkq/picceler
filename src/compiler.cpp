@@ -35,9 +35,9 @@ Compiler::Compiler()
   _cliApp.add_option("-o,--output", _cliOptions._outputFile, "Output executable file")->default_val("a.out");
 
   _context.loadAllAvailableDialects();
-  spdlog::debug("Initialized MLIR Dialects:");
+  spdlog::trace("Initialized MLIR Dialects:");
   for (auto *dialect : _context.getLoadedDialects()) {
-    spdlog::debug(" - {}", dialect->getNamespace());
+    spdlog::trace(" - {}", dialect->getNamespace());
   }
 }
 
@@ -64,18 +64,9 @@ bool Compiler::run() {
     spdlog::error("Failed to set source file: {}", sourceResult.error().message());
     return false;
   }
-  spdlog::info("Tokenizing source file: {}", inputFile);
-  auto tokens = _parser.getTokens();
-  if (!tokens) {
-    spdlog::error("Failed to tokenize source file: {}", tokens.error().message());
-    return false;
-  }
-  size_t index = 0;
-  for (const auto &token : tokens.value()) {
-    spdlog::debug("Token[{}]: {}", index++, token.toString());
-  }
-  spdlog::info("Finished tokenizing source file");
-  spdlog::info("Resetting lexer");
+
+  spdlog::trace("Finished tokenizing source file");
+  spdlog::trace("Resetting lexer");
   auto resetResult = _parser.setSource(inputFile);
   if (!resetResult) {
     spdlog::error("Failed to reset source file: {}", resetResult.error().message());
@@ -90,11 +81,10 @@ bool Compiler::run() {
   _parser.printAST(ast);
   ast->normalizeTopLevelStatements();
 
-  spdlog::info("Generating initial MLIR");
+  spdlog::trace("Generating initial MLIR");
   auto module = _mlirGen.generate(ast.get(), inputFile);
-  spdlog::info("Finished generating initial MLIR");
-  module->dump();
-  spdlog::info("Running pass manager");
+  spdlog::trace("Finished generating initial MLIR");
+  spdlog::trace("Running pass manager");
   bool result = _passManager.run(module);
   if (!result) {
     spdlog::error("Failed to run pass manager!");
@@ -104,17 +94,20 @@ bool Compiler::run() {
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
 
+  spdlog::trace("Finished translating MLIR to LLVM IR");
   if (!llvmModule) {
     spdlog::error("Failed to translate MLIR module to LLVM IR");
     return false;
   }
 
+  spdlog::trace("Emitting object file");
   auto success = emitObjectFile(llvmModule.get(), "picceler.o");
   if (!success) {
     spdlog::error("Failed to emit an object file");
     return false;
   }
 
+  spdlog::trace("Linking with LLD");
   success = linkWithLLD("picceler.o", "lib/libPiccelerRuntime.a", outputFile);
   if (!success) {
     spdlog::error("Failed to link an executable");

@@ -34,7 +34,7 @@ struct StringConstConverter : public mlir::OpConversionPattern<StringConstOp> {
 
     auto loc = op.getLoc();
     llvm::StringRef s = op.getValue();
-    spdlog::info("StringConst: {}", s);
+    spdlog::trace("StringConst: {}", s);
 
     // Convert to null-terminated bytes
     std::string bytes(s.begin(), s.end());
