@@ -1,5 +1,4 @@
 
-
 add_executable(unittests
     src/main.cpp
     src/lexer_tests.cpp

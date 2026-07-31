@@ -3,31 +3,35 @@
 
 class LexerTest : public ::testing::Test {
 protected:
-  void SetUp() override {}
-  void TearDown() override {}
-
   picceler::Lexer _lexer;
+
+  // Helper to extract tokens or fail the test gracefully if lexing errors out
+  std::vector<picceler::Token> tokenize(std::string_view source) {
+    _lexer.setSourceString(source);
+    auto res = _lexer.getTokens();
+    if (!res) {
+      ADD_FAILURE() << "Lexing failed unexpectedly: " << res.error().message();
+      return {};
+    }
+    return std::move(*res);
+  }
 };
 
-TEST_F(LexerTest, EmptyInput) {
-  _lexer.setSourceString(R"()");
+// -----------------------------------------------------------------------------
+// Basic Tokenizing & Literals
+// -----------------------------------------------------------------------------
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+TEST_F(LexerTest, EmptyInput) {
+  auto tokens = tokenize("");
 
   ASSERT_EQ(tokens.size(), 1);
   EXPECT_EQ(tokens[0].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, LoadImageStatement) {
-  _lexer.setSourceString(R"(img = load_image("cat.jpg"))");
+  auto tokens = tokenize(R"(img = load_image("cat.jpg"))");
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-
-  const auto &tokens = tokensRes.value();
-  ASSERT_GE(tokens.size(), 7);
+  ASSERT_EQ(tokens.size(), 7);
   EXPECT_EQ(tokens[0].type(), picceler::Token::Type::IDENTIFIER);
   EXPECT_EQ(tokens[0].value(), "img");
 
@@ -46,227 +50,200 @@ TEST_F(LexerTest, LoadImageStatement) {
   EXPECT_EQ(tokens[5].type(), picceler::Token::Type::R_PAREN);
   EXPECT_EQ(tokens[5].value(), ")");
 
-  EXPECT_EQ(tokens.back().type(), picceler::Token::Type::EOF_TOKEN);
+  EXPECT_EQ(tokens[6].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, NumbersParsing) {
-  _lexer.setSourceString(R"(
+  std::string_view code = R"(
       a = 123
       b = -3.14
       c = 0.5
-  )");
+  )";
 
-  auto tokensRes = _lexer.tokenizeAll();
+  auto tokens = tokenize(code);
 
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  // Exact check: 3 statements (3 tokens each) + 1 EOF = 10 tokens
+  ASSERT_EQ(tokens.size(), 10);
 
-  std::vector<std::string> numbers;
-  for (const auto &t : tokens) {
-    if (t.type() == picceler::Token::Type::NUMBER)
-      numbers.push_back(t.value());
-  }
+  EXPECT_EQ(tokens[0].value(), "a");
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::NUMBER);
+  EXPECT_EQ(tokens[2].value(), "123");
 
-  ASSERT_EQ(numbers.size(), 3);
-  EXPECT_EQ(numbers[0], "123");
-  EXPECT_EQ(numbers[1], "-3.14");
-  EXPECT_EQ(numbers[2], "0.5");
+  EXPECT_EQ(tokens[3].value(), "b");
+  EXPECT_EQ(tokens[5].type(), picceler::Token::Type::NUMBER);
+  EXPECT_EQ(tokens[5].value(), "-3.14");
+
+  EXPECT_EQ(tokens[6].value(), "c");
+  EXPECT_EQ(tokens[8].type(), picceler::Token::Type::NUMBER);
+  EXPECT_EQ(tokens[8].value(), "0.5");
+
+  EXPECT_EQ(tokens[9].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, KernelTokenSequence) {
-  _lexer.setSourceString(R"(k = [[1, 2], [3, 4]])");
+  auto tokens = tokenize(R"(k = [[1, 2], [3, 4]])");
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  std::vector<std::string> expectedValues = {"k", "=", "[", "[", "1", ",", "2", "]", ",", "[", "3", ",", "4", "]", "]"};
 
-  // Expect sequence: IDENTIFIER, '=', '[', '[', NUMBER(1), ',', NUMBER(2), ']', ',', '[', NUMBER(3), ',', NUMBER(4),
-  // ']', ']', EOF
-  std::vector<std::string> seq;
-  for (const auto &t : tokens) {
-    switch (t.type()) {
-    case picceler::Token::Type::IDENTIFIER:
-    case picceler::Token::Type::ASSIGN:
-    case picceler::Token::Type::L_BRACKET:
-    case picceler::Token::Type::R_BRACKET:
-    case picceler::Token::Type::COMMA:
-    case picceler::Token::Type::NUMBER:
-      seq.push_back(t.value());
-      break;
-    default:
-      break;
-    }
+  ASSERT_EQ(tokens.size(), expectedValues.size() + 1); // +1 for EOF
+
+  for (size_t i = 0; i < expectedValues.size(); ++i) {
+    EXPECT_EQ(tokens[i].value(), expectedValues[i]) << "Mismatch at index " << i;
   }
-
-  std::vector<std::string> expected = {"k", "=", "[", "[", "1", ",", "2", "]", ",", "[", "3", ",", "4", "]", "]"};
-  // the tokens vector also includes EOF at the end; compare prefix
-  ASSERT_GE(seq.size(), expected.size());
-  for (size_t i = 0; i < expected.size(); ++i) {
-    EXPECT_EQ(seq[i], expected[i]);
-  }
+  EXPECT_EQ(tokens.back().type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, IdentifiersAndUnderscores) {
-  _lexer.setSourceString(R"(
-        my_var = some_function()
-        other_var = _private123
-    )");
+  std::string_view code = R"(
+      my_var = some_function()
+      other_var = _private123
+  )";
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  auto tokens = tokenize(code);
 
-  // Check presence of identifier names
-  bool foundMyVar = false;
-  bool foundSomeFunction = false;
-  bool foundPrivate = false;
-  for (const auto &t : tokens) {
-    if (t.type() == picceler::Token::Type::IDENTIFIER) {
-      if (t.value() == "my_var")
-        foundMyVar = true;
-      if (t.value() == "some_function")
-        foundSomeFunction = true;
-      if (t.value() == "_private123")
-        foundPrivate = true;
-    }
-  }
-  EXPECT_TRUE(foundMyVar);
-  EXPECT_TRUE(foundSomeFunction);
-  EXPECT_TRUE(foundPrivate);
+  ASSERT_EQ(tokens.size(), 9);
+
+  EXPECT_EQ(tokens[0].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[0].value(), "my_var");
+
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[2].value(), "some_function");
+
+  EXPECT_EQ(tokens[5].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[5].value(), "other_var");
+
+  EXPECT_EQ(tokens[7].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[7].value(), "_private123");
+
+  EXPECT_EQ(tokens[8].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, StringParsingAndPeek) {
-  _lexer.setSourceString(R"(
-        s = "hello world"
-        empty = ""
-    )");
+  _lexer.setSourceString("s = \"hello world\"");
 
   auto peekRes = _lexer.peekToken();
   ASSERT_TRUE(peekRes.has_value());
-  // peek should return first token (identifier 's') without consuming
   EXPECT_EQ(peekRes->type(), picceler::Token::Type::IDENTIFIER);
   EXPECT_EQ(peekRes->value(), "s");
 
-  auto nextRes = _lexer.nextToken();
-  if (!nextRes)
-    FAIL() << nextRes.error().message();
-  EXPECT_EQ(nextRes->type(), picceler::Token::Type::IDENTIFIER);
-  EXPECT_EQ(nextRes->value(), "s");
+  auto t1 = _lexer.nextToken();
+  ASSERT_TRUE(t1.has_value());
+  EXPECT_EQ(t1->value(), "s");
 
-  // advance to string token
-  // consume '=', identifier already consumed
-  auto eqToken = _lexer.nextToken(); // consume '='
-  if (!eqToken)
-    FAIL() << eqToken.error().message();
-  auto strRes = _lexer.nextToken();
-  if (!strRes)
-    FAIL() << strRes.error().message();
-  EXPECT_EQ(strRes->type(), picceler::Token::Type::STRING);
-  EXPECT_EQ(strRes->value(), "hello world");
+  auto t2 = _lexer.nextToken();
+  ASSERT_TRUE(t2.has_value());
+  EXPECT_EQ(t2->type(), picceler::Token::Type::ASSIGN);
+
+  auto t3 = _lexer.nextToken();
+  ASSERT_TRUE(t3.has_value());
+  EXPECT_EQ(t3->type(), picceler::Token::Type::STRING);
+  EXPECT_EQ(t3->value(), "hello world");
 }
 
 TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
-  _lexer.setSourceString("a = @");
+  auto tokens = tokenize("a = @");
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
-
-  bool foundUnknown = false;
-  for (const auto &t : tokens) {
-    if (t.type() == picceler::Token::Type::UNKNOWN)
-      foundUnknown = true;
-  }
-  EXPECT_TRUE(foundUnknown);
+  ASSERT_EQ(tokens.size(), 4);
+  EXPECT_EQ(tokens[0].value(), "a");
+  EXPECT_EQ(tokens[1].value(), "=");
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::UNKNOWN);
+  EXPECT_EQ(tokens[2].value(), "@");
+  EXPECT_EQ(tokens[3].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
+// -----------------------------------------------------------------------------
+// Comment Handling
+// -----------------------------------------------------------------------------
+
 TEST_F(LexerTest, FullLineCommentsAreIgnored) {
-  _lexer.setSourceString(R"(
+  std::string_view code = R"(
 # This is a full line comment
 a = 1
       # Another comment
 b = 2
-)");
+)";
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  auto tokens = tokenize(code);
 
-  std::vector<std::string> expected = {"a", "=", "1", "b", "=", "2"};
-  std::vector<std::string> actual;
+  std::vector<std::string> expectedValues = {"a", "=", "1", "b", "=", "2"};
+  ASSERT_EQ(tokens.size(), expectedValues.size() + 1);
 
-  for (const auto &t : tokens) {
-    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
-      actual.push_back(t.value());
-    }
+  for (size_t i = 0; i < expectedValues.size(); ++i) {
+    EXPECT_EQ(tokens[i].value(), expectedValues[i]);
   }
-
-  EXPECT_EQ(actual, expected);
+  EXPECT_EQ(tokens.back().type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, ConsecutiveComments) {
-  _lexer.setSourceString(R"(
+  std::string_view code = R"(
 # Comment 1
 # Comment 2
 # Comment 3
 a = 5
-)");
+)";
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  auto tokens = tokenize(code);
 
-  std::vector<std::string> actual;
-  for (const auto &t : tokens) {
-    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
-      actual.push_back(t.value());
-    }
-  }
-
-  std::vector<std::string> expected = {"a", "=", "5"};
-  EXPECT_EQ(actual, expected);
+  ASSERT_EQ(tokens.size(), 4); // a, =, 5, EOF
+  EXPECT_EQ(tokens[0].value(), "a");
+  EXPECT_EQ(tokens[1].value(), "=");
+  EXPECT_EQ(tokens[2].value(), "5");
+  EXPECT_EQ(tokens[3].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, CommentAtEndOfFile) {
-  _lexer.setSourceString(R"(
+  std::string_view code = R"(
 a = 1 
 # This is the last line, no newline at the end
-)");
+)";
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  auto tokens = tokenize(code);
 
-  std::vector<std::string> actual;
-  for (const auto &t : tokens) {
-    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
-      actual.push_back(t.value());
-    }
-  }
-
-  std::vector<std::string> expected = {"a", "=", "1"};
-  EXPECT_EQ(actual, expected);
+  ASSERT_EQ(tokens.size(), 4); // a, =, 1, EOF
+  EXPECT_EQ(tokens[0].value(), "a");
+  EXPECT_EQ(tokens[1].value(), "=");
+  EXPECT_EQ(tokens[2].value(), "1");
+  EXPECT_EQ(tokens[3].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
 TEST_F(LexerTest, InlineComments) {
-  _lexer.setSourceString(R"(
+  std::string_view code = R"(
     img = load_image("cat.jpg") # load the cat image
     blurred = blur(img, 3)      # apply blur
-  )");
+  )";
 
-  auto tokensRes = _lexer.tokenizeAll();
-  ASSERT_TRUE(tokensRes.has_value());
-  const auto &tokens = tokensRes.value();
+  auto tokens = tokenize(code);
 
-  std::vector<std::string> values;
-  for (const auto &t : tokens) {
-    if (t.type() != picceler::Token::Type::EOF_TOKEN) {
-      values.push_back(t.value());
-    }
+  std::vector<std::string> expectedValues = {"img", "=",    "load_image", "(",   "cat.jpg", ")", "blurred",
+                                             "=",   "blur", "(",          "img", ",",       "3", ")"};
+
+  ASSERT_EQ(tokens.size(), expectedValues.size() + 1);
+
+  for (size_t i = 0; i < expectedValues.size(); ++i) {
+    EXPECT_EQ(tokens[i].value(), expectedValues[i]);
   }
+  EXPECT_EQ(tokens.back().type(), picceler::Token::Type::EOF_TOKEN);
+}
 
-  std::vector<std::string> expected = {"img", "=",    "load_image", "(",   "cat.jpg", ")", "blurred",
-                                       "=",   "blur", "(",          "img", ",",       "3", ")"};
+// -----------------------------------------------------------------------------
+// Source Location Tracking
+// -----------------------------------------------------------------------------
 
-  EXPECT_EQ(values, expected);
+TEST_F(LexerTest, SourceLocationTracking) {
+  std::string_view code = "a = 1\nb = 2";
+
+  auto tokens = tokenize(code);
+
+  ASSERT_EQ(tokens.size(), 7); // a, =, 1, b, =, 2, EOF
+
+  // Line 1
+  EXPECT_EQ(tokens[0].location().line(), 1);
+  EXPECT_EQ(tokens[0].location().column(), 1);
+
+  EXPECT_EQ(tokens[1].location().line(), 1);
+  EXPECT_EQ(tokens[1].location().column(), 3);
+
+  // Line 2
+  EXPECT_EQ(tokens[3].location().line(), 2);
+  EXPECT_EQ(tokens[3].location().column(), 1);
 }

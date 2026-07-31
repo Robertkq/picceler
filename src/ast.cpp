@@ -9,15 +9,15 @@ namespace picceler {
 std::string ModuleNode::toString() const { return std::format("Module: {} statements", statements().size()); }
 
 void ModuleNode::normalizeTopLevelStatements() {
-  spdlog::info("Printing all statements in the AST:\n");
+  spdlog::debug("Printing all statements in the AST:\n");
   for (auto stmt : statements()) {
-    spdlog::info("{}\n", stmt->toString());
+    spdlog::debug("{}", stmt->toString());
   }
   auto modified = wrapTopLevelStatementsInMain();
   if (modified) {
-    spdlog::info("AST normalization modified the graph. Final AST:\n");
+    spdlog::debug("AST normalization modified the graph. Final AST:\n");
     for (auto stmt : statements()) {
-      spdlog::info("{}\n", stmt->toString());
+      spdlog::debug("{}", stmt->toString());
     }
   }
 }

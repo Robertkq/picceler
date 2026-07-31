@@ -15,27 +15,19 @@ namespace picceler {
 class Parser {
 public:
   /**
-   * @brief Constructs a Parser.
+   * @brief Constructs a Parser without tokens.
    */
   Parser();
 
   /**
-   * @brief Sets the source string for the parser.
-   * @param source The source string to read from.
+   * @brief Constructs a Parser with a given vector of tokens.
    */
-  void setSourceString(std::string_view source);
+  explicit Parser(std::vector<Token> tokens);
 
-  /**
-   * @brief Sets the source file for the parser.
-   * @param source The source file to read from.
-   */
-  Result<void> setSource(const std::string &filepath);
-
-  /**
-   * @brief Retrieves all tokens from the lexer.
-   * @return A vector of all tokens.
-   */
-  Result<std::vector<Token>> getTokens();
+  void setTokens(std::vector<Token> tokens) {
+    _tokens = std::move(tokens);
+    _index = 0;
+  }
 
   /**
    * @brief Parses the tokens into an AST.
@@ -52,13 +44,25 @@ public:
   void printAST(const std::unique_ptr<ModuleNode> &node, int indent = 0);
 
 private:
+  const Token &peek() const;
+  const Token &peekAhead(std::size_t offset) const;
+  bool check(Token::Type type) const;
+
+  const Token &advance();
+
+  bool match(Token::Type type);
+
+  Result<Token> consume(Token::Type type, std::string_view errorMessage);
+
+  bool isAtEnd() const;
+
   /**
-   * \name Parse helper functions
+   * \name Parse explicit functions for each type of statement or expression.
    * \{
    */
   Result<std::unique_ptr<ASTNode>> parseStatement();
   Result<std::unique_ptr<ASTNode>> parseExpression();
-  Result<std::unique_ptr<ASTNode>> parseFunctionDefinition(const Token &defToken);
+  Result<std::unique_ptr<ASTNode>> parseFunctionDefinition();
   Result<std::unique_ptr<ASTNode>> parseAssignment(const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseCall(const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseVariable(const Token &identifier = Token{Token::Type::UNKNOWN, "", {}});
@@ -70,7 +74,9 @@ private:
    */
 
 private:
-  Lexer _lexer;
+  // Lexer _lexer;
+  std::vector<Token> _tokens;
+  std::size_t _index;
 };
 
 } // namespace picceler
