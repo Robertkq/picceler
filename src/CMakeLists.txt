@@ -41,6 +41,7 @@ add_library(PiccelerOps STATIC
     ops/blend.cpp
     ops/diff.cpp
     ops/print.cpp
+    ops/brightness.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC

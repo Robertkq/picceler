@@ -9,6 +9,7 @@
 #define PICCELER_OPS_TD
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "interfaces.td"
 include "types.td"
 
@@ -54,10 +55,13 @@ def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
   let hasVerifier = 1;
 }
 
-def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", []> {
+def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
   let summary = "Adjust the brightness of an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$value);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_InvertOp : Op<PiccelerDialect, "invert", []> {
