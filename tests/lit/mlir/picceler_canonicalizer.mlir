@@ -133,3 +133,57 @@ func.func @EdgeDetectBypassMultipleUseInvert(%arg0 : !picceler.image) -> !piccel
 // CHECK-DAG: %[[EDGE:.*]] = "picceler.edge_detect"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
 // CHECK: %[[BLEND:.*]] = "picceler.blend"(%[[INVERT]], %[[EDGE]], %[[ALPHA]]) : (!picceler.image, !picceler.image, f64) -> !picceler.image
 // CHECK-NEXT: return %[[BLEND]] : !picceler.image
+
+// -----
+
+func.func @RotateFoldOnZero(%arg0 : !picceler.image) -> !picceler.image {
+    %value = "arith.constant"() {value = 0 : i64} : () -> i64
+    %0 = "picceler.rotate" (%arg0, %value) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @RotateFoldOnZero
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT]] : !picceler.image
+
+// -----
+
+func.func @ChainedRotatesFolding(%arg0 : !picceler.image) -> !picceler.image {
+    %value1 = "arith.constant"() {value = 90 : i64} : () -> i64
+    %0 = "picceler.rotate" (%arg0, %value1) : (!picceler.image, i64) -> !picceler.image
+    %value2 = "arith.constant"() {value = 180 : i64} : () -> i64
+    %1 = "picceler.rotate" (%0, %value2) : (!picceler.image, i64) -> !picceler.image
+    return %1 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @ChainedRotatesFolding
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-DAG: %[[NEW_VALUE:.*]] = arith.constant 270 : i64
+// CHECK: %[[NEW_ROTATE:.*]] = "picceler.rotate"(%[[INPUT]], %[[NEW_VALUE]]) : (!picceler.image, i64) -> !picceler.image
+// CHECK-NEXT: return %[[NEW_ROTATE]] : !picceler.image
+
+// -----
+
+func.func @FoldIdentityConvolution(%arg0 : !picceler.image) -> !picceler.image {
+    %kernel = "picceler.kernel.const"() <{values = dense<[[0.000000e+00, 0.000000e+00, 0.000000e+00],
+     [0.000000e+00, 1.000000e+00, 0.000000e+00], [0.000000e+00, 0.000000e+00, 0.000000e+00]]> : tensor<3x3xf64>}> : () -> !picceler.kernel<3 x 3>
+    %0 = "picceler.convolution" (%arg0, %kernel) : (!picceler.image, !picceler.kernel<3 x 3>) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldIdentityConvolution
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK: return %[[INPUT]] : !picceler.image
+
+// -----
+
+ func.func @FoldUnusedKernel(%arg0 : i64) -> i64 {
+    %0 = "picceler.kernel.const"() <{values = dense<1.000000e+00> : tensor<1x1xf64>}> : () -> !picceler.kernel<1 x 1>
+    return %arg0 : i64
+ }
+
+ // CHECK-LABEL: func.func @FoldUnusedKernel
+ // CHECK-SAME: (%[[ARG0:.*]]: i64) -> i64
+ // CHECK-NEXT: return %[[ARG0]] : i64
+
+

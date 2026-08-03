@@ -19,7 +19,7 @@ def Picceler_StringConstOp : Op<PiccelerDialect, "string.const"> {
   let results = (outs Picceler_StringType:$result);
 }
 
-def Picceler_KernelConstOp : Op<PiccelerDialect, "kernel.const"> {
+def Picceler_KernelConstOp : Op<PiccelerDialect, "kernel.const", [Pure]> {
   let summary = "Kernel constant producing a picceler.kernel";
   let arguments = (ins F64ElementsAttr:$values);
   let results = (outs Picceler_KernelType:$result);
@@ -141,6 +141,10 @@ def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure,Neighbourh
   let summary = "Apply convolution to an image with a kernel";
   let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterface,

@@ -48,6 +48,7 @@ add_library(PiccelerOps STATIC
     ops/gaussian_blur.cpp
     ops/edge_detect.cpp
     ops/emboss.cpp
+    ops/rotate.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC

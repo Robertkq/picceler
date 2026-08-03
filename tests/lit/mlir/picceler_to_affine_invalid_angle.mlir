@@ -6,4 +6,4 @@ func.func @RotateImageInvalidAngle(%arg0 : !picceler.image) -> !picceler.image {
     return %0 : !picceler.image
 }
 
-// CHECK: error: 'picceler.rotate' op angle must be a multiple of 90 degrees
+// CHECK: error: 'picceler.rotate' op angle must be a multiple of 90, got 45
