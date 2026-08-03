@@ -7,6 +7,18 @@
 
 namespace picceler {
 
+mlir::LogicalResult BrightnessOp::verify() {
+  llvm::APInt intVal;
+  if (mlir::matchPattern(getValue(), mlir::m_ConstantInt(&intVal))) {
+    int64_t val = intVal.getSExtValue();
+    if (val < -255 || val > 255) {
+      return emitOpError("brightness value must be in range [-255, 255], but got ") << val;
+    }
+  }
+
+  return mlir::success();
+}
+
 struct ChainedBrightnessPattern : public mlir::OpRewritePattern<BrightnessOp> {
   using OpRewritePattern<BrightnessOp>::OpRewritePattern;
 
@@ -46,7 +58,7 @@ void BrightnessOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results,
 
 mlir::OpFoldResult BrightnessOp::fold(FoldAdaptor adaptor) {
   auto valueAttr = adaptor.getValue();
-  auto valueIntAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
+  auto valueIntAttr = mlir::dyn_cast_or_null<mlir::IntegerAttr>(valueAttr);
   if (!valueIntAttr) {
     return mlir::OpFoldResult();
   }

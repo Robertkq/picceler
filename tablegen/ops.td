@@ -60,59 +60,73 @@ def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
   let arguments = (ins Picceler_ImageType:$input, I64:$value);
   let results = (outs Picceler_ImageType:$result);
 
+  let hasVerifier = 1;
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
 
-def Picceler_InvertOp : Op<PiccelerDialect, "invert", []> {
+def Picceler_InvertOp : Op<PiccelerDialect, "invert", [Pure]> {
   let summary = "Invert the pixels of an image";
   let arguments = (ins Picceler_ImageType:$input);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
-def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", []> {
+def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", [Pure]> {
   let summary = "Adjust the sharpness of an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$value);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
-def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", []> {
+def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", [Pure]> {
   let summary = "Apply a simple box blur";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", []> {
+def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", [Pure]> {
   let summary = "Apply a gaussian blur (smoother)";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", []> {
+def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", [Pure]> {
   let summary = "Detect edges in the image";
   let arguments = (ins Picceler_ImageType:$input);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", []> {
+def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", [Pure]> {
   let summary = "Apply a 3D emboss effect";
   let arguments = (ins Picceler_ImageType:$input);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_RotateOp : Op<PiccelerDialect, "rotate", []> {
+def Picceler_RotateOp : Op<PiccelerDialect, "rotate", [Pure]> {
   let summary = "Rotate an image around its center";
   let arguments = (ins Picceler_ImageType:$input, I64:$angle);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure,NeighbourhoodOpInterface,
+ DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+ ]> {
   let summary = "Apply convolution to an image with a kernel";
   let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
   let results = (outs Picceler_ImageType:$result);
 }
 
-def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterface,
+ DeclareOpInterfaceMethods<NeighbourhoodOpInterface,
+  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+  ]> {
   let summary = "Apply erosion to an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
@@ -120,7 +134,10 @@ def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [NeighbourhoodOpInterface, D
   let hasVerifier = 1;
 }
 
-def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [NeighbourhoodOpInterface, DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>]> {
+def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInterface,
+ DeclareOpInterfaceMethods<NeighbourhoodOpInterface,
+  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+  ]> {
   let summary = "Apply dilation to an image";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
