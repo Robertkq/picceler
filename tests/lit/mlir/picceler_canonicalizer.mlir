@@ -78,3 +78,58 @@ func.func @SharpenFoldOnZero(%arg0 : !picceler.image) -> !picceler.image {
     return %0 : !picceler.image
 }
 
+// CHECK-LABEL: func.func @SharpenFoldOnZero(%arg0: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %arg0 : !picceler.image
+
+// -----
+
+func.func @BoxBlurFoldOnZero(%arg0 : !picceler.image) -> !picceler.image {
+    %value = "arith.constant"() {value = 0 : i64} : () -> i64
+    %0 = "picceler.box_blur" (%arg0, %value) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @BoxBlurFoldOnZero(%arg0: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %arg0 : !picceler.image
+
+// -----
+
+func.func @GaussianBlurFoldOnZero(%arg0 : !picceler.image) -> !picceler.image {
+    %value = "arith.constant"() {value = 0 : i64} : () -> i64
+    %0 = "picceler.gaussian_blur" (%arg0, %value) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @GaussianBlurFoldOnZero(%arg0: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %arg0 : !picceler.image
+
+// -----
+
+func.func @EdgeDetectBypassSingleUseInvert(%arg0 : !picceler.image) -> !picceler.image {
+    %0 = "picceler.invert" (%arg0) : (!picceler.image) -> !picceler.image
+    %1 = "picceler.edge_detect" (%0) : (!picceler.image) -> !picceler.image
+    return %1 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @EdgeDetectBypassSingleUseInvert
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: %[[EDGE:.*]] = "picceler.edge_detect"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[EDGE]] : !picceler.image
+
+// -----
+
+func.func @EdgeDetectBypassMultipleUseInvert(%arg0 : !picceler.image) -> !picceler.image {
+    %alpha = arith.constant 0.5 : f64
+    %0 = "picceler.invert" (%arg0) : (!picceler.image) -> !picceler.image
+    %1 = "picceler.edge_detect" (%0) : (!picceler.image) -> !picceler.image
+    %2 = "picceler.blend" (%0, %1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+    return %2 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @EdgeDetectBypassMultipleUseInvert
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-DAG: %[[ALPHA:.*]] = arith.constant 5.000000e-01 : f64
+// CHECK-DAG: %[[INVERT:.*]] = "picceler.invert"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
+// CHECK-DAG: %[[EDGE:.*]] = "picceler.edge_detect"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
+// CHECK: %[[BLEND:.*]] = "picceler.blend"(%[[INVERT]], %[[EDGE]], %[[ALPHA]]) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+// CHECK-NEXT: return %[[BLEND]] : !picceler.image

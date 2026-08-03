@@ -44,6 +44,10 @@ add_library(PiccelerOps STATIC
     ops/brightness.cpp
     ops/invert.cpp
     ops/sharpen.cpp
+    ops/box_blur.cpp
+    ops/gaussian_blur.cpp
+    ops/edge_detect.cpp
+    ops/emboss.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC

@@ -89,30 +89,50 @@ def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", [Pure]> {
   let summary = "Apply a simple box blur";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", [Pure]> {
   let summary = "Apply a gaussian blur (smoother)";
   let arguments = (ins Picceler_ImageType:$input, I64:$radius);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", [Pure]> {
   let summary = "Detect edges in the image";
   let arguments = (ins Picceler_ImageType:$input);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", [Pure]> {
   let summary = "Apply a 3D emboss effect";
   let arguments = (ins Picceler_ImageType:$input);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_RotateOp : Op<PiccelerDialect, "rotate", [Pure]> {
   let summary = "Rotate an image around its center";
   let arguments = (ins Picceler_ImageType:$input, I64:$angle);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure,NeighbourhoodOpInterface,

@@ -1,11 +1,13 @@
 #include "ops.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include <mlir/IR/Matchers.h>
 #include <mlir/IR/PatternMatch.h>
 
 #include <spdlog/spdlog.h>
 
 namespace picceler {
+
+// TODO: Refactor SharpenOp to use strength as input instead of radius
+//  and make it a fixed 3x3 kernel.
 
 mlir::LogicalResult SharpenOp::verify() {
 
