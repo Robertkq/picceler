@@ -39,9 +39,16 @@ struct Token {
     COLON,      // Represents the colon ':'
     ARROW,      // Represents the arrow '->'
     ASSIGN,     // Represents the assignment operator '='
+    EQ,         // Represents the assignment operator '=='
+    NE,         // Represents the assignment operator '!='
+    LT,         // Represents the assignment operator '<'
+    GT,         // Represents the assignment operator '>'
+    LE,         // Represents the assignment operator '<='
+    GE,         // Represents the assignment operator '>='
     TYPE,       // Represents type annotations (e.g., int, float, string)
     KW_DEF,     // Represents the keyword 'def'
     KW_RETURN,  // Represents the keyword 'return'
+    KW_IF,      // Represents the keyword 'if'
     EOF_TOKEN,  // Represents the end of file
     UNKNOWN     // Represents unknown tokens
   };

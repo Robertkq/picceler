@@ -35,6 +35,20 @@ std::string Token::typeToString() const {
     return "ARROW";
   case Type::ASSIGN:
     return "ASSIGN";
+  case Type::KW_IF:
+    return "KW_IF";
+  case Type::EQ:
+    return "EQ";
+  case Type::NE:
+    return "NE";
+  case Type::LT:
+    return "LT";
+  case Type::GT:
+    return "GT";
+  case Type::LE:
+    return "LE";
+  case Type::GE:
+    return "GE";
   case Type::TYPE:
     return "TYPE";
   case Type::KW_DEF:
@@ -162,7 +176,7 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string symbols = "=():,[]{}->=";
+  static const std::string symbols = "=():,[]{}->=<>!";
   return symbols.find(ch) != std::string::npos;
 }
 
@@ -170,6 +184,7 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   static const std::unordered_map<std::string, Token::Type> keywords = {
       {"def", Token::Type::KW_DEF},
       {"return", Token::Type::KW_RETURN},
+      {"if", Token::Type::KW_IF},
   };
   auto it = keywords.find(value);
   if (it != keywords.end()) {
@@ -273,7 +288,29 @@ Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
     }
     return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   case '=':
+    if (!eof() && peek() == '=') {
+      get(); // consume second '='
+      return Token{Token::Type::EQ, "==", Location{start}};
+    }
     return Token{Token::Type::ASSIGN, "=", Location{start}};
+  case '!':
+    if (!eof() && peek() == '=') {
+      get(); // consume '='
+      return Token{Token::Type::NE, "!=", Location{start}};
+    }
+    return Token{Token::Type::UNKNOWN, "!", Location{start}};
+  case '<':
+    if (!eof() && peek() == '=') {
+      get(); // consume '='
+      return Token{Token::Type::LE, "<=", Location{start}};
+    }
+    return Token{Token::Type::LT, "<", Location{start}};
+  case '>':
+    if (!eof() && peek() == '=') {
+      get(); // consume '='
+      return Token{Token::Type::GE, ">=", Location{start}};
+    }
+    return Token{Token::Type::GT, ">", Location{start}};
   default:
     return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   }
