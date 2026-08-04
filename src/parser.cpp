@@ -80,6 +80,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return parseFunctionDefinition();
   }
 
+  if (match(Token::Type::KW_IF)) {
+    return parseIfStatement();
+  }
+
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identifier = advance();
     if (check(Token::Type::ASSIGN)) {
@@ -202,8 +206,107 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
   return callNode;
 }
 
+// ==========================================
+
+Result<std::unique_ptr<ASTNode>> Parser::parseIfStatement() {
+  spdlog::debug("Parsing if statement");
+  Location loc = peek().location();
+
+  if (auto lparen = consume(Token::Type::L_PAREN, "Expected '(' after 'if'"); !lparen)
+    return std::unexpected(lparen.error());
+
+  auto condResult = parseExpression();
+  if (!condResult)
+    return std::unexpected(condResult.error());
+
+  if (auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after if condition"); !rparen)
+    return std::unexpected(rparen.error());
+
+  if (auto lbrace = consume(Token::Type::L_BRACE, "Expected '{' to open if body"); !lbrace)
+    return std::unexpected(lbrace.error());
+
+  std::vector<std::unique_ptr<ASTNode>> body;
+  while (!check(Token::Type::R_BRACE) && !isAtEnd()) {
+    auto stmt = parseStatement();
+    if (!stmt)
+      return std::unexpected(stmt.error());
+    body.push_back(std::move(*stmt));
+  }
+
+  if (auto rbrace = consume(Token::Type::R_BRACE, "Expected '}' to close if body"); !rbrace)
+    return std::unexpected(rbrace.error());
+
+  return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body));
+}
+
 Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
-  spdlog::debug("Parsing expression");
+  spdlog::debug("Parsing expression (Relational level)");
+  return parseRelational();
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseRelational() {
+  auto lhs = parseAdditive();
+  if (!lhs)
+    return lhs;
+
+  while (check(Token::Type::EQ) || check(Token::Type::NE) || check(Token::Type::LT) || check(Token::Type::GT) ||
+         check(Token::Type::LE) || check(Token::Type::GE)) {
+    Token opTok = advance();
+    auto rhs = parseAdditive();
+    if (!rhs)
+      return rhs;
+
+    Location loc = (*lhs)->location();
+    lhs = std::make_unique<BinaryOpNode>(loc, opTok.value(), std::move(*lhs), std::move(*rhs));
+  }
+  return lhs;
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
+  auto lhs = parseMultiplicative();
+  if (!lhs)
+    return lhs;
+
+  while (check(Token::Type::UNKNOWN) && (peek().value() == "+" || peek().value() == "-")) {
+    Token opTok = advance();
+    auto rhs = parseMultiplicative();
+    if (!rhs)
+      return rhs;
+
+    Location loc = (*lhs)->location();
+    lhs = std::make_unique<BinaryOpNode>(loc, opTok.value(), std::move(*lhs), std::move(*rhs));
+  }
+  return lhs;
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseMultiplicative() {
+  auto lhs = parsePrimary();
+  if (!lhs)
+    return lhs;
+
+  while (check(Token::Type::UNKNOWN) && (peek().value() == "*" || peek().value() == "/")) {
+    Token opTok = advance();
+    auto rhs = parsePrimary();
+    if (!rhs)
+      return rhs;
+
+    Location loc = (*lhs)->location();
+    lhs = std::make_unique<BinaryOpNode>(loc, opTok.value(), std::move(*lhs), std::move(*rhs));
+  }
+  return lhs;
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
+  spdlog::debug("Parsing primary expression");
+
+  if (match(Token::Type::L_PAREN)) {
+    auto expr = parseExpression();
+    if (!expr)
+      return expr;
+    if (auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after expression"); !rparen)
+      return std::unexpected(rparen.error());
+    return expr;
+  }
 
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identTok = advance();
