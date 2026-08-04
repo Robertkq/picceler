@@ -36,6 +36,18 @@ mlir::LogicalResult DilateOp::verify() {
   return mlir::success();
 }
 
+void DilateOp::getCanonicalizationPatterns(mlir::RewritePatternSet &results, mlir::MLIRContext *context) {}
+
+mlir::OpFoldResult DilateOp::fold(FoldAdaptor adaptor) {
+  if (auto radiusAttr = mlir::dyn_cast_or_null<mlir::IntegerAttr>(adaptor.getRadius())) {
+    auto radiusValue = radiusAttr.getInt();
+    if (radiusValue == 0) {
+      return getInput();
+    }
+  }
+  return {};
+}
+
 mlir::Value DilateOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {
   return createFloatConstant(builder, loc, -std::numeric_limits<double>::infinity());
 }

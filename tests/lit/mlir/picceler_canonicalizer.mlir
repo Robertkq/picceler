@@ -186,4 +186,88 @@ func.func @FoldIdentityConvolution(%arg0 : !picceler.image) -> !picceler.image {
  // CHECK-SAME: (%[[ARG0:.*]]: i64) -> i64
  // CHECK-NEXT: return %[[ARG0]] : i64
 
+// -----
+
+func.func @FoldDilateOnZero(%arg0 : !picceler.image) -> !picceler.image {
+    %value = "arith.constant"() {value = 0 : i64} : () -> i64
+    %0 = "picceler.dilate" (%arg0, %value) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldDilateOnZero
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT]] : !picceler.image
+
+// -----
+
+func.func @FoldErodeOnZero(%arg0 : !picceler.image) -> !picceler.image {
+    %value = "arith.constant"() {value = 0 : i64} : () -> i64
+    %0 = "picceler.erode" (%arg0, %value) : (!picceler.image, i64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldErodeOnZero
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT]] : !picceler.image
+
+// -----
+
+func.func @FoldBlendWithSameInput(%arg0 : !picceler.image) -> !picceler.image {
+    %alpha = arith.constant 0.5 : f64
+    %0 = "picceler.blend" (%arg0, %arg0, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldBlendWithSameInput
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT]] : !picceler.image
+
+// -----
+
+func.func @FoldBlendWithAlphaZero(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
+    %alpha = arith.constant 0.0 : f64
+    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldBlendWithAlphaZero
+// CHECK-SAME: (%[[INPUT1:.*]]: !picceler.image, %[[INPUT2:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT1]] : !picceler.image
+
+// -----
+
+func.func @FoldBlendWithAlphaOne(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
+    %alpha = arith.constant 1.0 : f64
+    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
+    return %0 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @FoldBlendWithAlphaOne
+// CHECK-SAME: (%[[INPUT1:.*]]: !picceler.image, %[[INPUT2:.*]]: !picceler.image) -> !picceler.image
+// CHECK-NEXT: return %[[INPUT2]] : !picceler.image
+
+// -----
+
+func.func @CombineCropWhenAllConstants(%arg0 : !picceler.image) -> !picceler.image {
+    %x1 = arith.constant 10 : i64
+    %y1 = arith.constant 20 : i64
+    %w1 = arith.constant 100 : i64
+    %h1 = arith.constant 200 : i64
+    %0 = "picceler.crop" (%arg0, %x1, %y1, %w1, %h1) : (!picceler.image, i64, i64, i64, i64) -> !picceler.image
+    %x2 = arith.constant 5 : i64
+    %y2 = arith.constant 10 : i64
+    %w2 = arith.constant 50 : i64
+    %h2 = arith.constant 100 : i64
+    %1 = "picceler.crop" (%0, %x2, %y2, %w2, %h2) : (!picceler.image, i64, i64, i64, i64) -> !picceler.image
+    return %1 : !picceler.image
+}
+
+// CHECK-LABEL: func.func @CombineCropWhenAllConstants
+// CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
+// CHECK-DAG: %[[FUSED_X:.*]] = arith.constant 15 : i64
+// CHECK-DAG: %[[FUSED_Y:.*]] = arith.constant 30 : i64
+// CHECK-DAG: %[[FUSED_W:.*]] = arith.constant 50 : i64
+// CHECK-DAG: %[[FUSED_H:.*]] = arith.constant 100 : i64
+// CHECK-NEXT: %[[FUSED_CROP:.*]] = "picceler.crop"(%[[INPUT]], %[[FUSED_X]], %[[FUSED_Y]], %[[FUSED_W]], %[[FUSED_H]]) : (!picceler.image, i64, i64, i64, i64) -> !picceler.image
+// CHECK-NEXT: return %[[FUSED_CROP]] : !picceler.image
 

@@ -135,7 +135,7 @@ def Picceler_RotateOp : Op<PiccelerDialect, "rotate", [Pure]> {
   let hasCanonicalizer = 1;
 }
 
-def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure,NeighbourhoodOpInterface,
+def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure, NeighbourhoodOpInterface,
  DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
  ]> {
   let summary = "Apply convolution to an image with a kernel";
@@ -156,6 +156,8 @@ def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterf
   let results = (outs Picceler_ImageType:$result);
 
   let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInterface,
@@ -167,26 +169,40 @@ def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInte
   let results = (outs Picceler_ImageType:$result);
 
   let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
-def Picceler_DiffOp : Op<PiccelerDialect, "diff", [ElementWiseBinaryOpInterface, DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
+def Picceler_DiffOp : Op<PiccelerDialect, "diff", [Pure, ElementWiseBinaryOpInterface,
+ DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
   let summary = "Compute the pixel-wise difference between two images";
   let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
-def Picceler_BlendOp : Op<PiccelerDialect, "blend", [ElementWiseBinaryOpInterface, DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
+def Picceler_BlendOp : Op<PiccelerDialect, "blend", [Pure,ElementWiseBinaryOpInterface,
+ DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
   let summary = "Blend two images together";
   let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2, F64:$weight);
   let results = (outs Picceler_ImageType:$result);
 
   let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
-def Picceler_CropOp : Op<PiccelerDialect, "crop", []> {
+def Picceler_CropOp : Op<PiccelerDialect, "crop", [Pure]> {
   let summary = "Crop an image to a rectangular region";
   let arguments = (ins Picceler_ImageType:$input, I64:$x, I64:$y, I64:$width, I64:$height);
   let results = (outs Picceler_ImageType:$result);
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 def Picceler_ReadStringOp : Op<PiccelerDialect, "read_string", []> {

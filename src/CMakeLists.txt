@@ -49,6 +49,7 @@ add_library(PiccelerOps STATIC
     ops/edge_detect.cpp
     ops/emboss.cpp
     ops/rotate.cpp
+    ops/crop.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC
