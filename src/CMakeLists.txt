@@ -41,6 +41,15 @@ add_library(PiccelerOps STATIC
     ops/blend.cpp
     ops/diff.cpp
     ops/print.cpp
+    ops/brightness.cpp
+    ops/invert.cpp
+    ops/sharpen.cpp
+    ops/box_blur.cpp
+    ops/gaussian_blur.cpp
+    ops/edge_detect.cpp
+    ops/emboss.cpp
+    ops/rotate.cpp
+    ops/crop.cpp
 )
 
 target_link_libraries(PiccelerOps PUBLIC

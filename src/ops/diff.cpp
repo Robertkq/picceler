@@ -2,8 +2,41 @@
 #include "channels.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/PatternMatch.h"
 
 namespace picceler {
+
+/**
+ * @brief Verifies the DiffOp to ensure that the input images have the same type and that the result image type matches
+ * the input image types.
+ *
+ * @return mlir::success() if the verification passes, otherwise emits an error and returns mlir::failure().
+ */
+mlir::LogicalResult DiffOp::verify() {
+  auto input1 = getInput1();
+  auto input2 = getInput2();
+
+  if (input1.getType() != input2.getType()) {
+    return emitOpError("Input images must have the same type, got ") << input1.getType() << " and " << input2.getType();
+  }
+
+  if (input1.getType() != getResult().getType()) {
+    return emitOpError("Result image type must match input image types, got ")
+           << getResult().getType() << " and " << input1.getType();
+  }
+
+  return mlir::success();
+}
+
+/**
+ * @brief Registers canonicalization patterns for the DiffOp
+ *
+ * @param results The set of rewrite patterns to which the canonicalization patterns will be added.
+ * @param context The MLIR context in which the patterns are registered.
+ */
+void DiffOp::getCanonicalizationPatterns(mlir::RewritePatternSet &, mlir::MLIRContext *) {}
+
+mlir::OpFoldResult DiffOp::fold(FoldAdaptor) { return {}; }
 
 mlir::Value DiffOp::transformPixels(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value lhsPixel,
                                     mlir::Value rhsPixel, Channel ch) {

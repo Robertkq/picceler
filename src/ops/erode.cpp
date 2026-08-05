@@ -7,6 +7,9 @@
 
 namespace picceler {
 
+/**
+ * @brief Verifies the ErodeOp to ensure that the radius is a non-negative integer if it's a constant.
+ */
 mlir::LogicalResult ErodeOp::verify() {
 
   auto radius = getRadius();
@@ -33,6 +36,30 @@ mlir::LogicalResult ErodeOp::verify() {
   }
 
   return mlir::success();
+}
+
+/**
+ * @brief Registers canonicalization patterns for the ErodeOp.
+ * No canonicalization patterns
+ */
+void ErodeOp::getCanonicalizationPatterns(mlir::RewritePatternSet &, mlir::MLIRContext *) {}
+
+/**
+ * @brief Folds the ErodeOp if the radius is a constant integer equal to 0.
+ * In this case, the ErodeOp can be replaced with its input image, as eroding with a radius of 0 has no effect.
+ *
+ * @param adaptor The FoldAdaptor providing access to the operands and attributes of the ErodeOp.
+ * @return mlir::OpFoldResult The folded result, which is the input image if the radius is 0, or an empty result if no
+ * folding is possible.
+ */
+mlir::OpFoldResult ErodeOp::fold(FoldAdaptor adaptor) {
+  if (auto radiusAttr = mlir::dyn_cast_or_null<mlir::IntegerAttr>(adaptor.getRadius())) {
+    auto radiusValue = radiusAttr.getInt();
+    if (radiusValue == 0) {
+      return getInput();
+    }
+  }
+  return {};
 }
 
 mlir::Value ErodeOp::initializeAccumulator(mlir::OpBuilder &builder, mlir::Location loc) {

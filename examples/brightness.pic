@@ -1,4 +1,38 @@
-img = load_image("~/Pictures/cat.png")
-show_image(img)
-brighter_img = brightness(img, 100)
-show_image(brighter_img)
+def main()
+{
+    img = load_image("~/Pictures/cat.png")
+    show_image(img)
+
+    brightness_func_A(img)
+    brightness_func_B(img)
+    brightness_func_C(img)
+    brightness_func_D(img)
+}
+
+def brightness_func_A(img : image)
+{
+    a = brightness(img, 10)
+    b = brightness(a, 20)
+    
+    show_image(b)
+}
+
+def brightness_func_B(img : image)
+{
+    a = brightness(img, 10)
+    b = brightness(a, -10)
+
+    show_image(b)
+}
+
+def brightness_func_C(img : image)
+{
+    a = brightness(img, 0)
+
+    show_image(a)
+}
+
+def brightness_func_D(img : image)
+{
+    a = brightness(img, 10)
+}
