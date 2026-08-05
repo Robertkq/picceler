@@ -1,6 +1,7 @@
 #include "mlir_gen.h"
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 #include "llvm/ADT/APFloat.h"
@@ -15,6 +16,44 @@
 #include "types.h"
 
 namespace picceler {
+
+enum class BinaryOperatorType : uint8_t {
+  Add,
+  Sub,
+  Mul,
+  Div,
+  Equal,
+  NotEqual,
+  LessThan,
+  LessEqual,
+  GreaterThan,
+  GreaterEqual
+};
+
+inline BinaryOperatorType getBinaryOpType(const std::string &opStr) {
+  if (opStr == "+")
+    return BinaryOperatorType::Add;
+  if (opStr == "-")
+    return BinaryOperatorType::Sub;
+  if (opStr == "*")
+    return BinaryOperatorType::Mul;
+  if (opStr == "/")
+    return BinaryOperatorType::Div;
+  if (opStr == "==")
+    return BinaryOperatorType::Equal;
+  if (opStr == "!=")
+    return BinaryOperatorType::NotEqual;
+  if (opStr == "<")
+    return BinaryOperatorType::LessThan;
+  if (opStr == "<=")
+    return BinaryOperatorType::LessEqual;
+  if (opStr == ">")
+    return BinaryOperatorType::GreaterThan;
+  if (opStr == ">=")
+    return BinaryOperatorType::GreaterEqual;
+
+  throw std::runtime_error("Unsupported binary operator: " + opStr);
+}
 
 /**
  * @brief Coerces a given MLIR value to a 64-bit integer if possible, with special handling for constants.
@@ -500,36 +539,33 @@ mlir::Value MLIRGen::emitBinaryOp(BinaryOpNode *node) {
   mlir::Value lhs = emitExpression(node->lhs());
   mlir::Value rhs = emitExpression(node->rhs());
 
-  const std::string &op = node->op();
   auto loc = _builder.getUnknownLoc();
+  BinaryOperatorType opType = getBinaryOpType(node->op());
 
-  // aici un switch and op should be an enum
-  // Arithmetic operations
-  if (op == "+") {
+  switch (opType) {
+  case BinaryOperatorType::Add:
     return _builder.create<mlir::arith::AddFOp>(loc, lhs, rhs);
-  } else if (op == "-") {
+  case BinaryOperatorType::Sub:
     return _builder.create<mlir::arith::SubFOp>(loc, lhs, rhs);
-  } else if (op == "*") {
+  case BinaryOperatorType::Mul:
     return _builder.create<mlir::arith::MulFOp>(loc, lhs, rhs);
-  } else if (op == "/") {
+  case BinaryOperatorType::Div:
     return _builder.create<mlir::arith::DivFOp>(loc, lhs, rhs);
-  }
-  // Relational operations (producing i1 truth values)
-  else if (op == "==") {
+  case BinaryOperatorType::Equal:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OEQ, lhs, rhs);
-  } else if (op == "!=") {
+  case BinaryOperatorType::NotEqual:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::ONE, lhs, rhs);
-  } else if (op == "<") {
+  case BinaryOperatorType::LessThan:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLT, lhs, rhs);
-  } else if (op == "<=") {
+  case BinaryOperatorType::LessEqual:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLE, lhs, rhs);
-  } else if (op == ">") {
+  case BinaryOperatorType::GreaterThan:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGT, lhs, rhs);
-  } else if (op == ">=") {
+  case BinaryOperatorType::GreaterEqual:
     return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGE, lhs, rhs);
   }
 
-  throw std::runtime_error("Unsupported binary operator: " + op);
+  throw std::runtime_error("Unhandled binary operator type");
 }
 
 } // namespace picceler

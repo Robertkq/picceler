@@ -151,6 +151,65 @@ TEST_F(LexerTest, UnknownCharacterProducesUnknownToken) {
   EXPECT_EQ(tokens[3].type(), picceler::Token::Type::EOF_TOKEN);
 }
 
+TEST_F(LexerTest, UnaryMinusVsBinaryMinus) {
+  auto tokens = tokenize("x = -5 - y");
+
+  // Expected: x, =, -5, -, y, EOF
+  ASSERT_EQ(tokens.size(), 6);
+
+  EXPECT_EQ(tokens[0].value(), "x");
+  EXPECT_EQ(tokens[1].type(), picceler::Token::Type::ASSIGN);
+
+  // Unary minus with digit gets read as part of NUMBER token by readNumber()
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::NUMBER);
+  EXPECT_EQ(tokens[2].value(), "-5");
+
+  // Binary minus gets read as MINUS token
+  EXPECT_EQ(tokens[3].type(), picceler::Token::Type::MINUS);
+  EXPECT_EQ(tokens[3].value(), "-");
+
+  EXPECT_EQ(tokens[4].value(), "y");
+  EXPECT_EQ(tokens[5].type(), picceler::Token::Type::EOF_TOKEN);
+}
+
+TEST_F(LexerTest, OperatorsWithoutWhitespace) {
+  auto tokens = tokenize("a+b*c/d-e");
+
+  std::vector<picceler::Token::Type> expectedTypes = {picceler::Token::Type::IDENTIFIER, // a
+                                                      picceler::Token::Type::PLUS,       // +
+                                                      picceler::Token::Type::IDENTIFIER, // b
+                                                      picceler::Token::Type::MULTIPLY,   // *
+                                                      picceler::Token::Type::IDENTIFIER, // c
+                                                      picceler::Token::Type::DIVIDE,     // /
+                                                      picceler::Token::Type::IDENTIFIER, // d
+                                                      picceler::Token::Type::MINUS,      // -
+                                                      picceler::Token::Type::IDENTIFIER, // e
+                                                      picceler::Token::Type::EOF_TOKEN};
+
+  ASSERT_EQ(tokens.size(), expectedTypes.size());
+  for (size_t i = 0; i < expectedTypes.size(); ++i) {
+    EXPECT_EQ(tokens[i].type(), expectedTypes[i]) << "Mismatch at index " << i;
+  }
+}
+
+TEST_F(LexerTest, ArrowVsMinusToken) {
+  auto tokens = tokenize("def foo() -> int64 { return a - b }");
+
+  // Check that '->' is ARROW and '-' is MINUS
+  bool foundArrow = false;
+  bool foundMinus = false;
+
+  for (const auto &tok : tokens) {
+    if (tok.type() == picceler::Token::Type::ARROW)
+      foundArrow = true;
+    if (tok.type() == picceler::Token::Type::MINUS)
+      foundMinus = true;
+  }
+
+  EXPECT_TRUE(foundArrow);
+  EXPECT_TRUE(foundMinus);
+}
+
 // -----------------------------------------------------------------------------
 // Comment Handling
 // -----------------------------------------------------------------------------

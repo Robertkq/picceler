@@ -120,4 +120,18 @@ std::string KernelNode::toString() const {
   return repr;
 }
 
+std::string BinaryOpNode::toString() const {
+  return std::format("BinaryOpNode:[op: '{}', lhs: {}, rhs: {}]", _op, lhs()->toString(), rhs()->toString());
+}
+
+std::string IfNode::toString() const {
+  std::string statements;
+  if (!body().empty()) {
+    for (const auto &statement : body()) {
+      statements += "\t" + statement->toString() + "\n";
+    }
+  }
+  return std::format("IfNode:[condition: {}] {{\n{}}}", condition()->toString(), statements);
+}
+
 } // namespace picceler

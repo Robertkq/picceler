@@ -196,7 +196,7 @@ public:
   ASTNode *lhs() const { return _lhs.get(); }
   ASTNode *rhs() const { return _rhs.get(); }
 
-  std::string toString() const override { return std::format("BinaryOpNode(op: '{}')", _op); }
+  std::string toString() const override;
 
 private:
   std::string _op;
@@ -215,7 +215,7 @@ public:
   ASTNode *condition() const { return _condition.get(); }
   auto body() const { return getRawPointers(_body); }
 
-  std::string toString() const override { return "IfNode()"; }
+  std::string toString() const override;
 
 private:
   std::unique_ptr<ASTNode> _condition;

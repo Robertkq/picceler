@@ -206,23 +206,24 @@ Result<std::unique_ptr<ASTNode>> Parser::parseCall(const Token &identifier) {
   return callNode;
 }
 
-// ==========================================
-
 Result<std::unique_ptr<ASTNode>> Parser::parseIfStatement() {
   spdlog::debug("Parsing if statement");
   Location loc = peek().location();
 
-  if (auto lparen = consume(Token::Type::L_PAREN, "Expected '(' after 'if'"); !lparen)
+  auto lparen = consume(Token::Type::L_PAREN, "Expected '(' after 'if'");
+  if (!lparen)
     return std::unexpected(lparen.error());
 
   auto condResult = parseExpression();
   if (!condResult)
     return std::unexpected(condResult.error());
 
-  if (auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after if condition"); !rparen)
+  auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after if condition");
+  if (!rparen)
     return std::unexpected(rparen.error());
 
-  if (auto lbrace = consume(Token::Type::L_BRACE, "Expected '{' to open if body"); !lbrace)
+  auto lbrace = consume(Token::Type::L_BRACE, "Expected '{' to open if body");
+  if (!lbrace)
     return std::unexpected(lbrace.error());
 
   std::vector<std::unique_ptr<ASTNode>> body;
@@ -233,14 +234,15 @@ Result<std::unique_ptr<ASTNode>> Parser::parseIfStatement() {
     body.push_back(std::move(*stmt));
   }
 
-  if (auto rbrace = consume(Token::Type::R_BRACE, "Expected '}' to close if body"); !rbrace)
+  auto rbrace = consume(Token::Type::R_BRACE, "Expected '}' to close if body");
+  if (!rbrace)
     return std::unexpected(rbrace.error());
 
   return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body));
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
-  spdlog::debug("Parsing expression (Relational level)");
+  spdlog::debug("Parsing expression entry point");
   return parseRelational();
 }
 
@@ -267,7 +269,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
   if (!lhs)
     return lhs;
 
-  while (check(Token::Type::UNKNOWN) && (peek().value() == "+" || peek().value() == "-")) {
+  while (check(Token::Type::PLUS) || check(Token::Type::MINUS)) {
     Token opTok = advance();
     auto rhs = parseMultiplicative();
     if (!rhs)
@@ -284,7 +286,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseMultiplicative() {
   if (!lhs)
     return lhs;
 
-  while (check(Token::Type::UNKNOWN) && (peek().value() == "*" || peek().value() == "/")) {
+  while (check(Token::Type::MULTIPLY) || check(Token::Type::DIVIDE)) {
     Token opTok = advance();
     auto rhs = parsePrimary();
     if (!rhs)
@@ -299,15 +301,20 @@ Result<std::unique_ptr<ASTNode>> Parser::parseMultiplicative() {
 Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
   spdlog::debug("Parsing primary expression");
 
+  // Parenthesized Expressions
   if (match(Token::Type::L_PAREN)) {
     auto expr = parseExpression();
     if (!expr)
       return expr;
-    if (auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after expression"); !rparen)
+
+    auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after expression");
+    if (!rparen)
       return std::unexpected(rparen.error());
+
     return expr;
   }
 
+  // Identifiers (Variables or Function Calls)
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identTok = advance();
     if (check(Token::Type::L_PAREN)) {
@@ -316,6 +323,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
     return parseVariable(identTok);
   }
 
+  // Literals & Complex structures
   if (check(Token::Type::STRING))
     return parseString();
   if (check(Token::Type::NUMBER))
@@ -329,16 +337,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
 
 Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
   spdlog::debug("Parsing variable");
-
-  Token varTok = identifier;
-  if (identifier.type() != Token::Type::IDENTIFIER) {
-    auto consumed = consume(Token::Type::IDENTIFIER, "Expected identifier for variable");
-    if (!consumed)
-      return std::unexpected(consumed.error());
-    varTok = *consumed;
-  }
-
-  return std::make_unique<VariableNode>(varTok.location(), varTok.value(), std::nullopt);
+  return std::make_unique<VariableNode>(identifier.location(), identifier.value(), std::nullopt);
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
@@ -394,7 +393,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
 
 Result<std::unique_ptr<ASTNode>> Parser::parseString() {
   spdlog::debug("Parsing string");
-
   auto strTok = consume(Token::Type::STRING, "Expected string literal");
   if (!strTok)
     return std::unexpected(strTok.error());
@@ -404,7 +402,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseString() {
 
 Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
   spdlog::debug("Parsing number");
-
   auto numTok = consume(Token::Type::NUMBER, "Expected double literal");
   if (!numTok)
     return std::unexpected(numTok.error());

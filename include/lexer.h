@@ -28,6 +28,10 @@ struct Token {
   enum class Type : uint8_t {
     IDENTIFIER, // Represents identifiers (user defined names)
     NUMBER,     // Represents numeric literals (e.g., integers, floats)
+    PLUS,       // Represents binary operation '+'
+    MINUS,      // Represents binary operation '-'
+    MULTIPLY,   // Represents binary operation '*'
+    DIVIDE,     // Represents binary operation '/'
     STRING,     // Represents string literals
     L_PAREN,    // Represents the left parenthesis '('
     R_PAREN,    // Represents the right parenthesis ')'

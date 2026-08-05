@@ -13,6 +13,14 @@ std::string Token::typeToString() const {
     return "IDENTIFIER";
   case Type::NUMBER:
     return "NUMBER";
+  case Type::PLUS:
+    return "PLUS";
+  case Type::MINUS:
+    return "MINUS";
+  case Type::MULTIPLY:
+    return "MULTIPLY";
+  case Type::DIVIDE:
+    return "DIVIDE";
   case Type::STRING:
     return "STRING";
   case Type::L_PAREN:
@@ -104,6 +112,15 @@ Result<Token> Lexer::nextToken() {
     return readIdentifierOrKeywordOrType({_line, _column});
   }
   if (isdigit(ch) || ch == '-') {
+    // Look ahead: if '-' is followed by a digit, treat it as a number.
+    // Otherwise, let it fall through to be handled as a symbol/minus operator.
+    if (ch == '-') {
+      char nextCh = (_position + 1 < _buffer.size()) ? _buffer[_position + 1] : '\0';
+      if (!isdigit(nextCh)) {
+        // It's a binary minus operator, not a negative number!
+        return readSymbol({_line, _column});
+      }
+    }
     return readNumber({_line, _column});
   }
   if (ch == '"') {
@@ -176,7 +193,7 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string symbols = "=():,[]{}->=<>!";
+  static const std::string symbols = "=():,[]{}->=<>!+-*/";
   return symbols.find(ch) != std::string::npos;
 }
 
@@ -286,7 +303,13 @@ Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
       get(); // consume '>'
       return Token{Token::Type::ARROW, "->", Location{start}};
     }
-    return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
+    return Token{Token::Type::MINUS, "-", Location{start}};
+  case '+':
+    return Token{Token::Type::PLUS, "+", Location{start}};
+  case '*':
+    return Token{Token::Type::MULTIPLY, "*", Location{start}};
+  case '/':
+    return Token{Token::Type::DIVIDE, "/", Location{start}};
   case '=':
     if (!eof() && peek() == '=') {
       get(); // consume second '='
