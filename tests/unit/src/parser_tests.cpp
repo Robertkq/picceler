@@ -141,4 +141,66 @@ TEST_F(ParserTest, MultipleStatements) {
 
 TEST_F(ParserTest, UnclosedParenFails) { assertParseFails(R"(img = load_image("cat.jpg")"); }
 
+TEST_F(ParserTest, ArithmeticPrecedenceAndBinaryOps) {
+  // 2 + 3 * 4 should parse as 2 + (3 * 4) because multiplication has higher precedence
+  auto ast = parseSuccessfully("res = 2 + 3 * 4");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *assign = as<AssignmentNode>(ast->statements()[0]);
+  ASSERT_NE(assign, nullptr);
+
+  const auto *addNode = as<BinaryOpNode>(assign->rhs());
+  ASSERT_NE(addNode, nullptr);
+  EXPECT_EQ(addNode->op(), "+");
+
+  // LHS of addition should be 2
+  const auto *leftNum = as<NumberNode>(addNode->lhs());
+  ASSERT_NE(leftNum, nullptr);
+  EXPECT_EQ(leftNum->value(), 2);
+
+  // RHS of addition should be a multiplication node (3 * 4)
+  const auto *mulNode = as<BinaryOpNode>(addNode->rhs());
+  ASSERT_NE(mulNode, nullptr);
+  EXPECT_EQ(mulNode->op(), "*");
+
+  const auto *mulLeft = as<NumberNode>(mulNode->lhs());
+  EXPECT_EQ(mulLeft->value(), 3);
+
+  const auto *mulRight = as<NumberNode>(mulNode->rhs());
+  EXPECT_EQ(mulRight->value(), 4);
+}
+
+TEST_F(ParserTest, ParenthesesOverridePrecedence) {
+  // (2 + 3) * 4 forces addition to happen first
+  auto ast = parseSuccessfully("res = (2 + 3) * 4");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *assign = as<AssignmentNode>(ast->statements()[0]);
+  const auto *mulNode = as<BinaryOpNode>(assign->rhs());
+  ASSERT_NE(mulNode, nullptr);
+  EXPECT_EQ(mulNode->op(), "*");
+
+  // LHS of multiplication should be the addition node (2 + 3)
+  const auto *addNode = as<BinaryOpNode>(mulNode->lhs());
+  ASSERT_NE(addNode, nullptr);
+  EXPECT_EQ(addNode->op(), "+");
+}
+
+TEST_F(ParserTest, RelationalComparisonExpression) {
+  // Testing a complete user scenario: var * car <= 50
+  auto ast = parseSuccessfully(R"(
+    var = -1 + 2 * 3
+    car = 10
+    if (var * car <= 50) {
+      print("x is greater than 2 \n")
+    }
+  )");
+
+  ASSERT_NE(ast, nullptr);
+  // Expecting 3 top-level statements: assignment, assignment, if-statement
+  ASSERT_EQ(ast->statements().size(), 3);
+}
+
 } // namespace picceler

@@ -1,6 +1,7 @@
 #include "mlir_gen.h"
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 #include "llvm/ADT/APFloat.h"
@@ -8,12 +9,51 @@
 #include "spdlog/spdlog.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Dialect.h"
 
 #include "ops.h"
 #include "types.h"
 
 namespace picceler {
+
+enum class BinaryOperatorType : uint8_t {
+  Add,
+  Sub,
+  Mul,
+  Div,
+  Equal,
+  NotEqual,
+  LessThan,
+  LessEqual,
+  GreaterThan,
+  GreaterEqual
+};
+
+inline BinaryOperatorType getBinaryOpType(const std::string &opStr) {
+  if (opStr == "+")
+    return BinaryOperatorType::Add;
+  if (opStr == "-")
+    return BinaryOperatorType::Sub;
+  if (opStr == "*")
+    return BinaryOperatorType::Mul;
+  if (opStr == "/")
+    return BinaryOperatorType::Div;
+  if (opStr == "==")
+    return BinaryOperatorType::Equal;
+  if (opStr == "!=")
+    return BinaryOperatorType::NotEqual;
+  if (opStr == "<")
+    return BinaryOperatorType::LessThan;
+  if (opStr == "<=")
+    return BinaryOperatorType::LessEqual;
+  if (opStr == ">")
+    return BinaryOperatorType::GreaterThan;
+  if (opStr == ">=")
+    return BinaryOperatorType::GreaterEqual;
+
+  throw std::runtime_error("Unsupported binary operator: " + opStr);
+}
 
 /**
  * @brief Coerces a given MLIR value to a 64-bit integer if possible, with special handling for constants.
@@ -165,6 +205,8 @@ void MLIRGen::emitStatement(ASTNode *node) {
     emitAssignment(assignment);
   } else if (auto call = dynamic_cast<CallNode *>(node)) {
     emitCall(call);
+  } else if (auto ifNode = dynamic_cast<IfNode *>(node)) {
+    emitIf(ifNode);
   } else {
     throw std::runtime_error("Unsupported statement type");
   }
@@ -207,6 +249,8 @@ mlir::Value MLIRGen::emitExpression(ASTNode *node) {
     return emitString(str);
   } else if (auto num = dynamic_cast<NumberNode *>(node)) {
     return emitNumber(num);
+  } else if (auto binaryOp = dynamic_cast<BinaryOpNode *>(node)) {
+    return emitBinaryOp(binaryOp);
   } else if (auto kernel = dynamic_cast<KernelNode *>(node)) {
     return emitKernel(kernel);
   } else {
@@ -448,6 +492,80 @@ mlir::Value MLIRGen::emitCallExpression(CallNode *node, const std::vector<mlir::
     // TODO: replace with Result<T> and proper error handling, more info
     throw std::runtime_error("Unknown function: " + name);
   }
+}
+
+void MLIRGen::emitIf(IfNode *node) {
+  spdlog::debug("Emitting MLIR for if statement");
+  mlir::Value cond = emitExpression(node->condition());
+  auto loc = _builder.getUnknownLoc();
+
+  // Standardize truthiness: if condition is scalar f64 instead of i1, compare non-zero
+  if (!cond.getType().isInteger(1)) {
+    auto zero = _builder.create<mlir::arith::ConstantFloatOp>(loc, _builder.getF64Type(), llvm::APFloat(0.0));
+    cond = _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::UNE, cond, zero);
+  }
+
+  // Construct using OperationState
+  mlir::OperationState state(loc, mlir::scf::IfOp::getOperationName());
+  mlir::scf::IfOp::build(_builder, state, cond, /*withElseRegion=*/false);
+
+  auto ifInst = llvm::cast<mlir::scf::IfOp>(_builder.create(state));
+
+  // Fix: Safely get or create the single block in the then region
+  mlir::Region &thenRegion = ifInst.getThenRegion();
+  if (thenRegion.empty()) {
+    thenRegion.emplaceBlock();
+  }
+  auto *thenBlock = &thenRegion.front();
+
+  _builder.setInsertionPointToStart(thenBlock);
+  enterScope("IfBlock");
+  for (auto stmt : node->body()) {
+    emitStatement(stmt);
+  }
+  exitScope();
+
+  // Ensure the block has a terminator (scf.yield)
+  if (thenBlock->empty() || !thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+    _builder.create<mlir::scf::YieldOp>(loc);
+  }
+
+  // Reset insertion point back after the if operation
+  _builder.setInsertionPointAfter(ifInst);
+}
+
+mlir::Value MLIRGen::emitBinaryOp(BinaryOpNode *node) {
+  spdlog::debug("Emitting MLIR for binary operation: {}", node->toString());
+  mlir::Value lhs = emitExpression(node->lhs());
+  mlir::Value rhs = emitExpression(node->rhs());
+
+  auto loc = _builder.getUnknownLoc();
+  BinaryOperatorType opType = getBinaryOpType(node->op());
+
+  switch (opType) {
+  case BinaryOperatorType::Add:
+    return _builder.create<mlir::arith::AddFOp>(loc, lhs, rhs);
+  case BinaryOperatorType::Sub:
+    return _builder.create<mlir::arith::SubFOp>(loc, lhs, rhs);
+  case BinaryOperatorType::Mul:
+    return _builder.create<mlir::arith::MulFOp>(loc, lhs, rhs);
+  case BinaryOperatorType::Div:
+    return _builder.create<mlir::arith::DivFOp>(loc, lhs, rhs);
+  case BinaryOperatorType::Equal:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OEQ, lhs, rhs);
+  case BinaryOperatorType::NotEqual:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::ONE, lhs, rhs);
+  case BinaryOperatorType::LessThan:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLT, lhs, rhs);
+  case BinaryOperatorType::LessEqual:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLE, lhs, rhs);
+  case BinaryOperatorType::GreaterThan:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGT, lhs, rhs);
+  case BinaryOperatorType::GreaterEqual:
+    return _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGE, lhs, rhs);
+  }
+
+  throw std::runtime_error("Unhandled binary operator type");
 }
 
 } // namespace picceler

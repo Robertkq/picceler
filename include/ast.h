@@ -184,4 +184,42 @@ private:
   std::vector<std::vector<double>> _rows;
 };
 
+/**
+ * @brief AST node for binary operations (arithmetic and relational).
+ */
+class BinaryOpNode : public ASTNode {
+public:
+  BinaryOpNode(Location loc, std::string op, std::unique_ptr<ASTNode> lhs, std::unique_ptr<ASTNode> rhs)
+      : ASTNode(loc), _op(std::move(op)), _lhs(std::move(lhs)), _rhs(std::move(rhs)) {}
+
+  const std::string &op() const { return _op; }
+  ASTNode *lhs() const { return _lhs.get(); }
+  ASTNode *rhs() const { return _rhs.get(); }
+
+  std::string toString() const override;
+
+private:
+  std::string _op;
+  std::unique_ptr<ASTNode> _lhs;
+  std::unique_ptr<ASTNode> _rhs;
+};
+
+/**
+ * @brief AST node for if conditional statements.
+ */
+class IfNode : public ASTNode {
+public:
+  IfNode(Location loc, std::unique_ptr<ASTNode> condition, std::vector<std::unique_ptr<ASTNode>> body)
+      : ASTNode(loc), _condition(std::move(condition)), _body(std::move(body)) {}
+
+  ASTNode *condition() const { return _condition.get(); }
+  auto body() const { return getRawPointers(_body); }
+
+  std::string toString() const override;
+
+private:
+  std::unique_ptr<ASTNode> _condition;
+  std::vector<std::unique_ptr<ASTNode>> _body;
+};
+
 } // namespace picceler

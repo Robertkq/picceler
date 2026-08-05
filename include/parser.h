@@ -69,6 +69,12 @@ private:
   Result<std::unique_ptr<ASTNode>> parseKernel();
   Result<std::unique_ptr<ASTNode>> parseString();
   Result<std::unique_ptr<ASTNode>> parseNumber();
+
+  Result<std::unique_ptr<ASTNode>> parseRelational();
+  Result<std::unique_ptr<ASTNode>> parseAdditive();
+  Result<std::unique_ptr<ASTNode>> parseMultiplicative();
+  Result<std::unique_ptr<ASTNode>> parsePrimary();
+  Result<std::unique_ptr<ASTNode>> parseIfStatement();
   /**
    * \}
    */
