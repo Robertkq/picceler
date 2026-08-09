@@ -9,12 +9,12 @@
 
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
+
+  registry.insert<picceler::PiccelerDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+                  mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect>();
+
   mlir::registerAllDialects(registry);
   mlir::registerAllPasses();
-
-  registry.insert<picceler::PiccelerDialect>();
-  registry.insert<mlir::LLVM::LLVMDialect>();
-  registry.insert<mlir::memref::MemRefDialect>();
   picceler::registerPasses();
 
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Picceler optimizer driver\n", registry));
