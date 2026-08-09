@@ -1,15 +1,30 @@
 
 
-add_library(PiccelerGlobalDeps INTERFACE) 
+add_library(PiccelerGlobalDeps INTERFACE)
+
+find_package(OpenCV REQUIRED)
+
+set(PICCELER_OPENCV_LINK_ITEMS "${OpenCV_LIBRARIES}")
+set(PICCELER_OPENCV_LINK_DIRS "${OpenCV_LIBRARY_DIRS}")
+set(PICCELER_CXX_IMPLICIT_LINK_LIBS "${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
+set(PICCELER_CXX_IMPLICIT_LINK_DIRS "${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES}")
+set(PICCELER_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES}")
+set(PICCELER_LLDRIVER_PATH "${CMAKE_BINARY_DIR}/lld-driver")
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/linker_config.h.in
+    ${CMAKE_BINARY_DIR}/generated/linker_config.h
+    @ONLY
+)
 
 target_include_directories(PiccelerGlobalDeps INTERFACE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/tablegen
+    ${CMAKE_BINARY_DIR}/generated
     ${LLVM_INCLUDE_DIRS}
     ${MLIR_INCLUDE_DIRS}
 )
 
-target_link_libraries(PiccelerGlobalDeps INTERFACE 
+target_link_libraries(PiccelerGlobalDeps INTERFACE
     spdlog::spdlog
 )
 
@@ -27,7 +42,7 @@ add_library(PiccelerFrontend STATIC
     parser.cpp
 )
 
-target_link_libraries(PiccelerFrontend PUBLIC 
+target_link_libraries(PiccelerFrontend PUBLIC
     PiccelerGlobalDeps
     PiccelerUtils
 )
@@ -59,7 +74,7 @@ target_link_libraries(PiccelerOps PUBLIC
     MLIRParser
 )
 
-add_dependencies(PiccelerOps 
+add_dependencies(PiccelerOps
     ${PICCELER_TABLEGEN_TARGETS}
 )
 
@@ -70,7 +85,7 @@ add_library(PiccelerIR STATIC
 )
 
 target_link_libraries(PiccelerIR PUBLIC
-    PiccelerGlobalDeps 
+    PiccelerGlobalDeps
     PiccelerFrontend
     PiccelerOps
     MLIRIR
@@ -86,7 +101,7 @@ add_library(PiccelerTransforms STATIC
     picceler_filters_to_conv_pass.cpp
 )
 
-target_link_libraries(PiccelerTransforms PUBLIC 
+target_link_libraries(PiccelerTransforms PUBLIC
     PiccelerIR
     MLIRPass
     MLIRTransforms
@@ -101,7 +116,7 @@ target_link_libraries(PiccelerTransforms PUBLIC
 )
 
 add_library(PiccelerSupport STATIC
-    image_access_helper.cpp 
+    image_access_helper.cpp
 )
 
 target_link_libraries(PiccelerSupport PUBLIC
@@ -130,11 +145,11 @@ target_link_libraries(PiccelerCore PUBLIC
     MLIRSCFToControlFlow
     MLIRReconcileUnrealizedCasts
     MLIRAffineToStandard
-    # hardware libs
-    ${NATIVE_HW_LLVM_LIBS}
+   # hardware libs
+   ${NATIVE_HW_LLVM_LIBS}
 )
 
-add_executable(picceler 
+add_executable(picceler
     main.cpp
 )
 
