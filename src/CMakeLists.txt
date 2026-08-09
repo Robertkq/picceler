@@ -2,24 +2,9 @@
 
 add_library(PiccelerGlobalDeps INTERFACE)
 
-find_package(OpenCV REQUIRED)
-
-set(PICCELER_OPENCV_LINK_ITEMS "${OpenCV_LIBRARIES}")
-set(PICCELER_OPENCV_LINK_DIRS "${OpenCV_LIBRARY_DIRS}")
-set(PICCELER_CXX_IMPLICIT_LINK_LIBS "${CMAKE_CXX_IMPLICIT_LINK_LIBRARIES}")
-set(PICCELER_CXX_IMPLICIT_LINK_DIRS "${CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES}")
-set(PICCELER_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES}")
-set(PICCELER_LLDRIVER_PATH "${CMAKE_BINARY_DIR}/lld-driver")
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/linker_config.h.in
-    ${CMAKE_BINARY_DIR}/generated/linker_config.h
-    @ONLY
-)
-
 target_include_directories(PiccelerGlobalDeps INTERFACE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/tablegen
-    ${CMAKE_BINARY_DIR}/generated
     ${LLVM_INCLUDE_DIRS}
     ${MLIR_INCLUDE_DIRS}
 )
