@@ -70,14 +70,24 @@ ProcessResult runCommand(const std::vector<std::string> &args) {
 
   int outPipe[2];
   int errPipe[2];
-  if (pipe(outPipe) != 0 || pipe(errPipe) != 0) {
-    spdlog::error("Failed to create pipes for subprocess");
+  if (pipe(outPipe) != 0) {
+    spdlog::error("pipe() failed for stdout: {}", strerror(errno));
+    return result;
+  }
+  if (pipe(errPipe) != 0) {
+    spdlog::error("pipe() failed for stderr: {}", strerror(errno));
+    close(outPipe[0]);
+    close(outPipe[1]);
     return result;
   }
 
   pid_t pid = fork();
   if (pid == -1) {
     spdlog::error("fork() failed: {}", strerror(errno));
+    close(outPipe[0]);
+    close(outPipe[1]);
+    close(errPipe[0]);
+    close(errPipe[1]);
     return result;
   }
 
@@ -232,7 +242,7 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule, const std::string &objFi
   llvm::TargetOptions opt;
   std::unique_ptr<llvm::TargetMachine> targetMachine(
       target->createTargetMachine(llvm::Triple(targetTriple), "generic", "", opt,
-                                  std::optional<llvm::Reloc::Model>(llvm::Reloc::PIC_)));
+                                  std::optional<llvm::Reloc::Model>(llvm::Reloc::Static)));
 
   llvmModule->setDataLayout(targetMachine->createDataLayout());
   llvmModule->setTargetTriple(llvm::Triple(targetTriple));
