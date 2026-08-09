@@ -58,7 +58,7 @@ private:
    * @param outputExe The name of the output executable file.
    * @return True if the linking was successful, false otherwise.
    */
-  bool linkWithLLD(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe);
+  bool linkWithClang(const std::string &objFile, const std::string &runtimeLib, const std::string &outputExe);
 
 private:
   CLI::App _cliApp;
