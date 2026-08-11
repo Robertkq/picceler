@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 
 #include "ops.h"
 #include "types.h"
@@ -191,6 +192,9 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 
 mlir::ModuleOp MLIRGen::generate(ModuleNode *root, const std::string &sourceFile) {
   _sourceFile = sourceFile;
+
+  _context->getOrLoadDialect<mlir::math::MathDialect>();
+
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   registerBuiltinFunctions();
 
@@ -472,6 +476,31 @@ void MLIRGen::registerBuiltinFunctions() {
 
     _builder.create<PrintOp>(loc, fmt, variadicArgs);
     return mlir::Value(); // Return an empty value for void functions
+  };
+
+  _functionTable["sqrt"] = [&](mlir::Location loc, const std::vector<mlir::Value> &args) {
+    if (args.size() != 1) {
+      throw std::runtime_error("sqrt expects 1 argument");
+    }
+    auto &arg = args[0];
+    
+    // Optional: Ensure it's a float or can be treated as one
+    if (!mlir::isa<mlir::FloatType>(arg.getType())) {
+      throw std::runtime_error("sqrt expects a floating-point argument");
+    }
+
+    auto callOp = _builder.create<mlir::math::SqrtOp>(loc, arg);
+    return callOp.getResult();
+  };
+
+  _functionTable["pow"] = [&](mlir::Location loc, const std::vector<mlir::Value> &args) {
+    if (args.size() != 2) {
+      throw std::runtime_error("pow expects 2 arguments");
+    }
+    auto &base = args[0];
+    auto &exp = args[1];
+    auto callOp = _builder.create<mlir::math::PowFOp>(loc, base, exp);
+    return callOp.getResult();
   };
 }
 
