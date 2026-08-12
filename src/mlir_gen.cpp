@@ -193,8 +193,6 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 mlir::ModuleOp MLIRGen::generate(ModuleNode *root, const std::string &sourceFile) {
   _sourceFile = sourceFile;
 
-  _context->getOrLoadDialect<mlir::math::MathDialect>();
-
   auto module = mlir::ModuleOp::create(_builder.getUnknownLoc());
   registerBuiltinFunctions();
 

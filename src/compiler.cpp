@@ -5,6 +5,7 @@
 #include <string_view>
 #include <vector>
 
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -160,6 +161,7 @@ mlir::DialectRegistry Compiler::initRegistry() {
   registry.insert<mlir::memref::MemRefDialect>();
   registry.insert<mlir::scf::SCFDialect>();
   registry.insert<mlir::LLVM::LLVMDialect>();
+  registry.insert<mlir::math::MathDialect>();
   mlir::registerBuiltinDialectTranslation(registry);
   mlir::registerLLVMDialectTranslation(registry);
   return registry;
