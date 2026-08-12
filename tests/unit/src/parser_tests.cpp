@@ -203,4 +203,46 @@ TEST_F(ParserTest, RelationalComparisonExpression) {
   ASSERT_EQ(ast->statements().size(), 3);
 }
 
+TEST_F(ParserTest, SqrtFunctionParses) {
+  auto ast = parseSuccessfully("res = sqrt(16.0)");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *assign = as<AssignmentNode>(ast->statements()[0]);
+  ASSERT_NE(assign, nullptr);
+  EXPECT_EQ(assign->lhs()->name(), "res");
+
+  const auto *call = as<CallNode>(assign->rhs());
+  ASSERT_NE(call, nullptr);
+  EXPECT_EQ(call->callee(), "sqrt");
+  ASSERT_EQ(call->arguments().size(), 1);
+
+  const auto *arg = as<NumberNode>(call->arguments()[0]);
+  ASSERT_NE(arg, nullptr);
+  EXPECT_EQ(arg->value(), 16.0);
+}
+
+TEST_F(ParserTest, PowFunctionParses) {
+  auto ast = parseSuccessfully("res = pow(2.0, 3.0)");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *assign = as<AssignmentNode>(ast->statements()[0]);
+  ASSERT_NE(assign, nullptr);
+  EXPECT_EQ(assign->lhs()->name(), "res");
+
+  const auto *call = as<CallNode>(assign->rhs());
+  ASSERT_NE(call, nullptr);
+  EXPECT_EQ(call->callee(), "pow");
+  ASSERT_EQ(call->arguments().size(), 2);
+
+  const auto *base = as<NumberNode>(call->arguments()[0]);
+  ASSERT_NE(base, nullptr);
+  EXPECT_EQ(base->value(), 2.0);
+
+  const auto *exp = as<NumberNode>(call->arguments()[1]);
+  ASSERT_NE(exp, nullptr);
+  EXPECT_EQ(exp->value(), 3.0);
+}
+
 } // namespace picceler
