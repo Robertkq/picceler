@@ -529,19 +529,18 @@ void MLIRGen::emitIf(IfNode *node) {
   mlir::Value cond = emitExpression(node->condition());
   auto loc = _builder.getUnknownLoc();
 
-  // Standardize truthiness: if condition is scalar f64 instead of i1, compare non-zero
   if (!cond.getType().isInteger(1)) {
     auto zero = _builder.create<mlir::arith::ConstantFloatOp>(loc, _builder.getF64Type(), llvm::APFloat(0.0));
     cond = _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::UNE, cond, zero);
   }
 
-  // Construct using OperationState
+  bool hasElse = !node->elseBody().empty();
+
   mlir::OperationState state(loc, mlir::scf::IfOp::getOperationName());
-  mlir::scf::IfOp::build(_builder, state, cond, /*withElseRegion=*/false);
+  mlir::scf::IfOp::build(_builder, state, cond, /*withElseRegion=*/hasElse);
 
   auto ifInst = llvm::cast<mlir::scf::IfOp>(_builder.create(state));
 
-  // Fix: Safely get or create the single block in the then region
   mlir::Region &thenRegion = ifInst.getThenRegion();
   if (thenRegion.empty()) {
     thenRegion.emplaceBlock();
@@ -550,17 +549,35 @@ void MLIRGen::emitIf(IfNode *node) {
 
   _builder.setInsertionPointToStart(thenBlock);
   enterScope("IfBlock");
-  for (auto stmt : node->body()) {
+  for (const auto &stmt : node->body()) {
     emitStatement(stmt);
   }
   exitScope();
 
-  // Ensure the block has a terminator (scf.yield)
   if (thenBlock->empty() || !thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
     _builder.create<mlir::scf::YieldOp>(loc);
   }
 
-  // Reset insertion point back after the if operation
+  // --- Populate Else Region (if it exists) ---
+  if (hasElse) {
+    mlir::Region &elseRegion = ifInst.getElseRegion();
+    if (elseRegion.empty()) {
+      elseRegion.emplaceBlock();
+    }
+    auto *elseBlock = &elseRegion.front();
+
+    _builder.setInsertionPointToStart(elseBlock);
+    enterScope("ElseBlock");
+    for (const auto &stmt : node->elseBody()) {
+      emitStatement(stmt);
+    }
+    exitScope();
+
+    if (elseBlock->empty() || !elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      _builder.create<mlir::scf::YieldOp>(loc);
+    }
+  }
+
   _builder.setInsertionPointAfter(ifInst);
 }
 

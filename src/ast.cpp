@@ -131,6 +131,16 @@ std::string IfNode::toString() const {
       statements += "\t" + statement->toString() + "\n";
     }
   }
+
+  if (!_elseBody.empty()) {
+    std::string elseStatements;
+    for (const auto &statement : elseBody()) {
+      elseStatements += "\t" + statement->toString() + "\n";
+    }
+    return std::format("IfNode:[condition: {}] {{\n{}}} else {{\n{}}}", condition()->toString(), statements,
+                       elseStatements);
+  }
+
   return std::format("IfNode:[condition: {}] {{\n{}}}", condition()->toString(), statements);
 }
 

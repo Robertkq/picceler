@@ -56,6 +56,7 @@ struct Token {
     KW_DEF,     // Represents the keyword 'def'
     KW_RETURN,  // Represents the keyword 'return'
     KW_IF,      // Represents the keyword 'if'
+    KW_ELSE,    // Represents the keyword 'else'
     EOF_TOKEN,  // Represents the end of file
     UNKNOWN     // Represents unknown tokens
   };

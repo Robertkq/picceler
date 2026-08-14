@@ -45,6 +45,8 @@ std::string Token::typeToString() const {
     return "ASSIGN";
   case Type::KW_IF:
     return "KW_IF";
+  case Type::KW_ELSE:
+    return "KW_ELSE";
   case Type::EQ:
     return "EQ";
   case Type::NE:
@@ -205,8 +207,8 @@ bool Lexer::isSymbol(char ch) const {
 
 Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   static const std::unordered_map<std::string, Token::Type> keywords = {
-      {"def", Token::Type::KW_DEF}, {"return", Token::Type::KW_RETURN}, {"if", Token::Type::KW_IF},
-      {"for", Token::Type::KW_FOR}, {"step", Token::Type::KW_STEP},
+      {"def", Token::Type::KW_DEF},   {"return", Token::Type::KW_RETURN}, {"if", Token::Type::KW_IF},
+      {"else", Token::Type::KW_ELSE}, {"for", Token::Type::KW_FOR},       {"step", Token::Type::KW_STEP},
   };
   auto it = keywords.find(value);
   if (it != keywords.end()) {

@@ -242,7 +242,34 @@ Result<std::unique_ptr<ASTNode>> Parser::parseIfStatement() {
   if (!rbrace)
     return std::unexpected(rbrace.error());
 
-  return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body));
+  // Parse optional else / else if
+  std::vector<std::unique_ptr<ASTNode>> elseBody;
+  if (match(Token::Type::KW_ELSE)) {
+    if (match(Token::Type::KW_IF)) {
+      // Support for 'else if' by recursively parsing it as a nested if statement node
+      auto elseIfStmt = parseIfStatement();
+      if (!elseIfStmt)
+        return std::unexpected(elseIfStmt.error());
+      elseBody.push_back(std::move(*elseIfStmt));
+    } else {
+      auto elseLBrace = consume(Token::Type::L_BRACE, "Expected '{' to open else body");
+      if (!elseLBrace)
+        return std::unexpected(elseLBrace.error());
+
+      while (!check(Token::Type::R_BRACE) && !isAtEnd()) {
+        auto stmt = parseStatement();
+        if (!stmt)
+          return std::unexpected(stmt.error());
+        elseBody.push_back(std::move(*stmt));
+      }
+
+      auto elseRBrace = consume(Token::Type::R_BRACE, "Expected '}' to close else body");
+      if (!elseRBrace)
+        return std::unexpected(elseRBrace.error());
+    }
+  }
+
+  return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body), std::move(elseBody));
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseForStatement() {
