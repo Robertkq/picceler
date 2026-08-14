@@ -222,4 +222,27 @@ private:
   std::vector<std::unique_ptr<ASTNode>> _body;
 };
 
+class ForNode : public ASTNode {
+public:
+  ForNode(Location loc, std::string varName, std::unique_ptr<ASTNode> lowerBound, std::unique_ptr<ASTNode> upperBound,
+          std::unique_ptr<ASTNode> step, std::vector<std::unique_ptr<ASTNode>> body)
+      : ASTNode(loc), _varName(std::move(varName)), _lowerBound(std::move(lowerBound)),
+        _upperBound(std::move(upperBound)), _step(std::move(step)), _body(std::move(body)) {}
+
+  const std::string &varName() const { return _varName; }
+  ASTNode *lowerBound() const { return _lowerBound.get(); }
+  ASTNode *upperBound() const { return _upperBound.get(); }
+  ASTNode *step() const { return _step.get(); }
+  const std::vector<std::unique_ptr<ASTNode>> &body() const { return _body; }
+
+  std::string toString() const override;
+
+private:
+  std::string _varName;
+  std::unique_ptr<ASTNode> _lowerBound;
+  std::unique_ptr<ASTNode> _upperBound;
+  std::unique_ptr<ASTNode> _step;
+  std::vector<std::unique_ptr<ASTNode>> _body;
+};
+
 } // namespace picceler

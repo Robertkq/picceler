@@ -57,6 +57,12 @@ std::string Token::typeToString() const {
     return "LE";
   case Type::GE:
     return "GE";
+  case Type::KW_FOR:
+    return "KW_FOR";
+  case Type::KW_STEP:
+    return "KW_STEP";
+  case Type::DOT_DOT:
+    return "DOT_DOT";
   case Type::TYPE:
     return "TYPE";
   case Type::KW_DEF:
@@ -193,15 +199,14 @@ char Lexer::get() {
 bool Lexer::isIdentifier(char ch) const { return isalpha(ch) || ch == '_'; }
 
 bool Lexer::isSymbol(char ch) const {
-  static const std::string symbols = "=():,[]{}->=<>!+-*/";
+  static const std::string symbols = "=():,[]{}->=<>!+-*/.";
   return symbols.find(ch) != std::string::npos;
 }
 
 Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
   static const std::unordered_map<std::string, Token::Type> keywords = {
-      {"def", Token::Type::KW_DEF},
-      {"return", Token::Type::KW_RETURN},
-      {"if", Token::Type::KW_IF},
+      {"def", Token::Type::KW_DEF}, {"return", Token::Type::KW_RETURN}, {"if", Token::Type::KW_IF},
+      {"for", Token::Type::KW_FOR}, {"step", Token::Type::KW_STEP},
   };
   auto it = keywords.find(value);
   if (it != keywords.end()) {
@@ -334,6 +339,13 @@ Result<Token> Lexer::readSymbol(std::pair<size_t, size_t> start) {
       return Token{Token::Type::GE, ">=", Location{start}};
     }
     return Token{Token::Type::GT, ">", Location{start}};
+  case '.':
+    if (!eof() && peek() == '.') {
+      get(); // consume second '.'
+      return Token{Token::Type::DOT_DOT, "..", Location{start}};
+    }
+    return Token{Token::Type::UNKNOWN, ".", Location{start}};
+
   default:
     return Token{Token::Type::UNKNOWN, std::string(1, ch), Location{start}};
   }
@@ -368,7 +380,8 @@ std::string Lexer::unescapeString(std::string &&string) const {
         unescaped += '\0';
         break; // Null Byte
       default:
-        // If it's an unrecognized escape (e.g. \a), keep the backslash and character
+        // If it's an unrecognized escape (e.g. \a), keep the backslash and
+        // character
         unescaped += '\\';
         unescaped += string[i + 1];
         break;

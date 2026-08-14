@@ -109,6 +109,7 @@ private:
   mlir::Value emitNumber(NumberNode *node);
   mlir::Value emitBinaryOp(BinaryOpNode *node);
   void emitIf(IfNode *node);
+  void emitFor(ForNode *node);
   mlir::Value emitCallExpression(CallNode *node, const std::vector<mlir::Value> &args);
 
   /**

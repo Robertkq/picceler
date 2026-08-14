@@ -49,6 +49,9 @@ struct Token {
     GT,         // Represents the assignment operator '>'
     LE,         // Represents the assignment operator '<='
     GE,         // Represents the assignment operator '>='
+    KW_FOR,     // Represents the assignment operator '>='
+    KW_STEP,    // Represents the assignment operator '>='
+    DOT_DOT,    // Represents the assignment operator '>='
     TYPE,       // Represents type annotations (e.g., int, float, string)
     KW_DEF,     // Represents the keyword 'def'
     KW_RETURN,  // Represents the keyword 'return'

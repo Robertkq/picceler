@@ -209,6 +209,8 @@ void MLIRGen::emitStatement(ASTNode *node) {
     emitCall(call);
   } else if (auto ifNode = dynamic_cast<IfNode *>(node)) {
     emitIf(ifNode);
+  } else if (auto forNode = dynamic_cast<ForNode *>(node)) {
+    emitFor(forNode);
   } else {
     throw std::runtime_error("Unsupported statement type");
   }
@@ -481,7 +483,7 @@ void MLIRGen::registerBuiltinFunctions() {
       throw std::runtime_error("sqrt expects 1 argument");
     }
     auto &arg = args[0];
-    
+
     // Optional: Ensure it's a float or can be treated as one
     if (!mlir::isa<mlir::FloatType>(arg.getType())) {
       throw std::runtime_error("sqrt expects a floating-point argument");
@@ -559,6 +561,58 @@ void MLIRGen::emitIf(IfNode *node) {
 
   // Reset insertion point back after the if operation
   _builder.setInsertionPointAfter(ifInst);
+}
+
+void MLIRGen::emitFor(ForNode *node) {
+  spdlog::debug("Emitting MLIR for for-loop: {}", node->varName());
+  auto loc = _builder.getUnknownLoc();
+
+  mlir::Value lbVal = emitExpression(node->lowerBound());
+  mlir::Value ubVal = emitExpression(node->upperBound());
+  mlir::Value stepVal = emitExpression(node->step());
+
+  auto toIndex = [&](mlir::Value val) -> mlir::Value {
+    if (val.getType().isIndex())
+      return val;
+    if (mlir::isa<mlir::FloatType>(val.getType())) {
+      auto i64Val = _builder.create<mlir::arith::FPToSIOp>(loc, _builder.getI64Type(), val);
+      return _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getIndexType(), i64Val);
+    }
+    if (val.getType().isInteger()) {
+      return _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getIndexType(), val);
+    }
+    throw std::runtime_error("Unsupported type for loop bounds/step");
+  };
+
+  mlir::Value lbIndex = toIndex(lbVal);
+  mlir::Value ubIndex = toIndex(ubVal);
+  mlir::Value stepIndex = toIndex(stepVal);
+
+  auto forOp = _builder.create<mlir::scf::ForOp>(loc, lbIndex, ubIndex, stepIndex);
+
+  mlir::Region &region = forOp.getRegion();
+  auto *bodyBlock = &region.front();
+
+  _builder.setInsertionPointToStart(bodyBlock);
+  enterScope("ForLoopBlock");
+
+  mlir::Value ivIndex = forOp.getInductionVar();
+  auto ivI64 = _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getI64Type(), ivIndex);
+  mlir::Value ivF64 = _builder.create<mlir::arith::SIToFPOp>(loc, _builder.getF64Type(), ivI64);
+
+  declareVariable(node->varName(), ivF64);
+
+  for (const auto &stmt : node->body()) {
+    emitStatement(stmt.get());
+  }
+
+  exitScope();
+
+  if (bodyBlock->empty() || !bodyBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+    _builder.create<mlir::scf::YieldOp>(loc);
+  }
+
+  _builder.setInsertionPointAfter(forOp);
 }
 
 mlir::Value MLIRGen::emitBinaryOp(BinaryOpNode *node) {

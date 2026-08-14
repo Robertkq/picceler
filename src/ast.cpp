@@ -134,4 +134,17 @@ std::string IfNode::toString() const {
   return std::format("IfNode:[condition: {}] {{\n{}}}", condition()->toString(), statements);
 }
 
+std::string ForNode::toString() const {
+  std::string str =
+      std::format("ForNode(var: {}, lb: {}, ub: {}, step: {}, body_statements: {})", _varName,
+                  _lowerBound ? _lowerBound->toString() : "nullptr", _upperBound ? _upperBound->toString() : "nullptr",
+                  _step ? _step->toString() : "nullptr", _body.size());
+  for (const auto &stmt : _body) {
+    if (stmt) {
+      str += "\n  " + stmt->toString();
+    }
+  }
+  return str;
+}
+
 } // namespace picceler
