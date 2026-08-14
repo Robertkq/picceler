@@ -482,6 +482,7 @@ void MLIRGen::registerBuiltinFunctions() {
     if (args.size() != 1) {
       throw std::runtime_error("sqrt expects 1 argument");
     }
+
     auto &arg = args[0];
 
     // Optional: Ensure it's a float or can be treated as one

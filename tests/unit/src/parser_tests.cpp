@@ -245,4 +245,74 @@ TEST_F(ParserTest, PowFunctionParses) {
   EXPECT_EQ(exp->value(), 3.0);
 }
 
+TEST_F(ParserTest, ForLoopParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    for (i = 1 .. 10) {
+      a = i
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  // Pass directly without .get()
+  const auto *forNode = as<ForNode>(ast->statements()[0]);
+  ASSERT_NE(forNode, nullptr);
+  EXPECT_EQ(forNode->varName(), "i");
+
+  // Check that lower bound is 1 and upper bound is 10
+  const auto *lb = as<NumberNode>(forNode->lowerBound());
+  ASSERT_NE(lb, nullptr);
+  EXPECT_EQ(lb->value(), 1.0);
+
+  const auto *ub = as<NumberNode>(forNode->upperBound());
+  ASSERT_NE(ub, nullptr);
+  EXPECT_EQ(ub->value(), 10.0);
+
+  // Check body statement count
+  ASSERT_EQ(forNode->body().size(), 1);
+
+  // Pass directly without .get()
+  const auto *assign = as<AssignmentNode>(forNode->body()[0].get());
+  ASSERT_NE(assign, nullptr);
+  EXPECT_EQ(assign->lhs()->name(), "a");
+}
+
+TEST_F(ParserTest, ForLoopWithStepParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    for (j = 0 .. 100 step 5) {
+      print("j: {}", j)
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *forNode = as<ForNode>(ast->statements()[0]);
+  ASSERT_NE(forNode, nullptr);
+  EXPECT_EQ(forNode->varName(), "j");
+
+  // Check step is present and evaluates to 5
+  const auto *stepNum = as<NumberNode>(forNode->step());
+  ASSERT_NE(stepNum, nullptr);
+  EXPECT_EQ(stepNum->value(), 5.0);
+
+  // Check body statement count
+  ASSERT_EQ(forNode->body().size(), 1);
+}
+
+TEST_F(ParserTest, InvalidForLoopFails) {
+  // Missing '..' operator
+  assertParseFails(R"(
+    for (i = 1 10) {
+      a = i
+    }
+  )");
+
+  // Missing closing parenthesis
+  assertParseFails(R"(
+    for (i = 1 .. 10 {
+      a = i
+    }
+  )");
+}
+
 } // namespace picceler
