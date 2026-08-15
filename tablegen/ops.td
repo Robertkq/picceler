@@ -13,6 +13,11 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 include "interfaces.td"
 include "types.td"
 
+// Convenience definition for types that can represent an image (either high-level dialect type or low-level memref)
+def Picceler_AnyImageType : AnyTypeOf<[Picceler_ImageType, AnyMemRef]>;
+
+def Picceler_AnyKernelType : AnyTypeOf<[Picceler_KernelType, AnyMemRef]>;
+
 def Picceler_StringConstOp : Op<PiccelerDialect, "string.const"> {
   let summary = "String constant producing a picceler.string";
   let arguments = (ins StrAttr:$value);
@@ -29,18 +34,18 @@ def Picceler_KernelConstOp : Op<PiccelerDialect, "kernel.const", [Pure]> {
 def Picceler_LoadImageOp : Op<PiccelerDialect, "load_image", []> {
   let summary = "Load an image from a file";
   let arguments = (ins Picceler_StringType:$filename);
-  let results = (outs Picceler_ImageType:$result);
+  let results = (outs Picceler_AnyImageType:$result);
 }
 
 def Picceler_SaveImageOp : Op<PiccelerDialect, "save_image", []> {
   let summary = "Save an image to a file";
-  let arguments = (ins Picceler_ImageType:$input, Picceler_StringType:$filename);
+  let arguments = (ins Picceler_AnyImageType:$input, Picceler_StringType:$filename);
   let results = (outs);
 }
 
 def Picceler_ShowImageOp : Op<PiccelerDialect, "show_image", []> {
   let summary = "Show an image in a window";
-  let arguments = (ins Picceler_ImageType:$input);
+  let arguments = (ins Picceler_AnyImageType:$input);
   let results = (outs);
 }
 
@@ -57,8 +62,8 @@ def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
 
 def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
   let summary = "Adjust the brightness of an image";
-  let arguments = (ins Picceler_ImageType:$input, I64:$value);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$value);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -67,8 +72,8 @@ def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
 
 def Picceler_InvertOp : Op<PiccelerDialect, "invert", [Pure]> {
   let summary = "Invert the pixels of an image";
-  let arguments = (ins Picceler_ImageType:$input);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -77,8 +82,8 @@ def Picceler_InvertOp : Op<PiccelerDialect, "invert", [Pure]> {
 
 def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", [Pure]> {
   let summary = "Adjust the sharpness of an image";
-  let arguments = (ins Picceler_ImageType:$input, I64:$value);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$value);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -87,8 +92,8 @@ def Picceler_SharpenOp : Op<PiccelerDialect, "sharpen", [Pure]> {
 
 def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", [Pure]> {
   let summary = "Apply a simple box blur";
-  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -97,8 +102,8 @@ def Picceler_BoxBlurOp : Op<PiccelerDialect, "box_blur", [Pure]> {
 
 def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", [Pure]> {
   let summary = "Apply a gaussian blur (smoother)";
-  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -107,8 +112,8 @@ def Picceler_GaussianBlurOp : Op<PiccelerDialect, "gaussian_blur", [Pure]> {
 
 def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", [Pure]> {
   let summary = "Detect edges in the image";
-  let arguments = (ins Picceler_ImageType:$input);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -117,8 +122,8 @@ def Picceler_EdgeDetectOp : Op<PiccelerDialect, "edge_detect", [Pure]> {
 
 def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", [Pure]> {
   let summary = "Apply a 3D emboss effect";
-  let arguments = (ins Picceler_ImageType:$input);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -127,8 +132,8 @@ def Picceler_EmbossOp : Op<PiccelerDialect, "emboss", [Pure]> {
 
 def Picceler_RotateOp : Op<PiccelerDialect, "rotate", [Pure]> {
   let summary = "Rotate an image around its center";
-  let arguments = (ins Picceler_ImageType:$input, I64:$angle);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$angle);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -139,8 +144,8 @@ def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure, Neighbour
  DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
  ]> {
   let summary = "Apply convolution to an image with a kernel";
-  let arguments = (ins Picceler_ImageType:$input, AnyTypeOf<[Picceler_KernelType, AnyMemRef]>:$kernel);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, Picceler_AnyKernelType:$kernel);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -152,8 +157,8 @@ def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterf
   ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
   ]> {
   let summary = "Apply erosion to an image";
-  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -165,8 +170,8 @@ def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInte
   ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
   ]> {
   let summary = "Apply dilation to an image";
-  let arguments = (ins Picceler_ImageType:$input, I64:$radius);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -176,8 +181,8 @@ def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInte
 def Picceler_DiffOp : Op<PiccelerDialect, "diff", [Pure, ElementWiseBinaryOpInterface,
  DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
   let summary = "Compute the pixel-wise difference between two images";
-  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input1, Picceler_AnyImageType:$input2);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -187,8 +192,8 @@ def Picceler_DiffOp : Op<PiccelerDialect, "diff", [Pure, ElementWiseBinaryOpInte
 def Picceler_BlendOp : Op<PiccelerDialect, "blend", [Pure,ElementWiseBinaryOpInterface,
  DeclareOpInterfaceMethods<ElementWiseBinaryOpInterface, ["transformPixels"]>]> {
   let summary = "Blend two images together";
-  let arguments = (ins Picceler_ImageType:$input1, Picceler_ImageType:$input2, F64:$weight);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input1, Picceler_AnyImageType:$input2, F64:$weight);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -197,8 +202,8 @@ def Picceler_BlendOp : Op<PiccelerDialect, "blend", [Pure,ElementWiseBinaryOpInt
 
 def Picceler_CropOp : Op<PiccelerDialect, "crop", [Pure]> {
   let summary = "Crop an image to a rectangular region";
-  let arguments = (ins Picceler_ImageType:$input, I64:$x, I64:$y, I64:$width, I64:$height);
-  let results = (outs Picceler_ImageType:$result);
+  let arguments = (ins Picceler_AnyImageType:$input, I64:$x, I64:$y, I64:$width, I64:$height);
+  let results = (outs Picceler_AnyImageType:$result);
 
   let hasVerifier = 1;
   let hasFolder = 1;

@@ -10,6 +10,7 @@ namespace picceler {
 class Image {
 public:
   Image() : _width(0), _height(0), _data(nullptr) {}
+  Image(uint32_t width, uint32_t height, unsigned char *data) : _width(width), _height(height), _data(data) {}
 
   uint32_t _width;
   uint32_t _height;

@@ -2,6 +2,8 @@
 
 #include "image.h"
 
+#include "mlir/ExecutionEngine/CRunnerUtils.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,10 +13,10 @@ extern "C" {
  * \{
  */
 
-picceler::Image *piccelerLoadImage(const char *filename);
-void piccelerShowImage(picceler::Image *image);
-void piccelerSaveImage(picceler::Image *image, const char *filename);
-picceler::Image *piccelerCreateImage(uint32_t width, uint32_t height);
+void piccelerLoadImage(const char *filename, uint8_t **data, int64_t *height, int64_t *width);
+void piccelerShowImage(void *data, uint32_t width, uint32_t height);
+void piccelerSaveImage(void *data, uint32_t width, uint32_t height, const char *filename);
+
 void *piccelerReadString(const char *prompt);
 double piccelerReadNumber(const char *prompt);
 

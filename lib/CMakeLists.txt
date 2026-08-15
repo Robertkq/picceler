@@ -15,6 +15,8 @@ add_library(${RUNTIME_LIB_NAME} STATIC
 
 target_include_directories(${RUNTIME_LIB_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${LLVM_INCLUDE_DIRS}
+    ${MLIR_INCLUDE_DIRS}
 )
 
 target_link_libraries(${RUNTIME_LIB_NAME}
