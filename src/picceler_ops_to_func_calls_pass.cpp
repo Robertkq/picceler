@@ -8,6 +8,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 
 #include "ops.h"
 #include "types.h"
@@ -43,6 +45,40 @@ mlir::func::FuncOp ensureRuntimeFunc(mlir::ModuleOp module, mlir::StringRef name
   return func;
 }
 
+/**
+ * @brief Builds a memref<?x?x4xi8> LLVM descriptor directly from a raw data pointer and
+ * dynamic height/width (both i64-typed, matching LLVMTypeConverter's default index type),
+ * emitting a single UnrealizedConversionCastOp from the LLVM struct to the memref type.
+ * This cast is a structural identity (LLVMTypeConverter converts memref<?x?x4xi8> to exactly
+ * this struct type), so it folds away cleanly under ReconcileUnrealizedCastsPass, unlike a
+ * cast straight from !llvm.ptr to memref.
+ */
+mlir::Value buildImageMemref(mlir::PatternRewriter &rewriter, mlir::Location loc, mlir::Value dataPtr,
+                             mlir::Value heightI64, mlir::Value widthI64) {
+  auto kDynamic = mlir::ShapedType::kDynamic;
+  auto targetMemRefType = mlir::MemRefType::get({kDynamic, kDynamic, 4}, rewriter.getIntegerType(8));
+
+  mlir::LLVMTypeConverter llvmTypeConverter(rewriter.getContext());
+  auto descTy = llvmTypeConverter.convertType(targetMemRefType);
+
+  mlir::MemRefDescriptor desc = mlir::MemRefDescriptor::poison(rewriter, loc, descTy);
+
+  auto c4 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 4, 64).getResult();
+  auto rowStride = rewriter.create<mlir::arith::MulIOp>(loc, widthI64, c4).getResult();
+
+  desc.setAllocatedPtr(rewriter, loc, dataPtr);
+  desc.setAlignedPtr(rewriter, loc, dataPtr);
+  desc.setConstantOffset(rewriter, loc, 0);
+  desc.setSize(rewriter, loc, 0, heightI64);
+  desc.setSize(rewriter, loc, 1, widthI64);
+  desc.setConstantSize(rewriter, loc, 2, 4);
+  desc.setStride(rewriter, loc, 0, rowStride);
+  desc.setConstantStride(rewriter, loc, 1, 4);
+  desc.setConstantStride(rewriter, loc, 2, 1);
+
+  return rewriter.create<mlir::UnrealizedConversionCastOp>(loc, targetMemRefType, mlir::Value(desc)).getResult(0);
+}
+
 struct LoadImageToCall : public mlir::OpConversionPattern<LoadImageOp> {
   using mlir::OpConversionPattern<LoadImageOp>::OpConversionPattern;
 
@@ -52,7 +88,6 @@ struct LoadImageToCall : public mlir::OpConversionPattern<LoadImageOp> {
     auto loc = op.getLoc();
     auto *ctx = rewriter.getContext();
 
-    auto i8Ty = rewriter.getIntegerType(8);
     auto i64Ty = rewriter.getI64Type();
     auto ptrTy = mlir::LLVM::LLVMPointerType::get(ctx);
 
@@ -81,30 +116,9 @@ struct LoadImageToCall : public mlir::OpConversionPattern<LoadImageOp> {
     auto h64 = rewriter.create<mlir::LLVM::LoadOp>(loc, i64Ty, hSlot.getResult()).getResult();
     auto w64 = rewriter.create<mlir::LLVM::LoadOp>(loc, i64Ty, wSlot.getResult()).getResult();
 
-    auto idxTy = rewriter.getIndexType();
-    auto h = rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, h64).getResult();
-    auto w = rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, w64).getResult();
+    auto result = buildImageMemref(rewriter, loc, dataPtr, h64, w64);
 
-    auto flatTy = mlir::MemRefType::get({mlir::ShapedType::kDynamic}, i8Ty);
-
-    // UnrealizedConversionCastOp wants TypeRange + ValueRange
-    auto baseMemref =
-        rewriter.create<mlir::UnrealizedConversionCastOp>(loc, mlir::TypeRange{flatTy}, mlir::ValueRange{dataPtr})
-            .getResult(0);
-
-    auto c4 = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 4);
-    auto rowStride = rewriter.create<mlir::arith::MulIOp>(loc, w, c4);
-
-    auto resultTy = mlir::MemRefType::get({mlir::ShapedType::kDynamic, mlir::ShapedType::kDynamic, 4}, i8Ty);
-
-    llvm::SmallVector<mlir::OpFoldResult> sizes{mlir::OpFoldResult(h), mlir::OpFoldResult(w), rewriter.getIndexAttr(4)};
-    llvm::SmallVector<mlir::OpFoldResult> strides{mlir::OpFoldResult(rowStride), rewriter.getIndexAttr(4),
-                                                  rewriter.getIndexAttr(1)};
-
-    auto result = rewriter.create<mlir::memref::ReinterpretCastOp>(loc, resultTy, baseMemref, rewriter.getIndexAttr(0),
-                                                                   sizes, strides);
-
-    rewriter.replaceOp(op, result.getResult());
+    rewriter.replaceOp(op, result);
     return mlir::success();
   }
 };
