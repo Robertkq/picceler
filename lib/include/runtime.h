@@ -2,8 +2,6 @@
 
 #include "image.h"
 
-#include "mlir/ExecutionEngine/CRunnerUtils.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
