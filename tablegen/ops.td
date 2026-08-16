@@ -141,7 +141,7 @@ def Picceler_RotateOp : Op<PiccelerDialect, "rotate", [Pure]> {
 }
 
 def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure, NeighbourhoodOpInterface,
- DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+ DeclareOpInterfaceMethods<NeighbourhoodOpInterface, ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getReductionKind", "getNeighborhoodSize"]>
  ]> {
   let summary = "Apply convolution to an image with a kernel";
   let arguments = (ins Picceler_AnyImageType:$input, Picceler_AnyKernelType:$kernel);
@@ -154,7 +154,7 @@ def Picceler_ConvolutionOp : Op<PiccelerDialect, "convolution", [Pure, Neighbour
 
 def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterface,
  DeclareOpInterfaceMethods<NeighbourhoodOpInterface,
-  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getReductionKind", "getNeighborhoodSize"]>
   ]> {
   let summary = "Apply erosion to an image";
   let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);
@@ -167,7 +167,7 @@ def Picceler_ErodeOp : Op<PiccelerDialect, "erode", [Pure, NeighbourhoodOpInterf
 
 def Picceler_DilateOp : Op<PiccelerDialect, "dilate", [Pure, NeighbourhoodOpInterface,
  DeclareOpInterfaceMethods<NeighbourhoodOpInterface,
-  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getNeighborhoodSize"]>
+  ["initializeAccumulator", "accumulate", "finalizeAccumulator", "getReductionKind", "getNeighborhoodSize"]>
   ]> {
   let summary = "Apply dilation to an image";
   let arguments = (ins Picceler_AnyImageType:$input, I64:$radius);

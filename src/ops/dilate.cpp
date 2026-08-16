@@ -59,6 +59,8 @@ mlir::Value DilateOp::accumulate(mlir::OpBuilder &builder, mlir::Location loc, m
 
 mlir::Value DilateOp::finalizeAccumulator(mlir::OpBuilder &, mlir::Location, mlir::Value finalAcc) { return finalAcc; }
 
+mlir::arith::AtomicRMWKind DilateOp::getReductionKind() { return mlir::arith::AtomicRMWKind::maximumf; }
+
 Result<std::pair<mlir::Value, mlir::Value>> DilateOp::getNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc,
                                                                           mlir::ArrayRef<mlir::Value> operands) {
   if (operands.size() < 2) {
