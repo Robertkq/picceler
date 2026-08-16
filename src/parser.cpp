@@ -88,6 +88,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return parseForStatement();
   }
 
+  if (check(Token::Type::KW_RETURN)) {
+    return parseReturnStatement();
+  }
+
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identifier = advance();
     if (check(Token::Type::ASSIGN)) {
@@ -137,6 +141,13 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
 
   if (auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after parameters"); !rparen) {
     return std::unexpected(rparen.error());
+  }
+
+  if (match(Token::Type::COLON)) {
+    auto returnTypeTok = consume(Token::Type::TYPE, "Expected return type after ':'");
+    if (!returnTypeTok)
+      return std::unexpected(returnTypeTok.error());
+    funcNode->setReturnType(returnTypeTok->value());
   }
 
   if (auto lbrace = consume(Token::Type::L_BRACE, "Expected '{' before function body"); !lbrace) {
@@ -512,4 +523,17 @@ Result<std::unique_ptr<ASTNode>> Parser::parseNumber() {
     return std::unexpected(
         CompileError{std::format("Double literal '{}' out of range", numTok->value()), numTok->location()});
   }
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseReturnStatement() {
+  spdlog::debug("Parsing return statement");
+  auto returnTok = consume(Token::Type::KW_RETURN, "Expected 'return' keyword");
+  if (!returnTok)
+    return std::unexpected(returnTok.error());
+
+  auto exprResult = parseExpression();
+  if (!exprResult)
+    return std::unexpected(exprResult.error());
+
+  return std::make_unique<ReturnNode>(returnTok->location(), std::move(*exprResult));
 }

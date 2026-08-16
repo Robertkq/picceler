@@ -350,12 +350,23 @@ struct PiccelerOpsToFuncCallsPass : public impl::PiccelerOpsToFuncCallsBase<Picc
                            mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
     target.addIllegalOp<LoadImageOp, ShowImageOp, SaveImageOp, ReadNumberOp, ReadStringOp, PrintOp>();
 
+    target.addDynamicallyLegalOp<mlir::func::FuncOp>(
+        [&](mlir::func::FuncOp op) { return typeConverter.isSignatureLegal(op.getFunctionType()); });
+    target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
+        [&](mlir::func::ReturnOp op) { return typeConverter.isLegal(op.getOperandTypes()); });
+    target.addDynamicallyLegalOp<mlir::func::CallOp>([&](mlir::func::CallOp op) {
+      return typeConverter.isLegal(op.getOperandTypes()) && typeConverter.isLegal(op.getResultTypes());
+    });
+
     target.markUnknownOpDynamicallyLegal([&](mlir::Operation *op) { return typeConverter.isLegal(op); });
 
     mlir::RewritePatternSet patterns(&getContext());
     patterns.add<LoadImageToCall, ShowImageToCall, SaveImageToCall, ReadNumberToCall, ReadStringToCall, PrintToCalls>(
         typeConverter, &getContext());
     patterns.add<GenericTypeUpdatePattern>(typeConverter, &getContext());
+    mlir::populateFunctionOpInterfaceTypeConversionPattern<mlir::func::FuncOp>(patterns, typeConverter);
+    mlir::populateReturnOpTypeConversionPattern(patterns, typeConverter);
+    mlir::populateCallOpTypeConversionPattern(patterns, typeConverter);
 
     if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();

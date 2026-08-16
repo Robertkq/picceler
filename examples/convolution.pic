@@ -1,11 +1,21 @@
-img = load_image("~/Pictures/cat.png")
-kernel = [[-1, -1, -1],
-          [-1,  8, -1],
-          [-1, -1, -1]]
-convolution_img = convolution(img, kernel)
-show_image(img)
 
-show_image(convolution_img)
-a = brightness(convolution_img, 128)
-show_image(a)
-save_image(convolution_img, "testme.png")
+
+def main() : f64
+{
+    img = load_image("~/Pictures/cat.png")
+    show_image(img)
+    processed = work(img)
+    show_image(processed)
+
+    return 0
+}
+
+def work(imgx : image) : image
+{
+    kernel = [[-1, -1, -1],
+            [-1,  8, -1],
+            [-1, -1, -1]]
+    convolution_img = convolution(imgx, kernel)
+
+    return convolution_img
+}

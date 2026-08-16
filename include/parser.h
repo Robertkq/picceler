@@ -77,6 +77,7 @@ private:
   Result<std::unique_ptr<ASTNode>> parsePrimary();
   Result<std::unique_ptr<ASTNode>> parseIfStatement();
   Result<std::unique_ptr<ASTNode>> parseForStatement();
+  Result<std::unique_ptr<ASTNode>> parseReturnStatement();
   /**
    * \}
    */
