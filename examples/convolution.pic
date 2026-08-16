@@ -1,6 +1,6 @@
 
 
-def main() : f64
+def main() -> f64
 {
     img = load_image("~/Pictures/cat.png")
     show_image(img)
@@ -10,7 +10,7 @@ def main() : f64
     return 0
 }
 
-def work(imgx : image) : image
+def work(imgx : image) -> image
 {
     kernel = [[-1, -1, -1],
             [-1,  8, -1],

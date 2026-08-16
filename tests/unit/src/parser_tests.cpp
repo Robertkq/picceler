@@ -384,6 +384,153 @@ TEST_F(ParserTest, ForLoopWithStepParsesSuccessfully) {
   ASSERT_EQ(forNode->body().size(), 1);
 }
 
+// -----------------------------------------------------------------------------
+// Function definitions: return type & return statements
+// -----------------------------------------------------------------------------
+
+TEST_F(ParserTest, FunctionWithoutReturnTypeHasNoReturnType) {
+  auto ast = parseSuccessfully(R"(
+    def foo(x : image) {
+      a = x
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *funcNode = as<FunctionNode>(ast->statements()[0]);
+  ASSERT_NE(funcNode, nullptr);
+  EXPECT_EQ(funcNode->name(), "foo");
+  EXPECT_FALSE(funcNode->returnType().has_value());
+}
+
+TEST_F(ParserTest, FunctionWithArrowReturnTypeParses) {
+  auto ast = parseSuccessfully(R"(
+    def foo(x : image) -> image {
+      return x
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *funcNode = as<FunctionNode>(ast->statements()[0]);
+  ASSERT_NE(funcNode, nullptr);
+  EXPECT_EQ(funcNode->name(), "foo");
+  ASSERT_TRUE(funcNode->returnType().has_value());
+  EXPECT_EQ(*funcNode->returnType(), "image");
+
+  ASSERT_EQ(funcNode->parameters().size(), 1);
+  EXPECT_EQ(funcNode->parameters()[0].first, "x");
+  EXPECT_EQ(funcNode->parameters()[0].second, "image");
+
+  ASSERT_EQ(funcNode->body().size(), 1);
+  const auto *returnNode = as<ReturnNode>(funcNode->body()[0]);
+  ASSERT_NE(returnNode, nullptr);
+
+  const auto *returnedVar = as<VariableNode>(returnNode->returnValue());
+  ASSERT_NE(returnedVar, nullptr);
+  EXPECT_EQ(returnedVar->name(), "x");
+}
+
+TEST_F(ParserTest, ReturnWithBinaryExpressionParses) {
+  // Closes the loop on the arrow/return-type feature the ArrowVsMinusToken lexer test anticipated.
+  auto ast = parseSuccessfully(R"(
+    def foo(a : int64, b : int64) -> int64 {
+      return a - b
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *funcNode = as<FunctionNode>(ast->statements()[0]);
+  ASSERT_NE(funcNode, nullptr);
+  ASSERT_TRUE(funcNode->returnType().has_value());
+  EXPECT_EQ(*funcNode->returnType(), "int64");
+
+  ASSERT_EQ(funcNode->body().size(), 1);
+  const auto *returnNode = as<ReturnNode>(funcNode->body()[0]);
+  ASSERT_NE(returnNode, nullptr);
+
+  const auto *subNode = as<BinaryOpNode>(returnNode->returnValue());
+  ASSERT_NE(subNode, nullptr);
+  EXPECT_EQ(subNode->op(), "-");
+
+  const auto *lhs = as<VariableNode>(subNode->lhs());
+  ASSERT_NE(lhs, nullptr);
+  EXPECT_EQ(lhs->name(), "a");
+
+  const auto *rhs = as<VariableNode>(subNode->rhs());
+  ASSERT_NE(rhs, nullptr);
+  EXPECT_EQ(rhs->name(), "b");
+}
+
+TEST_F(ParserTest, ReturnNumberLiteralParses) {
+  auto ast = parseSuccessfully(R"(
+    def foo() -> f64 {
+      return 42
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+
+  const auto *funcNode = as<FunctionNode>(ast->statements()[0]);
+  ASSERT_NE(funcNode, nullptr);
+  ASSERT_EQ(funcNode->body().size(), 1);
+
+  const auto *returnNode = as<ReturnNode>(funcNode->body()[0]);
+  ASSERT_NE(returnNode, nullptr);
+
+  const auto *num = as<NumberNode>(returnNode->returnValue());
+  ASSERT_NE(num, nullptr);
+  EXPECT_EQ(num->value(), 42.0);
+}
+
+TEST_F(ParserTest, MultipleFunctionsWithMixedReturnTypesParse) {
+  auto ast = parseSuccessfully(R"(
+    def helper(x : f64) -> f64 {
+      return x
+    }
+    def main() {
+      y = helper(1.0)
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 2);
+
+  const auto *helperNode = as<FunctionNode>(ast->statements()[0]);
+  ASSERT_NE(helperNode, nullptr);
+  ASSERT_TRUE(helperNode->returnType().has_value());
+  EXPECT_EQ(*helperNode->returnType(), "f64");
+
+  const auto *mainNode = as<FunctionNode>(ast->statements()[1]);
+  ASSERT_NE(mainNode, nullptr);
+  EXPECT_FALSE(mainNode->returnType().has_value());
+}
+
+TEST_F(ParserTest, MissingReturnTypeAfterArrowFails) {
+  assertParseFails(R"(
+    def foo() -> {
+      a = 1
+    }
+  )");
+}
+
+TEST_F(ParserTest, NonTypeTokenAfterArrowFails) {
+  // '5' is a NUMBER token, not a valid TYPE token.
+  assertParseFails(R"(
+    def foo() -> 5 {
+      return 5
+    }
+  )");
+}
+
+TEST_F(ParserTest, ReturnWithoutExpressionFails) {
+  // The current grammar requires an expression after 'return'.
+  assertParseFails(R"(
+    def foo() {
+      return
+    }
+  )");
+}
+
 TEST_F(ParserTest, InvalidForLoopFails) {
   // Missing '..' operator
   assertParseFails(R"(

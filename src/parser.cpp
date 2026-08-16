@@ -143,8 +143,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
     return std::unexpected(rparen.error());
   }
 
-  if (match(Token::Type::COLON)) {
-    auto returnTypeTok = consume(Token::Type::TYPE, "Expected return type after ':'");
+  if (match(Token::Type::ARROW)) {
+    auto returnTypeTok = consume(Token::Type::TYPE, "Expected return type after '->'");
     if (!returnTypeTok)
       return std::unexpected(returnTypeTok.error());
     funcNode->setReturnType(returnTypeTok->value());
