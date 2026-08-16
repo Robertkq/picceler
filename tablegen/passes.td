@@ -42,6 +42,13 @@ def PiccelerToAffine : Pass<"picceler-to-affine", "mlir::ModuleOp"> {
 def PiccelerOpsToFuncCalls : Pass<"picceler-ops-to-func-calls", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Heavy-Ops to function calls";
   let constructor = "picceler::createPiccelerOpsToFuncCallsPass()";
+
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect",
+    "mlir::memref::MemRefDialect",
+    "mlir::LLVM::LLVMDialect"
+    ];
 }
 
 def PiccelerToLLVMIR : Pass<"picceler-to-llvmir", "mlir::ModuleOp"> {

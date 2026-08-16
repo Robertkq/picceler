@@ -7,9 +7,33 @@ func.func @LoadImage() {
 }
 
 // CHECK-LABEL: func.func @LoadImage()
-// CHECK-NEXT: %[[PATH:.*]] = "picceler.string.const"() 
+// CHECK-NEXT: %[[PATH:.*]] = "picceler.string.const"()
 // CHECK-NOT: "picceler.load_image"
-// CHECK-NEXT: %[[LOAD:.*]] = call @piccelerLoadImage(%[[PATH]]) : (!picceler.string) -> !picceler.image
+// CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
+// CHECK-NEXT: %[[DATASLOT:.*]] = llvm.alloca %[[ONE]] x !llvm.ptr : (i32) -> !llvm.ptr
+// CHECK-NEXT: %[[HSLOT:.*]] = llvm.alloca %[[ONE]] x i64 : (i32) -> !llvm.ptr
+// CHECK-NEXT: %[[WSLOT:.*]] = llvm.alloca %[[ONE]] x i64 : (i32) -> !llvm.ptr
+// CHECK-NEXT: call @piccelerLoadImage(%[[PATH]], %[[DATASLOT]], %[[HSLOT]], %[[WSLOT]]) : (!picceler.string, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
+// CHECK-NEXT: %[[DATA:.*]] = llvm.load %[[DATASLOT]] : !llvm.ptr -> !llvm.ptr
+// CHECK-NEXT: %[[H:.*]] = llvm.load %[[HSLOT]] : !llvm.ptr -> i64
+// CHECK-NEXT: %[[W:.*]] = llvm.load %[[WSLOT]] : !llvm.ptr -> i64
+// CHECK-NEXT: %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)>
+// CHECK-NEXT: %[[FOUR:.*]] = arith.constant 4 : i64
+// CHECK-NEXT: %[[ROWSTRIDE:.*]] = arith.muli %[[W]], %[[FOUR]] : i64
+// CHECK-NEXT: %[[S0:.*]] = llvm.insertvalue %[[DATA]], %[[POISON]][0]
+// CHECK-NEXT: %[[S1:.*]] = llvm.insertvalue %[[DATA]], %[[S0]][1]
+// CHECK-NEXT: %[[ZERO:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK-NEXT: %[[S2:.*]] = llvm.insertvalue %[[ZERO]], %[[S1]][2]
+// CHECK-NEXT: %[[S3:.*]] = llvm.insertvalue %[[H]], %[[S2]][3, 0]
+// CHECK-NEXT: %[[S4:.*]] = llvm.insertvalue %[[W]], %[[S3]][3, 1]
+// CHECK-NEXT: %[[FOUR2:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK-NEXT: %[[S5:.*]] = llvm.insertvalue %[[FOUR2]], %[[S4]][3, 2]
+// CHECK-NEXT: %[[S6:.*]] = llvm.insertvalue %[[ROWSTRIDE]], %[[S5]][4, 0]
+// CHECK-NEXT: %[[FOUR3:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK-NEXT: %[[S7:.*]] = llvm.insertvalue %[[FOUR3]], %[[S6]][4, 1]
+// CHECK-NEXT: %[[ONEIDX:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK-NEXT: %[[S8:.*]] = llvm.insertvalue %[[ONEIDX]], %[[S7]][4, 2]
+// CHECK-NEXT: %[[LOAD:.*]] = builtin.unrealized_conversion_cast %[[S8]] : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> to memref<?x?x4xi8>
 // CHECK-NEXT: return
 
 // -----
@@ -22,11 +46,18 @@ func.func @LoadAndShowImage() {
 }
 
 // CHECK-LABEL: func.func @LoadAndShowImage()
-// CHECK-NEXT: %[[PATH:.*]] = "picceler.string.const"() 
-// CHECK-NOT: "picceler.load_image"
-// CHECK-NEXT: %[[LOAD:.*]] = call @piccelerLoadImage(%[[PATH]]) : (!picceler.string) -> !picceler.image
+// CHECK: %[[LOAD:.*]] = builtin.unrealized_conversion_cast %{{.*}} : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> to memref<?x?x4xi8>
 // CHECK-NOT: "picceler.show_image"
-// CHECK-NEXT: call @piccelerShowImage(%[[LOAD]]) : (!picceler.image) -> ()
+// CHECK-NEXT: %[[PTRIDX:.*]] = memref.extract_aligned_pointer_as_index %[[LOAD]] : memref<?x?x4xi8> -> index
+// CHECK-NEXT: %[[PTRI64:.*]] = arith.index_cast %[[PTRIDX]] : index to i64
+// CHECK-NEXT: %[[PTR:.*]] = llvm.inttoptr %[[PTRI64]] : i64 to !llvm.ptr
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[DIM0:.*]] = memref.dim %[[LOAD]], %[[C0]] : memref<?x?x4xi8>
+// CHECK-NEXT: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT: %[[DIM1:.*]] = memref.dim %[[LOAD]], %[[C1]] : memref<?x?x4xi8>
+// CHECK-NEXT: %[[H32:.*]] = arith.index_cast %[[DIM0]] : index to i32
+// CHECK-NEXT: %[[W32:.*]] = arith.index_cast %[[DIM1]] : index to i32
+// CHECK-NEXT: call @piccelerShowImage(%[[PTR]], %[[W32]], %[[H32]]) : (!llvm.ptr, i32, i32) -> ()
 // CHECK-NEXT: return
 
 // -----
@@ -41,14 +72,21 @@ func.func @LoadShowSaveImage() {
 }
 
 // CHECK-LABEL: func.func @LoadShowSaveImage()
-// CHECK-NEXT: %[[PATH:.*]] = "picceler.string.const"() 
-// CHECK-NOT: "picceler.load_image"
-// CHECK-NEXT: %[[LOAD:.*]] = call @piccelerLoadImage(%[[PATH]]) : (!picceler.string) -> !picceler.image
+// CHECK: %[[LOAD:.*]] = builtin.unrealized_conversion_cast %{{.*}} : !llvm.struct<(ptr, ptr, i64, array<3 x i64>, array<3 x i64>)> to memref<?x?x4xi8>
 // CHECK-NOT: "picceler.show_image"
-// CHECK-NEXT: call @piccelerShowImage(%[[LOAD]]) : (!picceler.image) -> ()
-// CHECK-NEXT: %[[OUTPATH:.*]] = "picceler.string.const"() 
+// CHECK: call @piccelerShowImage(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, i32, i32) -> ()
+// CHECK-NEXT: %[[OUTPATH:.*]] = "picceler.string.const"() <{value = "output.png"}>
 // CHECK-NOT: "picceler.save_image"
-// CHECK-NEXT: call @piccelerSaveImage(%[[LOAD]], %[[OUTPATH]]) : (!picceler.image, !picceler.string) -> ()
+// CHECK-NEXT: %[[PTRIDX2:.*]] = memref.extract_aligned_pointer_as_index %[[LOAD]] : memref<?x?x4xi8> -> index
+// CHECK-NEXT: %[[PTRI64_2:.*]] = arith.index_cast %[[PTRIDX2]] : index to i64
+// CHECK-NEXT: %[[PTR2:.*]] = llvm.inttoptr %[[PTRI64_2]] : i64 to !llvm.ptr
+// CHECK-NEXT: %[[C0_2:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %[[DIM0_2:.*]] = memref.dim %[[LOAD]], %[[C0_2]] : memref<?x?x4xi8>
+// CHECK-NEXT: %[[H32_2:.*]] = arith.index_cast %[[DIM0_2]] : index to i32
+// CHECK-NEXT: %[[C1_2:.*]] = arith.constant 1 : index
+// CHECK-NEXT: %[[DIM1_2:.*]] = memref.dim %[[LOAD]], %[[C1_2]] : memref<?x?x4xi8>
+// CHECK-NEXT: %[[W32_2:.*]] = arith.index_cast %[[DIM1_2]] : index to i32
+// CHECK-NEXT: call @piccelerSaveImage(%[[PTR2]], %[[W32_2]], %[[H32_2]], %[[OUTPATH]]) : (!llvm.ptr, i32, i32, !picceler.string) -> ()
 // CHECK-NEXT: return
 
 // -----

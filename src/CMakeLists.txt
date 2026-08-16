@@ -79,6 +79,7 @@ target_link_libraries(PiccelerIR PUBLIC
 )
 
 add_library(PiccelerTransforms STATIC
+    generic_type_rewriter.cpp
     picceler_kernel_to_memref_pass.cpp
     picceler_ops_to_func_calls_pass.cpp
     picceler_to_affine_pass.cpp

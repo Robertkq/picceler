@@ -7,9 +7,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 
 #include "ops.h"
 #include "types.h"
+#include "passes.h"
 
 namespace picceler {
 
@@ -74,6 +77,7 @@ struct PiccelerKernelToMemrefPass : public impl::PiccelerKernelToMemrefBase<Picc
 
     mlir::RewritePatternSet patterns(&context);
     patterns.add<KernelToMemref>(typeConverter, &context);
+    patterns.add<GenericTypeUpdatePattern>(typeConverter, &context);
 
     mlir::populateFunctionOpInterfaceTypeConversionPattern<mlir::func::FuncOp>(patterns, typeConverter);
     mlir::populateReturnOpTypeConversionPattern(patterns, typeConverter);
@@ -81,11 +85,13 @@ struct PiccelerKernelToMemrefPass : public impl::PiccelerKernelToMemrefBase<Picc
     mlir::ConversionTarget target(context);
     target.addIllegalOp<KernelConstOp>();
     target.addLegalDialect<mlir::arith::ArithDialect, mlir::memref::MemRefDialect, mlir::func::FuncDialect>();
+    // target.addLegalOp<mlir::UnrealizedConversionCastOp>();
 
     target.addDynamicallyLegalOp<mlir::func::FuncOp>(
         [&](mlir::func::FuncOp op) { return typeConverter.isSignatureLegal(op.getFunctionType()); });
     target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
         [&](mlir::func::ReturnOp op) { return typeConverter.isLegal(op.getOperandTypes()); });
+    target.markUnknownOpDynamicallyLegal([&](mlir::Operation *op) { return typeConverter.isLegal(op); });
 
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target, std::move(patterns)))) {
       signalPassFailure();

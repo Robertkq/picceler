@@ -41,8 +41,8 @@ IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context)
 bool IRPassManager::run(mlir::ModuleOp module) { return !mlir::failed(_passManager.run(module)); }
 
 void IRPassManager::addPasses() {
-  addRuntimeLoweringPasses();
   addHighLevelOptimizationPasses();
+  addRuntimeLoweringPasses();
   addAffineLoweringPasses();
   addBackendLoweringPasses();
 }

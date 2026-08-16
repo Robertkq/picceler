@@ -1,5 +1,6 @@
 #include "runtime.h"
 
+#include <cstddef>
 #include <iostream>
 
 #include "spdlog/spdlog.h"
@@ -8,35 +9,30 @@
 
 extern "C" {
 
-picceler::Image *piccelerLoadImage(const char *filename) {
-  spdlog::debug("piccelerLoadImage called with filename: {}", filename);
-  picceler::Image *imgPtr = picceler::loadImage(std::string(filename));
-  spdlog::debug("Size: {}, Width Off: {}, Height Off: {}, Data Off: {}", sizeof(picceler::Image),
-                offsetof(picceler::Image, _width), offsetof(picceler::Image, _height),
-                offsetof(picceler::Image, _data));
+void piccelerLoadImage(const char *filename, uint8_t **data, int64_t *height, int64_t *width) {
+  picceler::Image *img = picceler::loadImage(std::string(filename));
+  if (!img || !img->_data) {
+    *data = nullptr;
+    *height = 0;
+    *width = 0;
+    return;
+  }
 
-  return imgPtr;
+  *data = img->_data;
+  *height = static_cast<int64_t>(img->_height);
+  *width = static_cast<int64_t>(img->_width);
 }
 
-void piccelerShowImage(picceler::Image *image) {
+void piccelerShowImage(void *data, uint32_t width, uint32_t height) {
   spdlog::debug("piccelerShowImage called");
-  picceler::showImage(*image);
+  picceler::Image image{width, height, static_cast<unsigned char *>(data)};
+  picceler::showImage(image);
 }
 
-void piccelerSaveImage(picceler::Image *image, const char *filename) {
+void piccelerSaveImage(void *data, uint32_t width, uint32_t height, const char *filename) {
   spdlog::debug("piccelerSaveImage called with filename: {}", filename);
-  picceler::saveImage(*image, std::string(filename));
-}
-
-picceler::Image *piccelerCreateImage(uint32_t width, uint32_t height) {
-  spdlog::debug("piccelerCreateImage called with width: {}, height: {}", width, height);
-  picceler::Image *newImage = new picceler::Image();
-  newImage->_width = width;
-  newImage->_height = height;
-  constexpr auto channels = 4;
-  newImage->_data = new unsigned char[static_cast<size_t>(width) * height * channels];
-
-  return newImage;
+  picceler::Image image{width, height, static_cast<unsigned char *>(data)};
+  picceler::saveImage(image, std::string(filename));
 }
 
 void *piccelerReadString(const char *prompt) {
