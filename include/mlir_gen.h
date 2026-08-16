@@ -66,6 +66,13 @@ private:
   std::vector<mlir::Type> getFunctionArgTypes(FunctionNode *funcNode);
 
   /**
+   * @brief Maps a picceler source-level type name (e.g. "image", "f64") to its MLIR type.
+   * @param typeName The source-level type name.
+   * @return The corresponding MLIR type.
+   */
+  mlir::Type getMLIRType(const std::string &typeName);
+
+  /**
    * @brief Looks up a variable in the known scopes and returns its MLIR value if found.
    * @param name The name of the variable to look up.
    * @return The MLIR value of the variable if found, or an error if not found.
@@ -110,6 +117,7 @@ private:
   mlir::Value emitBinaryOp(BinaryOpNode *node);
   void emitIf(IfNode *node);
   void emitFor(ForNode *node);
+  void emitReturn(ReturnNode *node);
   mlir::Value emitCallExpression(CallNode *node, const std::vector<mlir::Value> &args);
 
   /**

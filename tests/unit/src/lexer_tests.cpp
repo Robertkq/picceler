@@ -192,6 +192,35 @@ TEST_F(LexerTest, OperatorsWithoutWhitespace) {
   }
 }
 
+TEST_F(LexerTest, ReturnKeywordToken) {
+  auto tokens = tokenize("return x");
+
+  ASSERT_EQ(tokens.size(), 3);
+  EXPECT_EQ(tokens[0].type(), picceler::Token::Type::KW_RETURN);
+  EXPECT_EQ(tokens[0].value(), "return");
+
+  EXPECT_EQ(tokens[1].type(), picceler::Token::Type::IDENTIFIER);
+  EXPECT_EQ(tokens[1].value(), "x");
+
+  EXPECT_EQ(tokens[2].type(), picceler::Token::Type::EOF_TOKEN);
+}
+
+TEST_F(LexerTest, FunctionWithArrowReturnTypeTokenSequence) {
+  auto tokens = tokenize("def foo() -> image { return x }");
+
+  std::vector<picceler::Token::Type> expectedTypes = {
+      picceler::Token::Type::KW_DEF,     picceler::Token::Type::IDENTIFIER, picceler::Token::Type::L_PAREN,
+      picceler::Token::Type::R_PAREN,    picceler::Token::Type::ARROW,      picceler::Token::Type::TYPE,
+      picceler::Token::Type::L_BRACE,    picceler::Token::Type::KW_RETURN,  picceler::Token::Type::IDENTIFIER,
+      picceler::Token::Type::R_BRACE,    picceler::Token::Type::EOF_TOKEN};
+
+  ASSERT_EQ(tokens.size(), expectedTypes.size());
+  for (size_t i = 0; i < expectedTypes.size(); ++i) {
+    EXPECT_EQ(tokens[i].type(), expectedTypes[i]) << "Mismatch at index " << i;
+  }
+  EXPECT_EQ(tokens[5].value(), "image");
+}
+
 TEST_F(LexerTest, ArrowVsMinusToken) {
   auto tokens = tokenize("def foo() -> int64 { return a - b }");
 

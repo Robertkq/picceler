@@ -157,4 +157,8 @@ std::string ForNode::toString() const {
   return str;
 }
 
+std::string ReturnNode::toString() const {
+  return std::format("ReturnNode:[value: {}]", _returnValue ? _returnValue->toString() : "nullptr");
+}
+
 } // namespace picceler

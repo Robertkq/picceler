@@ -123,7 +123,11 @@ void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
     if (auto funcNode = dynamic_cast<FunctionNode *>(stmt)) {
       spdlog::debug("Declaring function: {}", funcNode->name());
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
-      auto funcType = _builder.getFunctionType(funcArgTypes, {});
+      std::vector<mlir::Type> funcResultTypes;
+      if (funcNode->returnType()) {
+        funcResultTypes.push_back(getMLIRType(*funcNode->returnType()));
+      }
+      auto funcType = _builder.getFunctionType(funcArgTypes, funcResultTypes);
       auto funcOp = _builder.create<mlir::func::FuncOp>(_builder.getUnknownLoc(), funcNode->name(), funcType);
       _functionTable[funcNode->name()] = [&, funcOp](mlir::Location loc, const std::vector<mlir::Value> &args) {
         auto callOp = _builder.create<mlir::func::CallOp>(loc, funcOp, args);
@@ -138,19 +142,26 @@ void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
   std::vector<mlir::Type> argTypes;
   for (const auto &[paramName, paramType] : funcNode->parameters()) {
-    if (paramType == "image") {
-      argTypes.push_back(_builder.getType<ImageType>());
-    } else if (paramType == "string") {
-      argTypes.push_back(_builder.getType<StringType>());
-    } else if (paramType == "f64") {
-      argTypes.push_back(_builder.getF64Type());
-    } else if (paramType == "int64") {
-      argTypes.push_back(_builder.getI64Type());
-    } else {
+    try {
+      argTypes.push_back(getMLIRType(paramType));
+    } catch (const std::runtime_error &) {
       throw std::runtime_error("Unsupported parameter type: " + paramType);
     }
   }
   return argTypes;
+}
+
+mlir::Type MLIRGen::getMLIRType(const std::string &typeName) {
+  if (typeName == "image") {
+    return _builder.getType<ImageType>();
+  } else if (typeName == "string") {
+    return _builder.getType<StringType>();
+  } else if (typeName == "f64") {
+    return _builder.getF64Type();
+  } else if (typeName == "int64") {
+    return _builder.getI64Type();
+  }
+  throw std::runtime_error("Unsupported type: " + typeName);
 }
 
 void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
@@ -182,7 +193,10 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 
       exitScope();
 
-      _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
+      auto *insertionBlock = _builder.getInsertionBlock();
+      if (insertionBlock->empty() || !insertionBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+        _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
+      }
     } else {
       spdlog::error("Unexpected statement type in AST: {} -- parsing only FunctionNodes to emit code",
                     stmt->toString());
@@ -211,9 +225,20 @@ void MLIRGen::emitStatement(ASTNode *node) {
     emitIf(ifNode);
   } else if (auto forNode = dynamic_cast<ForNode *>(node)) {
     emitFor(forNode);
+  } else if (auto returnNode = dynamic_cast<ReturnNode *>(node)) {
+    emitReturn(returnNode);
   } else {
     throw std::runtime_error("Unsupported statement type");
   }
+}
+
+void MLIRGen::emitReturn(ReturnNode *node) {
+  spdlog::debug("Emitting MLIR for return statement: {}", node->toString());
+  mlir::Value returnValue;
+  if (node->returnValue()) {
+    returnValue = emitExpression(node->returnValue());
+  }
+  _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc(), returnValue);
 }
 
 mlir::Value MLIRGen::emitKernel(KernelNode *node) {

@@ -67,6 +67,7 @@ public:
   const std::string &name() const { return _name; }
   const auto &parameters() const { return _parameters; }
   auto body() const { return getRawPointers(_body); }
+  const std::optional<std::string> &returnType() const { return _returnType; }
 
   void addParameter(const std::string &paramName, const std::string &paramType) {
     _parameters.emplace_back(paramName, paramType);
@@ -74,12 +75,15 @@ public:
 
   void addBodyStatement(std::unique_ptr<ASTNode> statement) { _body.push_back(std::move(statement)); }
 
+  void setReturnType(std::string returnType) { _returnType = std::move(returnType); }
+
   std::string toString() const override;
 
 private:
   std::string _name;
   std::vector<std::pair<std::string, std::string>> _parameters;
   std::vector<std::unique_ptr<ASTNode>> _body;
+  std::optional<std::string> _returnType;
 };
 
 /**
@@ -249,6 +253,21 @@ private:
   std::unique_ptr<ASTNode> _upperBound;
   std::unique_ptr<ASTNode> _step;
   std::vector<std::unique_ptr<ASTNode>> _body;
+};
+
+/**
+ * @brief AST node for "return" statements.
+ */
+class ReturnNode : public ASTNode {
+public:
+  ReturnNode(Location loc, std::unique_ptr<ASTNode> returnValue) : ASTNode(loc), _returnValue(std::move(returnValue)) {}
+
+  ASTNode *returnValue() const { return _returnValue.get(); }
+
+  std::string toString() const override;
+
+private:
+  std::unique_ptr<ASTNode> _returnValue;
 };
 
 } // namespace picceler
