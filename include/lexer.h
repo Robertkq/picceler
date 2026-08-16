@@ -49,10 +49,14 @@ struct Token {
     GT,         // Represents the assignment operator '>'
     LE,         // Represents the assignment operator '<='
     GE,         // Represents the assignment operator '>='
+    KW_FOR,     // Represents the keyword 'for'
+    KW_STEP,    // Represents the keyword 'step'
+    DOT_DOT,    // Represents the operator '..'
     TYPE,       // Represents type annotations (e.g., int, float, string)
     KW_DEF,     // Represents the keyword 'def'
     KW_RETURN,  // Represents the keyword 'return'
     KW_IF,      // Represents the keyword 'if'
+    KW_ELSE,    // Represents the keyword 'else'
     EOF_TOKEN,  // Represents the end of file
     UNKNOWN     // Represents unknown tokens
   };

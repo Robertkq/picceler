@@ -84,6 +84,10 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return parseIfStatement();
   }
 
+  if (check(Token::Type::KW_FOR)) {
+    return parseForStatement();
+  }
+
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identifier = advance();
     if (check(Token::Type::ASSIGN)) {
@@ -238,7 +242,100 @@ Result<std::unique_ptr<ASTNode>> Parser::parseIfStatement() {
   if (!rbrace)
     return std::unexpected(rbrace.error());
 
-  return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body));
+  // Parse optional else / else if
+  std::vector<std::unique_ptr<ASTNode>> elseBody;
+  if (match(Token::Type::KW_ELSE)) {
+    if (match(Token::Type::KW_IF)) {
+      // Support for 'else if' by recursively parsing it as a nested if statement node
+      auto elseIfStmt = parseIfStatement();
+      if (!elseIfStmt)
+        return std::unexpected(elseIfStmt.error());
+      elseBody.push_back(std::move(*elseIfStmt));
+    } else {
+      auto elseLBrace = consume(Token::Type::L_BRACE, "Expected '{' to open else body");
+      if (!elseLBrace)
+        return std::unexpected(elseLBrace.error());
+
+      while (!check(Token::Type::R_BRACE) && !isAtEnd()) {
+        auto stmt = parseStatement();
+        if (!stmt)
+          return std::unexpected(stmt.error());
+        elseBody.push_back(std::move(*stmt));
+      }
+
+      auto elseRBrace = consume(Token::Type::R_BRACE, "Expected '}' to close else body");
+      if (!elseRBrace)
+        return std::unexpected(elseRBrace.error());
+    }
+  }
+
+  return std::make_unique<IfNode>(loc, std::move(*condResult), std::move(body), std::move(elseBody));
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseForStatement() {
+  spdlog::debug("Parsing for statement");
+  auto forTok = consume(Token::Type::KW_FOR, "Expected 'for' keyword");
+  if (!forTok)
+    return std::unexpected(forTok.error());
+  Location loc = forTok->location();
+
+  auto lparen = consume(Token::Type::L_PAREN, "Expected '(' after 'for'");
+  if (!lparen)
+    return std::unexpected(lparen.error());
+
+  auto varTok = consume(Token::Type::IDENTIFIER, "Expected loop variable name");
+  if (!varTok)
+    return std::unexpected(varTok.error());
+  std::string varName = varTok->value();
+
+  auto eqTok = consume(Token::Type::ASSIGN, "Expected '=' after loop variable");
+  if (!eqTok)
+    return std::unexpected(eqTok.error());
+
+  auto lowerBound = parseExpression();
+  if (!lowerBound)
+    return std::unexpected(lowerBound.error());
+
+  auto dotDot = consume(Token::Type::DOT_DOT, "Expected '..' after lower bound in for loop");
+  if (!dotDot)
+    return std::unexpected(dotDot.error());
+
+  auto upperBound = parseExpression();
+  if (!upperBound)
+    return std::unexpected(upperBound.error());
+
+  std::unique_ptr<ASTNode> step = nullptr;
+  if (match(Token::Type::KW_STEP)) {
+    auto stepExpr = parseExpression();
+    if (!stepExpr)
+      return std::unexpected(stepExpr.error());
+    step = std::move(*stepExpr);
+  } else {
+    step = std::make_unique<NumberNode>(loc, 1.0);
+  }
+
+  auto rparen = consume(Token::Type::R_PAREN, "Expected ')' after for loop header");
+  if (!rparen)
+    return std::unexpected(rparen.error());
+
+  auto lbrace = consume(Token::Type::L_BRACE, "Expected '{' to open for loop body");
+  if (!lbrace)
+    return std::unexpected(lbrace.error());
+
+  std::vector<std::unique_ptr<ASTNode>> body;
+  while (!check(Token::Type::R_BRACE) && !isAtEnd()) {
+    auto stmt = parseStatement();
+    if (!stmt)
+      return std::unexpected(stmt.error());
+    body.push_back(std::move(*stmt));
+  }
+
+  auto rbrace = consume(Token::Type::R_BRACE, "Expected '}' to close for loop body");
+  if (!rbrace)
+    return std::unexpected(rbrace.error());
+
+  return std::make_unique<ForNode>(loc, varName, std::move(*lowerBound), std::move(*upperBound), std::move(step),
+                                   std::move(body));
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {

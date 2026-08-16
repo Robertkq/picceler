@@ -1,5 +1,6 @@
 #pragma once
 
+#include <error.h>
 #include <memory>
 #include <vector>
 #include <string>
@@ -75,6 +76,7 @@ private:
   Result<std::unique_ptr<ASTNode>> parseMultiplicative();
   Result<std::unique_ptr<ASTNode>> parsePrimary();
   Result<std::unique_ptr<ASTNode>> parseIfStatement();
+  Result<std::unique_ptr<ASTNode>> parseForStatement();
   /**
    * \}
    */

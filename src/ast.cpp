@@ -131,7 +131,30 @@ std::string IfNode::toString() const {
       statements += "\t" + statement->toString() + "\n";
     }
   }
+
+  if (!_elseBody.empty()) {
+    std::string elseStatements;
+    for (const auto &statement : elseBody()) {
+      elseStatements += "\t" + statement->toString() + "\n";
+    }
+    return std::format("IfNode:[condition: {}] {{\n{}}} else {{\n{}}}", condition()->toString(), statements,
+                       elseStatements);
+  }
+
   return std::format("IfNode:[condition: {}] {{\n{}}}", condition()->toString(), statements);
+}
+
+std::string ForNode::toString() const {
+  std::string str =
+      std::format("ForNode(var: {}, lb: {}, ub: {}, step: {}, body_statements: {})", _varName,
+                  _lowerBound ? _lowerBound->toString() : "nullptr", _upperBound ? _upperBound->toString() : "nullptr",
+                  _step ? _step->toString() : "nullptr", _body.size());
+  for (const auto &stmt : _body) {
+    if (stmt) {
+      str += "\n  " + stmt->toString();
+    }
+  }
+  return str;
 }
 
 } // namespace picceler

@@ -209,16 +209,45 @@ private:
  */
 class IfNode : public ASTNode {
 public:
-  IfNode(Location loc, std::unique_ptr<ASTNode> condition, std::vector<std::unique_ptr<ASTNode>> body)
-      : ASTNode(loc), _condition(std::move(condition)), _body(std::move(body)) {}
+  IfNode(Location loc, std::unique_ptr<ASTNode> condition, std::vector<std::unique_ptr<ASTNode>> body,
+         std::vector<std::unique_ptr<ASTNode>> elseBody = {})
+      : ASTNode(loc), _condition(std::move(condition)), _body(std::move(body)), _elseBody(std::move(elseBody)) {}
 
   ASTNode *condition() const { return _condition.get(); }
   auto body() const { return getRawPointers(_body); }
+  auto elseBody() const { return getRawPointers(_elseBody); }
 
   std::string toString() const override;
 
 private:
   std::unique_ptr<ASTNode> _condition;
+  std::vector<std::unique_ptr<ASTNode>> _body;
+  std::vector<std::unique_ptr<ASTNode>> _elseBody;
+};
+
+/**
+ * @brief AST node for "for" statements.
+ */
+class ForNode : public ASTNode {
+public:
+  ForNode(Location loc, std::string varName, std::unique_ptr<ASTNode> lowerBound, std::unique_ptr<ASTNode> upperBound,
+          std::unique_ptr<ASTNode> step, std::vector<std::unique_ptr<ASTNode>> body)
+      : ASTNode(loc), _varName(std::move(varName)), _lowerBound(std::move(lowerBound)),
+        _upperBound(std::move(upperBound)), _step(std::move(step)), _body(std::move(body)) {}
+
+  const std::string &varName() const { return _varName; }
+  ASTNode *lowerBound() const { return _lowerBound.get(); }
+  ASTNode *upperBound() const { return _upperBound.get(); }
+  ASTNode *step() const { return _step.get(); }
+  const std::vector<std::unique_ptr<ASTNode>> &body() const { return _body; }
+
+  std::string toString() const override;
+
+private:
+  std::string _varName;
+  std::unique_ptr<ASTNode> _lowerBound;
+  std::unique_ptr<ASTNode> _upperBound;
+  std::unique_ptr<ASTNode> _step;
   std::vector<std::unique_ptr<ASTNode>> _body;
 };
 

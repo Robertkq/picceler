@@ -188,6 +188,91 @@ TEST_F(ParserTest, ParenthesesOverridePrecedence) {
   EXPECT_EQ(addNode->op(), "+");
 }
 
+TEST_F(ParserTest, IfElseParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    if (a == 1) {
+      b = 10
+    } else {
+      b = 20
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *ifNode = as<IfNode>(ast->statements()[0]);
+  ASSERT_NE(ifNode, nullptr);
+
+  const auto *cond = as<BinaryOpNode>(ifNode->condition());
+  ASSERT_NE(cond, nullptr);
+  EXPECT_EQ(cond->op(), "==");
+
+  ASSERT_EQ(ifNode->body().size(), 1);
+  const auto *thenAssign = as<AssignmentNode>(ifNode->body()[0]);
+  ASSERT_NE(thenAssign, nullptr);
+  EXPECT_EQ(thenAssign->lhs()->name(), "b");
+  const auto *thenVal = as<NumberNode>(thenAssign->rhs());
+  ASSERT_NE(thenVal, nullptr);
+  EXPECT_EQ(thenVal->value(), 10.0);
+
+  ASSERT_EQ(ifNode->elseBody().size(), 1);
+  const auto *elseAssign = as<AssignmentNode>(ifNode->elseBody()[0]);
+  ASSERT_NE(elseAssign, nullptr);
+  EXPECT_EQ(elseAssign->lhs()->name(), "b");
+  const auto *elseVal = as<NumberNode>(elseAssign->rhs());
+  ASSERT_NE(elseVal, nullptr);
+  EXPECT_EQ(elseVal->value(), 20.0);
+}
+
+TEST_F(ParserTest, IfElseIfElseParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    if (x == 1) {
+      res = 100
+    } else if (x == 2) {
+      res = 200
+    } else {
+      res = 300
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *outerIf = as<IfNode>(ast->statements()[0]);
+  ASSERT_NE(outerIf, nullptr);
+  ASSERT_EQ(outerIf->body().size(), 1);
+
+  ASSERT_EQ(outerIf->elseBody().size(), 1);
+  const auto *nestedIf = as<IfNode>(outerIf->elseBody()[0]);
+  ASSERT_NE(nestedIf, nullptr);
+
+  const auto *nestedCond = as<BinaryOpNode>(nestedIf->condition());
+  ASSERT_NE(nestedCond, nullptr);
+  EXPECT_EQ(nestedCond->op(), "==");
+
+  ASSERT_EQ(nestedIf->elseBody().size(), 1);
+  const auto *fallbackAssign = as<AssignmentNode>(nestedIf->elseBody()[0]);
+  ASSERT_NE(fallbackAssign, nullptr);
+  const auto *fallbackVal = as<NumberNode>(fallbackAssign->rhs());
+  ASSERT_NE(fallbackVal, nullptr);
+  EXPECT_EQ(fallbackVal->value(), 300.0);
+}
+
+TEST_F(ParserTest, InvalidElseSyntaxFails) {
+  // 'else' without a matching 'if' statement
+  assertParseFails(R"(
+    else {
+      b = 20
+    }
+  )");
+
+  // Unclosed brace in else block
+  assertParseFails(R"(
+    if (a == 1) {
+      b = 10
+    } else {
+      b = 20
+  )");
+}
+
 TEST_F(ParserTest, RelationalComparisonExpression) {
   // Testing a complete user scenario: var * car <= 50
   auto ast = parseSuccessfully(R"(
@@ -243,6 +328,76 @@ TEST_F(ParserTest, PowFunctionParses) {
   const auto *exp = as<NumberNode>(call->arguments()[1]);
   ASSERT_NE(exp, nullptr);
   EXPECT_EQ(exp->value(), 3.0);
+}
+
+TEST_F(ParserTest, ForLoopParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    for (i = 1 .. 10) {
+      a = i
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  // Pass directly without .get()
+  const auto *forNode = as<ForNode>(ast->statements()[0]);
+  ASSERT_NE(forNode, nullptr);
+  EXPECT_EQ(forNode->varName(), "i");
+
+  // Check that lower bound is 1 and upper bound is 10
+  const auto *lb = as<NumberNode>(forNode->lowerBound());
+  ASSERT_NE(lb, nullptr);
+  EXPECT_EQ(lb->value(), 1.0);
+
+  const auto *ub = as<NumberNode>(forNode->upperBound());
+  ASSERT_NE(ub, nullptr);
+  EXPECT_EQ(ub->value(), 10.0);
+
+  // Check body statement count
+  ASSERT_EQ(forNode->body().size(), 1);
+
+  // Pass directly without .get()
+  const auto *assign = as<AssignmentNode>(forNode->body()[0].get());
+  ASSERT_NE(assign, nullptr);
+  EXPECT_EQ(assign->lhs()->name(), "a");
+}
+
+TEST_F(ParserTest, ForLoopWithStepParsesSuccessfully) {
+  auto ast = parseSuccessfully(R"(
+    for (j = 0 .. 100 step 5) {
+      print("j: {}", j)
+    }
+  )");
+  ASSERT_NE(ast, nullptr);
+  ASSERT_EQ(ast->statements().size(), 1);
+
+  const auto *forNode = as<ForNode>(ast->statements()[0]);
+  ASSERT_NE(forNode, nullptr);
+  EXPECT_EQ(forNode->varName(), "j");
+
+  // Check step is present and evaluates to 5
+  const auto *stepNum = as<NumberNode>(forNode->step());
+  ASSERT_NE(stepNum, nullptr);
+  EXPECT_EQ(stepNum->value(), 5.0);
+
+  // Check body statement count
+  ASSERT_EQ(forNode->body().size(), 1);
+}
+
+TEST_F(ParserTest, InvalidForLoopFails) {
+  // Missing '..' operator
+  assertParseFails(R"(
+    for (i = 1 10) {
+      a = i
+    }
+  )");
+
+  // Missing closing parenthesis
+  assertParseFails(R"(
+    for (i = 1 .. 10 {
+      a = i
+    }
+  )");
 }
 
 } // namespace picceler

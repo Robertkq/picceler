@@ -209,6 +209,8 @@ void MLIRGen::emitStatement(ASTNode *node) {
     emitCall(call);
   } else if (auto ifNode = dynamic_cast<IfNode *>(node)) {
     emitIf(ifNode);
+  } else if (auto forNode = dynamic_cast<ForNode *>(node)) {
+    emitFor(forNode);
   } else {
     throw std::runtime_error("Unsupported statement type");
   }
@@ -480,8 +482,9 @@ void MLIRGen::registerBuiltinFunctions() {
     if (args.size() != 1) {
       throw std::runtime_error("sqrt expects 1 argument");
     }
+
     auto &arg = args[0];
-    
+
     // Optional: Ensure it's a float or can be treated as one
     if (!mlir::isa<mlir::FloatType>(arg.getType())) {
       throw std::runtime_error("sqrt expects a floating-point argument");
@@ -526,19 +529,18 @@ void MLIRGen::emitIf(IfNode *node) {
   mlir::Value cond = emitExpression(node->condition());
   auto loc = _builder.getUnknownLoc();
 
-  // Standardize truthiness: if condition is scalar f64 instead of i1, compare non-zero
   if (!cond.getType().isInteger(1)) {
     auto zero = _builder.create<mlir::arith::ConstantFloatOp>(loc, _builder.getF64Type(), llvm::APFloat(0.0));
     cond = _builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::UNE, cond, zero);
   }
 
-  // Construct using OperationState
+  bool hasElse = !node->elseBody().empty();
+
   mlir::OperationState state(loc, mlir::scf::IfOp::getOperationName());
-  mlir::scf::IfOp::build(_builder, state, cond, /*withElseRegion=*/false);
+  mlir::scf::IfOp::build(_builder, state, cond, /*withElseRegion=*/hasElse);
 
   auto ifInst = llvm::cast<mlir::scf::IfOp>(_builder.create(state));
 
-  // Fix: Safely get or create the single block in the then region
   mlir::Region &thenRegion = ifInst.getThenRegion();
   if (thenRegion.empty()) {
     thenRegion.emplaceBlock();
@@ -547,18 +549,88 @@ void MLIRGen::emitIf(IfNode *node) {
 
   _builder.setInsertionPointToStart(thenBlock);
   enterScope("IfBlock");
-  for (auto stmt : node->body()) {
+  for (const auto &stmt : node->body()) {
     emitStatement(stmt);
   }
   exitScope();
 
-  // Ensure the block has a terminator (scf.yield)
   if (thenBlock->empty() || !thenBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
     _builder.create<mlir::scf::YieldOp>(loc);
   }
 
-  // Reset insertion point back after the if operation
+  // --- Populate Else Region (if it exists) ---
+  if (hasElse) {
+    mlir::Region &elseRegion = ifInst.getElseRegion();
+    if (elseRegion.empty()) {
+      elseRegion.emplaceBlock();
+    }
+    auto *elseBlock = &elseRegion.front();
+
+    _builder.setInsertionPointToStart(elseBlock);
+    enterScope("ElseBlock");
+    for (const auto &stmt : node->elseBody()) {
+      emitStatement(stmt);
+    }
+    exitScope();
+
+    if (elseBlock->empty() || !elseBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+      _builder.create<mlir::scf::YieldOp>(loc);
+    }
+  }
+
   _builder.setInsertionPointAfter(ifInst);
+}
+
+void MLIRGen::emitFor(ForNode *node) {
+  spdlog::debug("Emitting MLIR for for-loop: {}", node->varName());
+  auto loc = _builder.getUnknownLoc();
+
+  mlir::Value lbVal = emitExpression(node->lowerBound());
+  mlir::Value ubVal = emitExpression(node->upperBound());
+  mlir::Value stepVal = emitExpression(node->step());
+
+  auto toIndex = [&](mlir::Value val) -> mlir::Value {
+    if (val.getType().isIndex())
+      return val;
+    if (mlir::isa<mlir::FloatType>(val.getType())) {
+      auto i64Val = _builder.create<mlir::arith::FPToSIOp>(loc, _builder.getI64Type(), val);
+      return _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getIndexType(), i64Val);
+    }
+    if (val.getType().isInteger()) {
+      return _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getIndexType(), val);
+    }
+    throw std::runtime_error("Unsupported type for loop bounds/step");
+  };
+
+  mlir::Value lbIndex = toIndex(lbVal);
+  mlir::Value ubIndex = toIndex(ubVal);
+  mlir::Value stepIndex = toIndex(stepVal);
+
+  auto forOp = _builder.create<mlir::scf::ForOp>(loc, lbIndex, ubIndex, stepIndex);
+
+  mlir::Region &region = forOp.getRegion();
+  auto *bodyBlock = &region.front();
+
+  _builder.setInsertionPointToStart(bodyBlock);
+  enterScope("ForLoopBlock");
+
+  mlir::Value ivIndex = forOp.getInductionVar();
+  auto ivI64 = _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getI64Type(), ivIndex);
+  mlir::Value ivF64 = _builder.create<mlir::arith::SIToFPOp>(loc, _builder.getF64Type(), ivI64);
+
+  declareVariable(node->varName(), ivF64);
+
+  for (const auto &stmt : node->body()) {
+    emitStatement(stmt.get());
+  }
+
+  exitScope();
+
+  if (bodyBlock->empty() || !bodyBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+    _builder.create<mlir::scf::YieldOp>(loc);
+  }
+
+  _builder.setInsertionPointAfter(forOp);
 }
 
 mlir::Value MLIRGen::emitBinaryOp(BinaryOpNode *node) {
