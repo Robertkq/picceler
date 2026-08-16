@@ -6,6 +6,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <utility>

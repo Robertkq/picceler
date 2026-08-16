@@ -80,6 +80,8 @@ mlir::Value ErodeOp::finalizeAccumulator(mlir::OpBuilder &builder, mlir::Locatio
   return finalAcc;
 }
 
+mlir::arith::AtomicRMWKind ErodeOp::getReductionKind() { return mlir::arith::AtomicRMWKind::minimumf; }
+
 Result<std::pair<mlir::Value, mlir::Value>> ErodeOp::getNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc,
                                                                          mlir::ArrayRef<mlir::Value> operands) {
   if (operands.size() < 2) {

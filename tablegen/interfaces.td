@@ -37,6 +37,14 @@ def NeighbourhoodOpInterface : OpInterface<"NeighbourhoodOpInterface"> {
 			(ins "mlir::OpBuilder &":$builder, "mlir::Location":$loc,
 					 "mlir::Value":$finalAcc)
 		>,
+		InterfaceMethod<
+			"Returns the associative reduction kind that combines per-tap "
+			"contributions produced by accumulate(). Must match the arith op "
+			"accumulate() builds (e.g. addf for a sum, minimumf for a min).",
+			"mlir::arith::AtomicRMWKind",
+			"getReductionKind",
+			(ins)
+		>,
         InterfaceMethod<
 		"Returns the neighborhood shape to be processed around each pixel.",
 		"::picceler::Result<std::pair<mlir::Value, mlir::Value>>",

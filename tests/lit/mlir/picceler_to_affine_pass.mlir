@@ -8,8 +8,7 @@ func.func @RotateImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // CHECK-LABEL: func.func @RotateImage
 // CHECK: memref.alloc
-// CHECK: affine.for
-// CHECK: affine.for
+// CHECK: affine.parallel
 // CHECK: arith.select
 // CHECK-NOT: "picceler.rotate"
 // CHECK: return
@@ -24,8 +23,7 @@ func.func @DiffImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> mem
 // CHECK-LABEL: func.func @DiffImages
 // CHECK: func.call @abort
 // CHECK: memref.alloc
-// CHECK: affine.for
-// CHECK: affine.for
+// CHECK: affine.parallel
 // CHECK: arith.extui
 // CHECK: arith.subi
 // CHECK: arith.select
@@ -42,8 +40,7 @@ func.func @BlendImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> me
 
 // CHECK-LABEL: func.func @BlendImages
 // CHECK: memref.alloc
-// CHECK: affine.for
-// CHECK: affine.for
+// CHECK: affine.parallel
 // CHECK: arith.uitofp
 // CHECK: arith.mulf
 // CHECK: arith.addf
@@ -61,7 +58,7 @@ func.func @DilateImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // CHECK-LABEL: func.func @DilateImage
 // CHECK: memref.alloc
-// CHECK-COUNT-4: affine.for
+// CHECK-COUNT-2: affine.parallel
 // CHECK: arith.maximumf
 // CHECK-NOT: "picceler.dilate"
 // CHECK: return
@@ -76,7 +73,7 @@ func.func @ErodeImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // CHECK-LABEL: func.func @ErodeImage
 // CHECK: memref.alloc
-// CHECK-COUNT-4: affine.for
+// CHECK-COUNT-2: affine.parallel
 // CHECK: arith.minimumf
 // CHECK-NOT: "picceler.erode"
 // CHECK: return
@@ -98,7 +95,7 @@ func.func @ConvolutionImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // CHECK-LABEL: func.func @ConvolutionImage
 // CHECK: memref.alloc
-// CHECK-COUNT-4: affine.for
+// CHECK-COUNT-2: affine.parallel
 // CHECK: memref.load
 // CHECK: arith.mulf
 // CHECK: arith.addf
@@ -118,6 +115,6 @@ func.func @CropImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // CHECK-LABEL: func.func @CropImage
 // CHECK: memref.alloc
-// CHECK-COUNT-2: affine.for
+// CHECK: affine.parallel
 // CHECK-NOT: "picceler.crop"
 // CHECK: return

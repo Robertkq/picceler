@@ -20,6 +20,27 @@
 
 namespace picceler {
 
+/// Builds an `affine.parallel` band with one induction variable per entry in
+/// `upperBounds`, lower bound 0 and step 1. Pass `resultTypes`/`reductions` to
+/// get a reduction band whose body must end with a matching `affine.yield`;
+/// left empty, the trivial `affine.yield` terminator is inserted automatically.
+static mlir::affine::AffineParallelOp
+createAffineParallel(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc, mlir::ValueRange upperBounds,
+                     mlir::TypeRange resultTypes = {}, llvm::ArrayRef<mlir::arith::AtomicRMWKind> reductions = {}) {
+  mlir::MLIRContext *ctx = rewriter.getContext();
+  unsigned n = upperBounds.size();
+
+  llvm::SmallVector<mlir::AffineMap, 4> lbMaps(n, rewriter.getConstantAffineMap(0));
+  llvm::SmallVector<mlir::AffineMap, 4> ubMaps;
+  for (unsigned i = 0; i < n; ++i) {
+    ubMaps.push_back(mlir::AffineMap::get(n, 0, rewriter.getAffineDimExpr(i), ctx));
+  }
+  llvm::SmallVector<int64_t, 4> steps(n, 1);
+
+  return rewriter.create<mlir::affine::AffineParallelOp>(loc, resultTypes, reductions, lbMaps, mlir::ValueRange{},
+                                                          ubMaps, upperBounds, steps);
+}
+
 struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -41,18 +62,11 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{inputHeight, inputWidth});
 
-    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+    auto pixelLoop = createAffineParallel(rewriter, loc, {inputHeight, inputWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              inputHeight, ubMap, 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
-
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              inputWidth, ubMap, 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
-    mlir::Value pixelColIndex = colLoop.getInductionVar();
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
 
     mlir::Value amount = adaptor.getValue();
     mlir::Value amountI32 = rewriter.create<mlir::arith::TruncIOp>(loc, rewriter.getI32Type(), amount);
@@ -86,7 +100,7 @@ struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
     processChannel(Channel::B);
     processChannel(Channel::A);
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(op, output);
 
     return mlir::success();
@@ -115,18 +129,11 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{inputHeight, inputWidth});
 
-    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+    auto pixelLoop = createAffineParallel(rewriter, loc, {inputHeight, inputWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              inputHeight, ubMap, 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
-
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              inputWidth, ubMap, 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
-    mlir::Value pixelColIndex = colLoop.getInductionVar();
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
 
     auto c255 = rewriter.create<mlir::arith::ConstantIntOp>(loc, i8Type, 255);
 
@@ -152,7 +159,7 @@ struct InvertToAffine : mlir::OpConversionPattern<InvertOp> {
     processChannel(Channel::B);
     processChannel(Channel::A);
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(op, output);
     return mlir::success();
   }
@@ -208,18 +215,11 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{outputHeight, outputWidth});
 
-    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+    auto pixelLoop = createAffineParallel(rewriter, loc, {outputHeight, outputWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              outputHeight, ubMap, 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
-
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              outputWidth, ubMap, 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
-    mlir::Value pixelColIndex = colLoop.getInductionVar();
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
 
     auto c1Index = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 1);
 
@@ -256,7 +256,7 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     copyChannel(Channel::B);
     copyChannel(Channel::A);
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(op, output);
     return mlir::success();
   }
@@ -291,7 +291,6 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
 
     auto [neighborhoodRows, neighborhoodCols] = *neighborhoodSizeResult;
 
-    auto ptrType = mlir::LLVM::LLVMPointerType::get(getContext());
     auto indexType = rewriter.getIndexType();
     auto i8Type = rewriter.getI8Type();
     auto f64Type = rewriter.getF64Type();
@@ -316,44 +315,28 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
 
     mlir::Value zeroIndex = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
 
-    auto oneConstant = rewriter.create<mlir::arith::ConstantIntOp>(loc, 1, 32);
-    auto sumR = rewriter.create<mlir::LLVM::AllocaOp>(loc, ptrType, f64Type, oneConstant);
-    auto sumG = rewriter.create<mlir::LLVM::AllocaOp>(loc, ptrType, f64Type, oneConstant);
-    auto sumB = rewriter.create<mlir::LLVM::AllocaOp>(loc, ptrType, f64Type, oneConstant);
+    auto pixelLoop = createAffineParallel(rewriter, loc, {inputHeight, inputWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), inputHeight,
-        mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
 
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), inputWidth,
-        mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
-    mlir::Value pixelColIndex = colLoop.getInductionVar();
-
-    mlir::Value initAcc = op.initializeAccumulator(rewriter, loc);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, initAcc, sumR);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, initAcc, sumG);
-    rewriter.create<mlir::LLVM::StoreOp>(loc, initAcc, sumB);
-
-    auto kRowLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodRowsIdx,
-        mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
-    rewriter.setInsertionPointToStart(kRowLoop.getBody());
-
-    auto kColLoop = rewriter.create<mlir::affine::AffineForOp>(
-        loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0), neighborhoodColsIdx,
-        mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext()), 1);
-    rewriter.setInsertionPointToStart(kColLoop.getBody());
-
-    mlir::Value kRowIndex = kRowLoop.getInductionVar();
-    mlir::Value kColIndex = kColLoop.getInductionVar();
+    // The seed each kernel tap's contribution is folded into before the
+    // affine.parallel reduce combines all taps; it must be the identity
+    // element of getReductionKind() (e.g. 0.0 for addf, +inf for minimumf).
+    mlir::Value identity = op.initializeAccumulator(rewriter, loc);
+    mlir::arith::AtomicRMWKind reductionKind = op.getReductionKind();
 
     auto coordMap = mlir::AffineMap::get(
         2, 1, rewriter.getAffineDimExpr(0) + rewriter.getAffineDimExpr(1) - rewriter.getAffineSymbolExpr(0));
+
+    auto kernelLoop = createAffineParallel(rewriter, loc, {neighborhoodRowsIdx, neighborhoodColsIdx},
+                                           mlir::TypeRange{f64Type, f64Type, f64Type},
+                                           {reductionKind, reductionKind, reductionKind});
+    rewriter.setInsertionPointToStart(kernelLoop.getBody());
+
+    mlir::Value kRowIndex = kernelLoop.getIVs()[0];
+    mlir::Value kColIndex = kernelLoop.getIVs()[1];
 
     mlir::Value sampleRow = rewriter.create<mlir::affine::AffineApplyOp>(
         loc, coordMap, mlir::ValueRange{pixelRowIndex, kRowIndex, neighborhoodRowRadiusIdx});
@@ -369,7 +352,11 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     auto colValid = rewriter.create<mlir::arith::AndIOp>(loc, colLow, colHigh);
     auto isValid = rewriter.create<mlir::arith::AndIOp>(loc, rowValid, colValid);
 
-    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, isValid.getResult(), false);
+    // Both branches must yield a per-channel contribution: the real sample
+    // when in-bounds, or the reduction identity (a no-op for the reduce)
+    // when the tap falls outside the image.
+    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, mlir::TypeRange{f64Type, f64Type, f64Type},
+                                                 isValid.getResult(), /*withElseRegion=*/true);
     rewriter.setInsertionPointToStart(ifOp.thenBlock());
 
     mlir::Value kernelWeight = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(1.0));
@@ -377,26 +364,29 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       kernelWeight = rewriter.create<mlir::memref::LoadOp>(loc, kernelOperand, mlir::ValueRange{kRowIndex, kColIndex});
     }
 
-    auto accumulateChannel = [&](Channel ch, mlir::Value sumAlloca) {
+    auto sampleChannel = [&](Channel ch) -> mlir::Value {
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto pixelByte =
           rewriter.create<mlir::memref::LoadOp>(loc, input, mlir::ValueRange{sampleRow, sampleCol, cOffset});
       auto pixelAsF64 = rewriter.create<mlir::arith::UIToFPOp>(loc, f64Type, pixelByte);
-
-      auto currentAcc = rewriter.create<mlir::LLVM::LoadOp>(loc, f64Type, sumAlloca);
-      auto nextAcc = op.accumulate(rewriter, loc, currentAcc, pixelAsF64, kernelWeight);
-      rewriter.create<mlir::LLVM::StoreOp>(loc, nextAcc, sumAlloca);
+      return op.accumulate(rewriter, loc, identity, pixelAsF64, kernelWeight);
     };
 
-    accumulateChannel(Channel::R, sumR);
-    accumulateChannel(Channel::G, sumG);
-    accumulateChannel(Channel::B, sumB);
+    mlir::Value contribR = sampleChannel(Channel::R);
+    mlir::Value contribG = sampleChannel(Channel::G);
+    mlir::Value contribB = sampleChannel(Channel::B);
+    rewriter.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{contribR, contribG, contribB});
 
-    rewriter.setInsertionPointAfter(kRowLoop);
+    rewriter.setInsertionPointToStart(ifOp.elseBlock());
+    rewriter.create<mlir::scf::YieldOp>(loc, mlir::ValueRange{identity, identity, identity});
 
-    auto finalizeChannel = [&](Channel ch, mlir::Value sumAlloca) {
-      auto currentAcc = rewriter.create<mlir::LLVM::LoadOp>(loc, f64Type, sumAlloca);
-      auto finalizedAcc = op.finalizeAccumulator(rewriter, loc, currentAcc);
+    rewriter.setInsertionPointAfter(ifOp);
+    rewriter.create<mlir::affine::AffineYieldOp>(loc, ifOp.getResults());
+
+    rewriter.setInsertionPointAfter(kernelLoop);
+
+    auto finalizeChannel = [&](Channel ch, mlir::Value channelSum) {
+      auto finalizedAcc = op.finalizeAccumulator(rewriter, loc, channelSum);
 
       auto c0F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(0.0));
       auto c255F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(255.0));
@@ -409,16 +399,16 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
                                              mlir::ValueRange{pixelRowIndex, pixelColIndex, cOffset});
     };
 
-    finalizeChannel(Channel::R, sumR);
-    finalizeChannel(Channel::G, sumG);
-    finalizeChannel(Channel::B, sumB);
+    finalizeChannel(Channel::R, kernelLoop.getResult(0));
+    finalizeChannel(Channel::G, kernelLoop.getResult(1));
+    finalizeChannel(Channel::B, kernelLoop.getResult(2));
 
     auto c3 = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 3);
     auto alphaVal =
         rewriter.create<mlir::memref::LoadOp>(loc, input, mlir::ValueRange{pixelRowIndex, pixelColIndex, c3});
     rewriter.create<mlir::memref::StoreOp>(loc, alphaVal, output, mlir::ValueRange{pixelRowIndex, pixelColIndex, c3});
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(rawOp, output);
     return mlir::success();
   }
@@ -469,18 +459,11 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{lhsHeight, lhsWidth});
 
-    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+    auto pixelLoop = createAffineParallel(rewriter, loc, {lhsHeight, lhsWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              lhsHeight, ubMap, 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
-
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              lhsWidth, ubMap, 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value pixelRowIndex = rowLoop.getInductionVar();
-    mlir::Value pixelColIndex = colLoop.getInductionVar();
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
 
     auto processChannel = [&](Channel ch) {
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
@@ -501,7 +484,7 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
     processChannel(Channel::B);
     processChannel(Channel::A);
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(rawOp, output);
 
     return mlir::success();
@@ -542,18 +525,11 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{cropH, cropW});
 
-    auto ubMap = mlir::AffineMap::get(1, 0, rewriter.getAffineDimExpr(0), rewriter.getContext());
+    auto pixelLoop = createAffineParallel(rewriter, loc, {cropH, cropW});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
 
-    auto rowLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              cropH, ubMap, 1);
-    rewriter.setInsertionPointToStart(rowLoop.getBody());
-
-    auto colLoop = rewriter.create<mlir::affine::AffineForOp>(loc, mlir::ValueRange{}, rewriter.getConstantAffineMap(0),
-                                                              cropW, ubMap, 1);
-    rewriter.setInsertionPointToStart(colLoop.getBody());
-
-    mlir::Value outRow = rowLoop.getInductionVar();
-    mlir::Value outCol = colLoop.getInductionVar();
+    mlir::Value outRow = pixelLoop.getIVs()[0];
+    mlir::Value outCol = pixelLoop.getIVs()[1];
 
     // Map output pixel (outRow, outCol) to input pixel (srcRow, srcCol)
     mlir::Value srcRow = rewriter.create<mlir::arith::AddIOp>(loc, yIndex, outRow);
@@ -572,7 +548,7 @@ struct CropToAffine : mlir::OpConversionPattern<CropOp> {
     copyChannel(Channel::B);
     copyChannel(Channel::A);
 
-    rewriter.setInsertionPointAfter(rowLoop);
+    rewriter.setInsertionPointAfter(pixelLoop);
     rewriter.replaceOp(op, output);
     return mlir::success();
   }

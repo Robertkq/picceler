@@ -178,6 +178,8 @@ mlir::Value ConvolutionOp::finalizeAccumulator([[maybe_unused]] mlir::OpBuilder 
   return finalAcc;
 }
 
+mlir::arith::AtomicRMWKind ConvolutionOp::getReductionKind() { return mlir::arith::AtomicRMWKind::addf; }
+
 Result<std::pair<mlir::Value, mlir::Value>>
 ConvolutionOp::getNeighborhoodSize(mlir::OpBuilder &builder, mlir::Location loc, mlir::ArrayRef<mlir::Value> operands) {
   if (operands.size() < 2) {
