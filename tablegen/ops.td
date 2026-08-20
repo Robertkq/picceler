@@ -60,7 +60,8 @@ def Picceler_PrintOp : Op<PiccelerDialect, "print", []> {
   let hasVerifier = 1;
 }
 
-def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
+def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure, ElementWiseUnaryOpInterface,
+  DeclareOpInterfaceMethods<ElementWiseUnaryOpInterface, ["transformPixel"]>]> {
   let summary = "Adjust the brightness of an image";
   let arguments = (ins Picceler_AnyImageType:$input, I64:$value);
   let results = (outs Picceler_AnyImageType:$result);
@@ -70,7 +71,8 @@ def Picceler_BrightnessOp : Op<PiccelerDialect, "brightness", [Pure]> {
   let hasCanonicalizer = 1;
 }
 
-def Picceler_InvertOp : Op<PiccelerDialect, "invert", [Pure]> {
+def Picceler_InvertOp : Op<PiccelerDialect, "invert", [Pure, ElementWiseUnaryOpInterface,
+  DeclareOpInterfaceMethods<ElementWiseUnaryOpInterface, ["transformPixel"]>]> {
   let summary = "Invert the pixels of an image";
   let arguments = (ins Picceler_AnyImageType:$input);
   let results = (outs Picceler_AnyImageType:$result);

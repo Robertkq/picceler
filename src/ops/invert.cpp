@@ -16,6 +16,12 @@ mlir::LogicalResult InvertOp::verify() {
   return mlir::success();
 }
 
+mlir::Value InvertOp::transformPixel(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value inputPixel) {
+  auto maxVal = builder.create<mlir::arith::ConstantFloatOp>(loc, builder.getF64Type(), llvm::APFloat(255.0));
+
+  return builder.create<mlir::arith::SubFOp>(loc, maxVal, inputPixel);
+}
+
 struct ChainedInvertPattern : public mlir::OpRewritePattern<InvertOp> {
   using OpRewritePattern<InvertOp>::OpRewritePattern;
 
