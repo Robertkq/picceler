@@ -129,7 +129,7 @@ func.func @InvertImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 // CHECK-LABEL: func.func @InvertImage
 // CHECK: memref.alloc
 // CHECK: affine.parallel
-// CHECK: arith.subi
+// CHECK: arith.subf
 // CHECK-NOT: picceler.invert
 // CHECK: return
 
@@ -144,6 +144,6 @@ func.func @BrightnessImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 // CHECK-LABEL: func.func @BrightnessImage
 // CHECK: memref.alloc
 // CHECK: affine.parallel
-// CHECK: arith.addi
+// CHECK: arith.addf
 // CHECK-NOT: picceler.brightness
 // CHECK: return

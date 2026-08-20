@@ -544,7 +544,7 @@ struct ElementWiseUnaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementWi
         auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255F64);
         finalValue = rewriter.create<mlir::arith::FPToUIOp>(loc, i8Type, clampedHigh);
       } else {
-        finalValue = inputByte; // Alpha channel passes through untouched
+        finalValue = inputByte;
       }
 
       rewriter.create<mlir::memref::StoreOp>(loc, finalValue, output,
