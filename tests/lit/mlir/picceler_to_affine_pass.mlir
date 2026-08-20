@@ -118,3 +118,32 @@ func.func @CropImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 // CHECK: affine.parallel
 // CHECK-NOT: "picceler.crop"
 // CHECK: return
+
+// -----
+
+func.func @InvertImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
+  %0 = "picceler.invert"(%arg0) : (memref<?x?x4xi8>) -> memref<?x?x4xi8>
+  return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @InvertImage
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.subf
+// CHECK-NOT: picceler.invert
+// CHECK: return
+
+// -----
+
+func.func @BrightnessImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
+  %val = "arith.constant"() {value = 50 : i64} : () -> i64
+  %0 = "picceler.brightness"(%arg0, %val) : (memref<?x?x4xi8>, i64) -> memref<?x?x4xi8>
+  return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @BrightnessImage
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.addf
+// CHECK-NOT: picceler.brightness
+// CHECK: return

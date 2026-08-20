@@ -24,9 +24,10 @@ namespace picceler {
 /// `upperBounds`, lower bound 0 and step 1. Pass `resultTypes`/`reductions` to
 /// get a reduction band whose body must end with a matching `affine.yield`;
 /// left empty, the trivial `affine.yield` terminator is inserted automatically.
-static mlir::affine::AffineParallelOp
-createAffineParallel(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc, mlir::ValueRange upperBounds,
-                     mlir::TypeRange resultTypes = {}, llvm::ArrayRef<mlir::arith::AtomicRMWKind> reductions = {}) {
+static mlir::affine::AffineParallelOp createAffineParallel(mlir::ConversionPatternRewriter &rewriter,
+                                                           mlir::Location loc, mlir::ValueRange upperBounds,
+                                                           mlir::TypeRange resultTypes = {},
+                                                           llvm::ArrayRef<mlir::arith::AtomicRMWKind> reductions = {}) {
   mlir::MLIRContext *ctx = rewriter.getContext();
   unsigned n = upperBounds.size();
 
@@ -38,7 +39,7 @@ createAffineParallel(mlir::ConversionPatternRewriter &rewriter, mlir::Location l
   llvm::SmallVector<int64_t, 4> steps(n, 1);
 
   return rewriter.create<mlir::affine::AffineParallelOp>(loc, resultTypes, reductions, lbMaps, mlir::ValueRange{},
-                                                          ubMaps, upperBounds, steps);
+                                                         ubMaps, upperBounds, steps);
 }
 
 struct BrightnessToAffine : mlir::OpConversionPattern<BrightnessOp> {
@@ -330,9 +331,9 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     auto coordMap = mlir::AffineMap::get(
         2, 1, rewriter.getAffineDimExpr(0) + rewriter.getAffineDimExpr(1) - rewriter.getAffineSymbolExpr(0));
 
-    auto kernelLoop = createAffineParallel(rewriter, loc, {neighborhoodRowsIdx, neighborhoodColsIdx},
-                                           mlir::TypeRange{f64Type, f64Type, f64Type},
-                                           {reductionKind, reductionKind, reductionKind});
+    auto kernelLoop =
+        createAffineParallel(rewriter, loc, {neighborhoodRowsIdx, neighborhoodColsIdx},
+                             mlir::TypeRange{f64Type, f64Type, f64Type}, {reductionKind, reductionKind, reductionKind});
     rewriter.setInsertionPointToStart(kernelLoop.getBody());
 
     mlir::Value kRowIndex = kernelLoop.getIVs()[0];
@@ -355,8 +356,8 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     // Both branches must yield a per-channel contribution: the real sample
     // when in-bounds, or the reduction identity (a no-op for the reduce)
     // when the tap falls outside the image.
-    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, mlir::TypeRange{f64Type, f64Type, f64Type},
-                                                 isValid.getResult(), /*withElseRegion=*/true);
+    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, mlir::TypeRange{f64Type, f64Type, f64Type}, isValid.getResult(),
+                                                 /*withElseRegion=*/true);
     rewriter.setInsertionPointToStart(ifOp.thenBlock());
 
     mlir::Value kernelWeight = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(1.0));
@@ -491,6 +492,77 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
   }
 };
 
+struct ElementWiseUnaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementWiseUnaryOpInterface> {
+  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(ElementWiseUnaryOpInterface op, mlir::ArrayRef<mlir::Value> operands,
+                                      mlir::ConversionPatternRewriter &rewriter) const override {
+    auto *rawOp = op.getOperation();
+    mlir::Location loc = rawOp->getLoc();
+
+    if (operands.empty()) {
+      rawOp->emitOpError("expected at least one operand");
+      return mlir::failure();
+    }
+
+    auto input = operands[0];
+    if (!mlir::isa<mlir::MemRefType>(input.getType())) {
+      rawOp->emitOpError("expected input image to be a MemRefType");
+      return mlir::failure();
+    }
+
+    auto i8Type = rewriter.getI8Type();
+
+    mlir::Value inputHeight = rewriter.create<mlir::memref::DimOp>(loc, input, 0);
+    mlir::Value inputWidth = rewriter.create<mlir::memref::DimOp>(loc, input, 1);
+
+    auto kDynamic = mlir::ShapedType::kDynamic;
+    auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
+                                                         mlir::ValueRange{inputHeight, inputWidth});
+
+    auto pixelLoop = createAffineParallel(rewriter, loc, {inputHeight, inputWidth});
+    rewriter.setInsertionPointToStart(pixelLoop.getBody());
+
+    mlir::Value pixelRowIndex = pixelLoop.getIVs()[0];
+    mlir::Value pixelColIndex = pixelLoop.getIVs()[1];
+
+    auto processChannel = [&](Channel ch) {
+      auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
+
+      auto inputByte =
+          rewriter.create<mlir::memref::LoadOp>(loc, input, mlir::ValueRange{pixelRowIndex, pixelColIndex, cOffset});
+
+      mlir::Value finalValue;
+      if (ch != Channel::A) {
+        // Convert to F64 for the interface's transformPixel computation, then cast back to i8
+        auto inputF64 = rewriter.create<mlir::arith::UIToFPOp>(loc, rewriter.getF64Type(), inputByte);
+        mlir::Value transformedF64 = op.transformPixel(rewriter, loc, inputF64);
+
+        auto c0F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(0.0));
+        auto c255F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(255.0));
+        auto clampedLow = rewriter.create<mlir::arith::MaximumFOp>(loc, transformedF64, c0F64);
+        auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255F64);
+        finalValue = rewriter.create<mlir::arith::FPToUIOp>(loc, i8Type, clampedHigh);
+      } else {
+        finalValue = inputByte;
+      }
+
+      rewriter.create<mlir::memref::StoreOp>(loc, finalValue, output,
+                                             mlir::ValueRange{pixelRowIndex, pixelColIndex, cOffset});
+    };
+
+    processChannel(Channel::R);
+    processChannel(Channel::G);
+    processChannel(Channel::B);
+    processChannel(Channel::A);
+
+    rewriter.setInsertionPointAfter(pixelLoop);
+    rewriter.replaceOp(rawOp, output);
+
+    return mlir::success();
+  }
+};
+
 struct CropToAffine : mlir::OpConversionPattern<CropOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -606,8 +678,7 @@ struct PiccelerToAffinePass : public impl::PiccelerToAffineBase<PiccelerToAffine
     target.addIllegalDialect<PiccelerDialect>();
 
     mlir::RewritePatternSet patterns(ctx);
-    patterns.add<BrightnessToAffine>(typeConverter, ctx);
-    patterns.add<InvertToAffine>(typeConverter, ctx);
+    patterns.add<ElementWiseUnaryOpToAffine>(typeConverter, ctx);
     patterns.add<RotateToAffine>(typeConverter, ctx);
     patterns.add<NeighbourhoodOpsToAffine>(typeConverter, ctx);
     patterns.add<ElementWiseBinaryOpToAffine>(typeConverter, ctx);
