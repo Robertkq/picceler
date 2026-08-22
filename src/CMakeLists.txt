@@ -97,6 +97,8 @@ target_link_libraries(PiccelerTransforms PUBLIC
     MLIRMemRefDialect
     MLIRSCFDialect
     MLIRLLVMDialect
+    MLIRBufferizationDialect
+    MLIRBufferizationPipelines
     PiccelerSupport
     PiccelerOps
 )
