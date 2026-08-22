@@ -142,6 +142,5 @@ Both suites run in CI on every pull request (`.github/workflows/unit_tests.yaml`
 ## Install picceler on your system - WIP
 
 There is currently no `install()` rule wired up in the CMake configuration, so `cmake --install .`
-is a no-op today — this section is a placeholder for that work (tracked in [TODO.md](TODO.md)
-under "Packaging and installs"). For now, run the built binaries directly out of `build/`, or add
-`build/` to your `PATH` yourself.
+is a no-op today — this section is a placeholder for that work. For now, run the built binaries
+directly out of `build/`, or add `build/` to your `PATH` yourself.
