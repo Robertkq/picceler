@@ -18,28 +18,31 @@ A picceler source file is a sequence of top-level statements. Two shapes are acc
 * One or more function definitions, one of which is named `main` — `main` is the entry point.
 * A sequence of statements with **no** `main` function — the compiler implicitly wraps them in a
   generated `main` for you (any other function definitions in the file are left as-is, only the
-  non-function statements are moved into the generated `main`). This is why `examples/binary_operations.pic`
-  and `examples/crop.pic` can be flat scripts with no `def main()` at all.
+  non-function statements are moved into the generated `main`). This is why `examples/photo_pipeline.pic`
+  and `examples/blend_and_compare.pic` can be flat scripts with no `def main()` at all.
 
 Mixing the two — defining `main` explicitly **and** having other top-level statements outside of any
 function — is a compile error.
 
 ```
-# examples/print.pic — explicit main, no implicit wrapping needed
+# examples/language_tour.pic (excerpt) — explicit main, no implicit wrapping needed
+def classify(value: f64) {
+    if (value < 10) {
+        print("  {} is a small number\n", value)
+    }
+}
+
 def main() {
-    img_path = "~/Pictures/cat.png"
-    print("Loading image {}\n", img_path)
-    img = load_image(img_path)
-    number = read_number("Please input a number:")
-    print("The number you entered is {} and the image path is {}\n", number, img_path)
+    print("-- picceler language tour --\n")
+    ...
 }
 ```
 
 ```
-# examples/dilate.pic — no 'main' defined, gets implicitly wrapped
-cat = load_image("~/Pictures/cat.png")
-dilated_cat = dilate(cat, 3)
-show_image(dilated_cat)
+# examples/photo_pipeline.pic (excerpt) — no 'main' defined, gets implicitly wrapped
+photo = load_image("../img/cat.png")
+show_image(photo)
+brightened = brightness(photo, 15)
 ```
 
 ### Variables & assignment
@@ -95,6 +98,12 @@ complex_calc = -1 + 2 * 3 + root_val + cubed
 * There is no unary negation operator for arbitrary expressions. `-1` is a negative *number
   literal* (the `-` must be directly followed by a digit), but `-x` or `-(a + b)` are not valid —
   write `0 - x` instead.
+* `sqrt()`/`pow()` only work when every argument is a compile-time-constant literal (as in the
+  snippet above). There is currently no lowering pass from the `math` dialect to LLVM, so the only
+  reason these calls compile at all is that the canonicalizer constant-folds them away entirely
+  before that becomes a problem — calling either with a variable, function parameter, or any other
+  runtime-computed value fails to compile with `missing LLVMTranslationDialectInterface registration
+  for dialect for op: math.sqrt` (or `math.powf`).
 
 ### Function definitions & calls
 
@@ -109,22 +118,21 @@ The parameter list and `-> returnType` are both optional (a function with no dec
 returns nothing). Calling a function uses the familiar `name(arg1, arg2, ...)` syntax.
 
 ```
-# examples/function.pic
-def f() {
-    pathx = "~/Pictures/cat.png"
-    img = load_image(pathx)
-    show_image(img)
-    dilated = dilate(img, 3)
-    show_image(dilated)
+# examples/language_tour.pic (excerpt) — a function with a typed parameter,
+# and calling it
+def classify(value: f64) {
+    if (value < 10) {
+        print("  {} is a small number\n", value)
+    } else if (value < 20) {
+        print("  {} is a medium number\n", value)
+    } else {
+        print("  {} is a large number\n", value)
+    }
 }
 
-def g(path : string)
-{
-    img = load_image("~/Pictures/cat.png")
-    show_image(img)
+def main() {
+    classify(3.0)
 }
-
-f()
 ```
 
 ### Control flow
@@ -168,8 +176,10 @@ for (i = 1 .. 5) {
 * **read_string(string)** -> prompts with `string` and reads a string from the keyboard
 * **print(string, ...)** -> prints `string` to the console, substituting each `{}` placeholder in
   order with the remaining arguments, e.g. `print("x = {}, y = {}\n", x, y)`
-* **sqrt(f64)** -> square root of the argument
-* **pow(f64, f64)** -> the first argument raised to the power of the second argument
+* **sqrt(f64)** -> square root of the argument. Argument must be a compile-time constant — see
+  "Operators & expression precedence" above.
+* **pow(f64, f64)** -> the first argument raised to the power of the second argument. Both
+  arguments must be compile-time constants — see "Operators & expression precedence" above.
 
 ## Builtin Operations
 
@@ -199,9 +209,17 @@ for (i = 1 .. 5) {
 
 # Examples
 
-We have multiple picceler files that exemplify how to use the picceler language.
+The [examples](./examples/) directory has four small showcase programs, each demonstrating a
+different style of picceler program:
 
-You can try compiling any of the following files from the [examples](./examples/) directory, by using:
+* **photo_pipeline.pic** — chains several image effects together over a real photo and saves the
+  results.
+* **blend_and_compare.pic** — composites two images together with `blend()` and `diff()`.
+* **language_tour.pic** — functions, `if`/`else if`/`else`, `for` loops, and `print()` formatting,
+  with no image operations.
+* **interactive_dilate.pic** — the `read_string()`/`read_number()` interactive-CLI pattern.
+
+Run any of them from your build directory (see [BUILD.md](BUILD.md)):
 
 ```
 ./picceler -o myExecutable ./examples/FILENAME.pic

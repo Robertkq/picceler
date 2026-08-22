@@ -1,0 +1,28 @@
+
+# photo_pipeline.pic -- a small chain of image effects run over a real photo.
+#
+# Demonstrates the core picceler workflow: load an image, run it through a
+# few combined operations, and save/show the results along the way.
+#
+# Run from your build directory (see BUILD.md):
+#   ./picceler -o photo_pipeline ./examples/photo_pipeline.pic
+#   ./photo_pipeline
+#
+# Assumes cwd is the build directory (img/ is a sibling of build/ at the
+# repo root) -- swap the path below for your own image if running elsewhere.
+
+photo = load_image("../img/cat.png")
+show_image(photo)
+
+# Brighten first so the sharpen pass below has more contrast to work with.
+brightened = brightness(photo, 15)
+enhanced = sharpen(brightened, 40)
+save_image(enhanced, "photo_pipeline_enhanced.png")
+show_image(enhanced)
+
+# A second, independent pass over the enhanced result.
+edges = edge_detect(enhanced)
+save_image(edges, "photo_pipeline_edges.png")
+show_image(edges)
+
+print("photo_pipeline: wrote photo_pipeline_enhanced.png and photo_pipeline_edges.png\n")

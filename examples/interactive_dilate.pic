@@ -1,0 +1,20 @@
+
+# interactive_dilate.pic -- showcases the read_string()/read_number()
+# interactive-CLI pattern: prompt the user for an image path and a radius,
+# then dilate() and save the result.
+#
+# Run from your build directory (see BUILD.md):
+#   ./picceler -o interactive_dilate ./examples/interactive_dilate.pic
+#   ./interactive_dilate
+# (try "../img/cat.png" and "3" when prompted)
+
+path = read_string("Path to the image you'd like to dilate: ")
+radius = read_number("Dilation radius (try 3): ")
+
+img = load_image(path)
+dilated = dilate(img, radius)
+
+save_image(dilated, "interactive_dilate_output.png")
+show_image(dilated)
+
+print("interactive_dilate: saved result to interactive_dilate_output.png\n")
