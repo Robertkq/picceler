@@ -1,5 +1,10 @@
 # picceler
 
+[![Unit Tests](https://github.com/Robertkq/picceler/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/unit_tests.yaml)
+[![LIT MLIR Tests](https://github.com/Robertkq/picceler/actions/workflows/lit_mlir_tests.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/lit_mlir_tests.yaml)
+[![Publish Docs](https://github.com/Robertkq/picceler/actions/workflows/docs.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/docs.yaml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
+
 *picceler* (Pixel Accelerator) is a compiled domain specific language for image processing.
 The language aims to simplify and fasten the development speed for image processing work (currently CPU-only, targeting the host's native architecture).
 
@@ -17,8 +22,7 @@ Please refer to the [Language](LANGUAGE.md) document for more precise informatio
 
 # Inner workings
 
-This section will provide details about how, using MLIR, we can get from high level source code, to an intermediate representation (IR) and then to assembly for a specific platform.
+Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `picceler` dialect, down through several lowering passes, to LLVM IR and finally native machine code.
 
-WIP -- md document or latex would be cool
-
+Refer to the [Compiler Internals](docs/compiler-internals.md) document for a full breakdown of the pass pipeline (phases, order, and rationale), and to the [Dialect Reference](docs/dialect-reference.md) for op/type-level detail on the MLIR dialects involved.
 
