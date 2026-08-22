@@ -1,0 +1,29 @@
+name: E2E Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test-e2e:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/robertkq/picceler-ci:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure project
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+      - name: Build project
+        run: cmake --build build --parallel
+
+      - name: Run e2e
+        run: |
+          cd build
+          # -j 1: concurrent picceler invocations from the same cwd currently race on a shared
+          # intermediate object file (picceler.o) -- see issue tracker. Run e2e cases sequentially
+          # until that's fixed.
+          lit -j 1 -v ./e2e

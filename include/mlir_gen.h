@@ -135,6 +135,12 @@ private:
   std::vector<NamedVariableTable> _scopedVariableTable;
   std::unordered_map<std::string, GeneratorFunction> _functionTable;
   std::string _sourceFile;
+  /**
+   * @brief True while defineUserFunctions() is emitting the body of "main". "main" is forced to
+   * return i64 regardless of its declared return type (or lack of one), since its return value
+   * becomes the process exit code -- see emitReturn() and defineUserFunctions().
+   */
+  bool _isMainFunction = false;
 };
 
 } // namespace picceler

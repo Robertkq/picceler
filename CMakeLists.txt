@@ -5,6 +5,7 @@ project(picceler)
 set(CMAKE_CXX_STANDARD 23)
 
 option(ENABLE_TESTS "Enable testing" ON)
+option(ENABLE_E2E_TESTS "Enable end-to-end (compile-and-run) tests" ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 option(ENABLE_DOCS "Enable documentation generation" OFF)
 
