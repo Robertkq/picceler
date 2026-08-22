@@ -8,15 +8,12 @@ option(ENABLE_TESTS "Enable testing" ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 option(ENABLE_DOCS "Enable documentation generation" OFF)
 
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json" FORCE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json" FORCE)
 
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
 endif()
-
-find_package(CLI11 REQUIRED)
-find_package(spdlog REQUIRED)
 
 if (ENABLE_CLANG_TIDY)
     find_program(CLANG_TIDY_EXE NAMES clang-tidy)
@@ -48,10 +45,14 @@ if (ENABLE_DOCS)
     endif()
 endif()
 
+find_package(CLI11 REQUIRED)
+find_package(spdlog REQUIRED)
 find_package(LLVM REQUIRED CONFIG)
 find_package(MLIR REQUIRED CONFIG)
+
 message(STATUS "LLVM includes: ${LLVM_INCLUDE_DIRS}")
 message(STATUS "MLIR includes: ${MLIR_INCLUDE_DIRS}")
+
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
 
