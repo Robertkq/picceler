@@ -3,14 +3,14 @@
 
 ## Architecture
 - **Goal**: Compile DSL to optimized assembly using MLIR and LLVM.
-- **Runtime**: I/O functions (`load`, `save`, `show`) translate to calls in the runtime library (`libpicceler_runtime.a` / `runtime.so`).
+- **Runtime**: I/O functions (`load_image`, `save_image`, `show_image`, `read_number`, `read_string`, `print`) lower to calls into the `PiccelerRuntime` static library (`lib/`, OpenCV-backed for image I/O).
 - **Operations**: Image processing operations (e.g., `brightness`, `blur`) are lowered to MLIR and compiled to native assembly for performance.
-- **Pipeline**: Source -> Lexer/Parser -> AST -> MLIR Generation -> Passes/Optimization -> LLVM IR -> Object File.
+- **Pipeline**: Source -> Lexer/Parser -> AST -> MLIR Generation -> Passes/Optimization -> LLVM IR -> Object File. See `docs/compiler-internals.md` for the full pass-by-pass breakdown and `docs/dialect-reference.md` for op/type detail.
 
 ## Tech Stack
-- **Language**: C++ (Modern C++20 standards).
+- **Language**: C++ (Modern C++23 standards).
 - **Build System**: CMake.
-- **Core Libraries**: LLVM, MLIR, CLI11, spdlog, gtest.
+- **Core Libraries**: LLVM, MLIR, OpenCV, CLI11, spdlog, gtest.
 
 # Coding Standards
 - **Quality**: Prioritize high-quality, maintainable, and modern C++ code.
@@ -36,7 +36,7 @@ The user will occasionally summon specific personas to help manage the project, 
 
 ## 1. /PM (The Project Manager)
 **Trigger**: User starts prompt with `/PM` or asks for task breakdown/motivation.
-- **Goal**: Prevent procrastination, limit scope creep, and break large goals from `TODO.md` into bite-sized, 30-minute actionable tasks.
+- **Goal**: Prevent procrastination, limit scope creep, and break large goals down into bite-sized, 30-minute actionable tasks.
 - **Rules**: 
   - Never provide a massive list of tasks. Give the user exactly **ONE** small, well-defined next step.
   - Celebrate small wins. Keep the tone encouraging, structured, and focused on momentum.

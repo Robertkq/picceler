@@ -80,7 +80,6 @@ sudo cmake --install .
 > Make sure you do not skip on any of these cmake options, otherwise your MLIR installation is ill-formed.
 
 ### Hooray, you are done! Now let's compile picceler!
-### Todo: This section should contain more information about all the options available for picceler compilation, like tests, clang-tidy and others
 
 ```bash
 git clone https://github.com/Robertkq/picceler.git && cd picceler
@@ -88,13 +87,60 @@ mkdir build && cd build
 cmake .. && cmake --build . -j
 ```
 
-If compilation was successful, you can now use `./picceler` to start compiling your own picceler files!
+If compilation was successful, `./picceler` is your compiler driver for `.pic` source files
+(usage below; see [LANGUAGE.md](LANGUAGE.md) for the language itself). All binaries build
+straight into `build/`, alongside it: `./picceler-opt` runs standalone passes over `.mlir` files
+for testing, and `./picceler-mlir-lsp-server` backs editor tooling for the `picceler` dialect.
+
+```bash
+./picceler -o myExecutable ./examples/<file>.pic
+./myExecutable # Try running it!
+```
+
+## Build options
+
+These are set with `-D<OPTION>=<ON|OFF>` at the `cmake ..` configure step, e.g.
+`cmake .. -DENABLE_DOCS=ON`.
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `ENABLE_TESTS` | `ON` | Adds the `tests/` subdirectory (unit tests + MLIR lit tests, see "Running tests" below). |
+| `ENABLE_CLANG_TIDY` | `OFF` | Runs `clang-tidy` as part of the normal build (`-warnings-as-errors=*`), using the project's `.clang-tidy` config. Requires `clang-tidy` to be on your `PATH`. |
+| `ENABLE_DOCS` | `OFF` | Adds a `doc_doxygen` build target that generates the Doxygen API docs into `docs/html/` (requires Doxygen to be installed). Build it explicitly with `cmake --build . --target doc_doxygen`. |
+
+### Build type
+
+If you don't pass `-DCMAKE_BUILD_TYPE`, the project defaults to `RelWithDebInfo`. The usual CMake
+build types are supported: `Debug`, `Release`, `RelWithDebInfo`.
+
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+```
+
+## Running tests
+
+With the default `ENABLE_TESTS=ON`, two independent test suites are built:
+
+**Unit tests** (GoogleTest, `tests/unit/`) — build and run the `unittests` binary:
+
+```bash
+cmake --build . --target unittests -j
+./unittests
+```
+
+**MLIR lit tests** (`tests/lit/`) — exercise the individual lowering passes (`picceler-opt`) against
+`.mlir` input/`CHECK` files. These need `lit` (the LLVM test runner) on your `PATH`:
+
+```bash
+cmake --build . -j
+lit -v ./mlir
+```
+
+Both suites run in CI on every pull request (`.github/workflows/unit_tests.yaml` and
+`.github/workflows/lit_mlir_tests.yaml`).
 
 ## Install picceler on your system - WIP
 
-Once you built picceler, you can choose to install it system wide.
-```bash
-cd picceler/build
-sudo cmake --install .
-```
-Done, now you can call `picceler` from anywhere on your system.
+There is currently no `install()` rule wired up in the CMake configuration, so `cmake --install .`
+is a no-op today — this section is a placeholder for that work. For now, run the built binaries
+directly out of `build/`, or add `build/` to your `PATH` yourself.
