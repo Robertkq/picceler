@@ -60,26 +60,26 @@ img = load_image(pathx)
 
 * **Numbers** — `f64` floating point values, with an optional leading `-` directly against the
   first digit (e.g. `-1`, `3.14`, `-0.5`). There is currently no separate integer literal syntax.
-* **Strings** — double-quoted, e.g. `"cat.png"`. The following escape sequences are recognized:
-  `\n`, `\t`, `\r`, `\\`, `\"`, `\'`, `\0`. A leading `~` in a string literal is expanded to the
-  user's home directory at parse time, so `"~/Pictures/cat.png"` works the same as it would in a
-  shell.
+* **Strings** — double-quoted, e.g. `"cat.png"`. Recognized escape sequences: `\n` (newline),
+  `\t` (tab), `\r` (carriage return), `\\` (backslash), `\0` (null byte), plus escaped single and
+  double quote characters. A leading `~` in a string literal is expanded to the user's home
+  directory at parse time, so `"~/Pictures/cat.png"` works the same as it would in a shell.
 * **Kernels** — `N`x`M` matrices of numbers, every row must be the same length:
   `[[1,2,3],[4,5,6],[7,8,9]]`.
 
 ### Type annotations
 
 `int64`, `f64`, `string`, and `image` are the recognized type names. They only appear in function
-parameter and return-type positions (see [Function definitions](#function-definitions--calls)
-below) — variables themselves are never annotated.
+parameter and return-type positions (see "Function definitions & calls" below) — variables
+themselves are never annotated.
 
 ### Operators & expression precedence
 
 From lowest to highest precedence:
 
-1. Relational: `== != < > <= >=`
-2. Additive: `+ -`
-3. Multiplicative: `* /`
+1. Relational: `==`, `!=`, `<`, `>`, `<=`, `>=`
+2. Additive: `+`, `-`
+3. Multiplicative: `*`, `/`
 
 Parentheses `( expr )` can be used to override precedence.
 
@@ -203,7 +203,8 @@ We have multiple picceler files that exemplify how to use the picceler language.
 
 You can try compiling any of the following files from the [examples](./examples/) directory, by using:
 
-```bash
-./picceler -o myExecutable ./examples/<file>.pic
+```
+./picceler -o myExecutable ./examples/FILENAME.pic
 ./myExecutable # Try running it!
 ```
+
