@@ -1,0 +1,40 @@
+
+# language_tour.pic -- a narrated tour of picceler's core language features:
+# functions with typed parameters/return values, if/else if/else, for loops,
+# and print()'s {} formatting. No image operations here -- see
+# photo_pipeline.pic / blend_and_compare.pic for those.
+#
+# Run from your build directory (see BUILD.md):
+#   ./picceler -o language_tour ./examples/language_tour.pic
+#   ./language_tour
+
+def classify(value: f64) {
+    if (value < 10) {
+        print("  {} is a small number\n", value)
+    } else if (value < 20) {
+        print("  {} is a medium number\n", value)
+    } else {
+        print("  {} is a large number\n", value)
+    }
+}
+
+def main() {
+    print("-- picceler language tour --\n")
+
+    # sqrt()/pow() currently only fold correctly with compile-time-constant
+    # arguments -- both calls below are literal constants.
+    root_val = sqrt(25.0)
+    cubed = pow(2.0, 3.0)
+    total = root_val + cubed
+    print("sqrt(25.0) + 2.0^3.0 = {}\n", total)
+    classify(total)
+    classify(3.0)
+    classify(42.0)
+
+    print("counting a small even sequence:\n")
+    for (i = 0 .. 10 step 2) {
+        print("  {}\n", i)
+    }
+
+    print("-- tour complete --\n")
+}
