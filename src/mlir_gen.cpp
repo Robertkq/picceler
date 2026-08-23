@@ -125,8 +125,9 @@ void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
       std::vector<mlir::Type> funcResultTypes;
       if (funcNode->name() == "main") {
-        // main's return value becomes the process exit code, so it's always i64 regardless of
-        // what (if anything) the user declared -- see emitReturn() for the coercion this implies.
+        if (funcNode->returnType() && *funcNode->returnType() != "int64") {
+          throw std::runtime_error("main must return int64, got: " + *funcNode->returnType());
+        }
         funcResultTypes.push_back(_builder.getI64Type());
       } else if (funcNode->returnType()) {
         funcResultTypes.push_back(getMLIRType(*funcNode->returnType()));
@@ -191,8 +192,6 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
         ++argIndex;
       }
 
-      _isMainFunction = (funcNode->name() == "main");
-
       for (auto bodyStmt : funcNode->body()) {
         emitStatement(bodyStmt);
       }
@@ -201,17 +200,13 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 
       auto *insertionBlock = _builder.getInsertionBlock();
       if (insertionBlock->empty() || !insertionBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        if (_isMainFunction) {
-          // Fell off the end of main without an explicit return -- exit 0, mirroring C/C++'s
-          // implicit "return 0;" at the end of main().
+        if (funcNode->name() == "main") {
           auto zero = _builder.create<mlir::arith::ConstantIntOp>(_builder.getUnknownLoc(), 0, 64);
           _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc(), mlir::ValueRange{zero});
         } else {
           _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
         }
       }
-
-      _isMainFunction = false;
     } else {
       spdlog::error("Unexpected statement type in AST: {} -- parsing only FunctionNodes to emit code",
                     stmt->toString());
@@ -253,9 +248,8 @@ void MLIRGen::emitReturn(ReturnNode *node) {
   if (node->returnValue()) {
     returnValue = emitExpression(node->returnValue());
   }
-  if (_isMainFunction && returnValue) {
-    // main's declared result type is always i64 (see declareUserFunctions()) since it becomes
-    // the process exit code -- coerce whatever numeric value the user actually returned.
+  auto enclosingFunc = mlir::cast<mlir::func::FuncOp>(_builder.getInsertionBlock()->getParentOp());
+  if (returnValue && enclosingFunc.getName() == "main") {
     returnValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), returnValue, "main", "return value");
   }
   _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc(), returnValue);
