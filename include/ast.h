@@ -91,17 +91,17 @@ private:
  */
 class VariableNode : public ASTNode {
 public:
-  VariableNode(Location loc, std::string name, std::optional<std::string> type = std::nullopt)
+  VariableNode(Location loc, std::string name, std::string type = "unspecified")
       : ASTNode(loc), _name(std::move(name)), _type(std::move(type)) {}
 
   const std::string &name() const { return _name; }
-  const std::optional<std::string> &type() const { return _type; }
+  const std::string &type() const { return _type; }
 
   std::string toString() const override;
 
 private:
   std::string _name;
-  std::optional<std::string> _type; // optional type annotation
+  std::string _type; // optional type annotation
 };
 
 /**

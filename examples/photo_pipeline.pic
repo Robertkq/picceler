@@ -11,17 +11,17 @@
 # Assumes cwd is the build directory (img/ is a sibling of build/ at the
 # repo root) -- swap the path below for your own image if running elsewhere.
 
-photo = load_image("../img/cat.png")
+image photo = load_image("../img/cat.png")
 show_image(photo)
 
 # Brighten first so the sharpen pass below has more contrast to work with.
-brightened = brightness(photo, 15)
-enhanced = sharpen(brightened, 40)
+image brightened = brightness(photo, 15)
+image enhanced = sharpen(brightened, 40)
 save_image(enhanced, "photo_pipeline_enhanced.png")
 show_image(enhanced)
 
 # A second, independent pass over the enhanced result.
-edges = edge_detect(enhanced)
+image edges = edge_detect(enhanced)
 save_image(edges, "photo_pipeline_edges.png")
 show_image(edges)
 

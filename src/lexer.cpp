@@ -218,15 +218,10 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
 }
 
 Result<Token::Type> Lexer::isType(const std::string &value) const {
-  static const std::unordered_map<std::string, Token::Type> types = {
-      {"int64", Token::Type::TYPE},
-      {"f64", Token::Type::TYPE},
-      {"string", Token::Type::TYPE},
-      {"image", Token::Type::TYPE},
-  };
-  auto it = types.find(value);
-  if (it != types.end()) {
-    return it->second;
+  static const std::vector<std::string> typeNames = {"int64", "float64", "string", "image"};
+  auto it = std::find(typeNames.begin(), typeNames.end(), value);
+  if (it != typeNames.end()) {
+    return Token::Type::TYPE;
   }
   return std::unexpected(CompileError{std::format("Not a type: {}", value), Location{_line, _column}});
 }

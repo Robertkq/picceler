@@ -76,6 +76,7 @@ Result<Token> Parser::consume(Token::Type type, std::string_view errorMessage) {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
+  spdlog::trace("Parsing statement at line {}, column {}", peek().line(), peek().column());
   if (match(Token::Type::KW_DEF)) {
     return parseFunctionDefinition();
   }
@@ -92,22 +93,34 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return parseReturnStatement();
   }
 
+  auto token = peek();
+  spdlog::trace("Parsing statement starting with token: {}, type: {}", token.toString(),
+                static_cast<int>(token.type()));
+
+  if (check(Token::Type::TYPE)) {
+    const auto &type = advance();
+    if (check(Token::Type::IDENTIFIER)) {
+      auto identifier = advance();
+      return parseAssignment(type, identifier);
+    }
+  }
+
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identifier = advance();
-    if (check(Token::Type::ASSIGN)) {
-      return parseAssignment(identifier);
-    }
+    spdlog::trace("Parsed identifier: {}", identifier.value());
     if (check(Token::Type::L_PAREN)) {
       return parseCall(identifier);
     }
-    return std::unexpected(
-        CompileError{std::format("Unexpected token '{}' after identifier", peek().value()), peek().location()});
+    return std::unexpected(CompileError{
+        std::format("Unexpected token '{}' after identifier, did you forget type annotation?", peek().value()),
+        peek().location()});
   }
 
   return std::unexpected(CompileError{std::format("Unexpected token '{}'", peek().value()), peek().location()});
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
+  spdlog::debug("Parsing function definition");
   auto nameTok = consume(Token::Type::IDENTIFIER, "Expected function name after 'def'");
   if (!nameTok)
     return std::unexpected(nameTok.error());
@@ -169,8 +182,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
   return funcNode;
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier) {
-  spdlog::debug("Parsing assignment for identifier '{}'", identifier.value());
+Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &type, const Token &identifier) {
+  spdlog::debug("Parsing assignment for type '{}'", type.value());
 
   if (auto eqTok = consume(Token::Type::ASSIGN, "Expected '=' after identifier"); !eqTok) {
     return std::unexpected(eqTok.error());
@@ -180,7 +193,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier
   if (!exprResult)
     return std::unexpected(exprResult.error());
 
-  auto leftVarResult = parseVariable(identifier);
+  spdlog::info("Parsed assignment: {} {} = {}", type.value(), identifier.value(), (*exprResult)->toString());
+  auto leftVarResult = parseVariable(type, identifier);
   if (!leftVarResult)
     return std::unexpected(leftVarResult.error());
 
@@ -355,6 +369,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseRelational() {
+  spdlog::debug("Parsing relational expression");
   auto lhs = parseAdditive();
   if (!lhs)
     return lhs;
@@ -373,6 +388,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseRelational() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
+  spdlog::debug("Parsing additive expression");
   auto lhs = parseMultiplicative();
   if (!lhs)
     return lhs;
@@ -390,6 +406,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseMultiplicative() {
+  spdlog::debug("Parsing multiplicative expression");
   auto lhs = parsePrimary();
   if (!lhs)
     return lhs;
@@ -443,12 +460,17 @@ Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
       CompileError{std::format("Unexpected token '{}' in expression", peek().value()), peek().location()});
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
+Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &type, const Token &identifier) {
   spdlog::debug("Parsing variable");
-  return std::make_unique<VariableNode>(identifier.location(), identifier.value(), std::nullopt);
+  return std::make_unique<VariableNode>(identifier.location(), identifier.value(), type.value());
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
+  return parseVariable(Token(Token::Type::TYPE, "", identifier.location()), identifier);
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
+  spdlog::debug("Parsing kernel");
   auto lbracket = consume(Token::Type::L_BRACKET, "Expected '[' to open kernel");
   if (!lbracket)
     return std::unexpected(lbracket.error());

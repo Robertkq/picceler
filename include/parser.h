@@ -64,9 +64,10 @@ private:
   Result<std::unique_ptr<ASTNode>> parseStatement();
   Result<std::unique_ptr<ASTNode>> parseExpression();
   Result<std::unique_ptr<ASTNode>> parseFunctionDefinition();
-  Result<std::unique_ptr<ASTNode>> parseAssignment(const Token &identifier);
+  Result<std::unique_ptr<ASTNode>> parseAssignment(const Token &type, const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseCall(const Token &identifier);
-  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &identifier = Token{Token::Type::UNKNOWN, "", {}});
+  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &type, const Token &identifier);
+  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseKernel();
   Result<std::unique_ptr<ASTNode>> parseString();
   Result<std::unique_ptr<ASTNode>> parseNumber();
@@ -83,7 +84,6 @@ private:
    */
 
 private:
-  // Lexer _lexer;
   std::vector<Token> _tokens;
   std::size_t _index;
 };

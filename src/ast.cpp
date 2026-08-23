@@ -83,7 +83,7 @@ std::string FunctionNode::toString() const {
   return std::format("Function:[{}({})] {{\n{}}}", name(), params, statements);
 }
 
-std::string VariableNode::toString() const { return std::format("Variable:[{}]", name()); }
+std::string VariableNode::toString() const { return std::format("Variable:[{} : {}]", name(), type()); }
 
 std::string StringNode::toString() const { return std::format("String:[{}]", value()); }
 
