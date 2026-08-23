@@ -21,6 +21,4 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Run mlir
-        run: |
-          cd build
-          lit -v ./mlir
+        run: cmake --build build --target mlir

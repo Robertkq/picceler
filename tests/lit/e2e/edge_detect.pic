@@ -2,9 +2,24 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded image
+# CHECK: applied edge_detect
+# CHECK: applied edge_detect
 # CHECK: edge_detect: ok
 
-img = load_image("img/cat.png")
-edge_detect_img = edge_detect(img)
+def apply_edge_detect(img: image) -> image {
+    result = edge_detect(img)
+    print("applied edge_detect\n")
+    return result
+}
 
-print("edge_detect: ok\n")
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    edges = apply_edge_detect(img)
+    edges_of_edges = apply_edge_detect(edges)
+
+    print("edge_detect: ok\n")
+    return 0
+}

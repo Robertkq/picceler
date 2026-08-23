@@ -2,9 +2,25 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded image
+# CHECK: dilated radius=3
+# CHECK: eroded radius=3
 # CHECK: erode: ok
 
-cat = load_image("img/cat.png")
-eroded_cat = erode(cat, 3)
+def apply_erode(img: image, radius: f64) -> image {
+    result = erode(img, radius)
+    print("eroded radius={}\n", radius)
+    return result
+}
 
-print("erode: ok\n")
+def main() -> int64 {
+    cat = load_image("img/cat.png")
+    print("loaded image\n")
+
+    dilated = dilate(cat, 3)
+    print("dilated radius=3\n")
+    closed = apply_erode(dilated, 3.0)
+
+    print("erode: ok\n")
+    return 0
+}

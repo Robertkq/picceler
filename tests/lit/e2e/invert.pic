@@ -2,9 +2,24 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded image
+# CHECK: inverted once
+# CHECK: inverted twice
 # CHECK: invert: ok
 
-img = load_image("img/cat.png")
-inverted = invert(img)
+def apply_invert(img: image) -> image {
+    return invert(img)
+}
 
-print("invert: ok\n")
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    inverted = apply_invert(img)
+    print("inverted once\n")
+    restored = apply_invert(inverted)
+    print("inverted twice\n")
+
+    print("invert: ok\n")
+    return 0
+}

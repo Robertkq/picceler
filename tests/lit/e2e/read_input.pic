@@ -4,10 +4,17 @@
 
 # CHECK: read_input: ok
 
-path = read_string("Please enter the path to your image:")
-value = read_number("Please enter the radius for DilateOp:")
+def load_and_dilate(path: string, radius: f64) -> image {
+    img = load_image(path)
+    return dilate(img, radius)
+}
 
-img = load_image(path)
-dilated_img = dilate(img, value)
+def main() -> int64 {
+    path = read_string("Please enter the path to your image:")
+    value = read_number("Please enter the radius for DilateOp:")
 
-print("read_input: ok\n")
+    dilated_img = load_and_dilate(path, value)
+
+    print("read_input: ok\n")
+    return 0
+}

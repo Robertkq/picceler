@@ -2,18 +2,23 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded and dilated img/cat.png
 # CHECK: function: ok
 
-def f() {
-    pathx = "img/cat.png"
-    img = load_image(pathx)
+def load_and_dilate(path: string) -> image {
+    img = load_image(path)
     dilated = dilate(img, 3)
+    print("loaded and dilated {}\n", path)
+    return dilated
 }
 
-def g(path : string)
-{
-    img = load_image("img/cat.png")
+def unused_helper(path: string) {
+    img = load_image(path)
 }
 
-f()
-print("function: ok\n")
+def main() -> int64 {
+    dilated = load_and_dilate("img/cat.png")
+
+    print("function: ok\n")
+    return 0
+}

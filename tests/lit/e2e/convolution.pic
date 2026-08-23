@@ -2,23 +2,36 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded image
+# CHECK: applied edge kernel
+# CHECK: applied identity kernel
 # CHECK: convolution: ok
 
-def main() -> int64
-{
+def apply_edge_kernel(img: image) -> image {
+    kernel = [[-1, -1, -1],
+              [-1,  8, -1],
+              [-1, -1, -1]]
+    result = convolution(img, kernel)
+    print("applied edge kernel\n")
+    return result
+}
+
+def apply_identity_kernel(img: image) -> image {
+    kernel = [[0, 0, 0],
+              [0, 1, 0],
+              [0, 0, 0]]
+    result = convolution(img, kernel)
+    print("applied identity kernel\n")
+    return result
+}
+
+def main() -> int64 {
     img = load_image("img/cat.png")
-    processed = work(img)
+    print("loaded image\n")
+
+    edges = apply_edge_kernel(img)
+    identity = apply_identity_kernel(img)
 
     print("convolution: ok\n")
     return 0
-}
-
-def work(imgx : image) -> image
-{
-    kernel = [[-1, -1, -1],
-            [-1,  8, -1],
-            [-1, -1, -1]]
-    convolution_img = convolution(imgx, kernel)
-
-    return convolution_img
 }

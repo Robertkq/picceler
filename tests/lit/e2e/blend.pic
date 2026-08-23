@@ -2,13 +2,31 @@
 # RUN: %picceler -o %t %s
 # RUN: %t | FileCheck %s
 
+# CHECK: loaded images
+# CHECK: blended mostly white
+# CHECK: blended mostly blue
 # CHECK: blend: ok
 
-white = load_image("img/white.png")
-blue = load_image("img/blue.png")
+def blend_mostly_white(a: image, b: image) -> image {
+    result = blend(a, b, 0.75)
+    print("blended mostly white\n")
+    return result
+}
 
-more_white = blend(white, blue, 0.7)
-more_blue = blend(white, blue, 0.3)
-more_blue_2 = blend(blue, white, 0.7)
+def blend_mostly_blue(a: image, b: image) -> image {
+    result = blend(a, b, 0.25)
+    print("blended mostly blue\n")
+    return result
+}
 
-print("blend: ok\n")
+def main() -> int64 {
+    white = load_image("img/white.png")
+    blue = load_image("img/blue.png")
+    print("loaded images\n")
+
+    mostly_white = blend_mostly_white(white, blue)
+    mostly_blue = blend_mostly_blue(white, blue)
+
+    print("blend: ok\n")
+    return 0
+}

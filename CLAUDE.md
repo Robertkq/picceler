@@ -16,7 +16,8 @@ agent needs on every task.
 mkdir build && cd build
 cmake .. && cmake --build . -j   # binaries land directly in build/: picceler, picceler-opt, picceler-mlir-lsp-server, unittests
 ./unittests                      # GoogleTest unit tests (tests/unit/)
-lit -v ./mlir                    # MLIR lit tests (tests/lit/)
+cmake --build . --target mlir    # MLIR lit tests (tests/lit/mlir/)
+cmake --build . --target e2e     # e2e lit tests (tests/lit/e2e/) — compiles & runs real .pic programs
 ```
 
 Default build type is `RelWithDebInfo`. `-DENABLE_CLANG_TIDY=ON` / `-DENABLE_DOCS=ON` are opt-in.
@@ -53,3 +54,5 @@ C++23, CMake, LLVM/MLIR (21.0), OpenCV (image I/O in the runtime), spdlog (loggi
   quietly "fix"; see BUILD.md.
 - `docs/` is *not* fully gitignored — only `docs/html/` (generated Doxygen output) is. Don't assume
   files under `docs/` are untracked.
+- `main()` must declare `-> int64` or no return type at all (implicit `return 0`) — any other
+  declared return type is a compile error, since main's return value becomes the process exit code.
