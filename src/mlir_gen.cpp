@@ -248,7 +248,19 @@ void MLIRGen::emitReturn(ReturnNode *node) {
   if (node->returnValue()) {
     returnValue = emitExpression(node->returnValue());
   }
-  auto enclosingFunc = mlir::cast<mlir::func::FuncOp>(_builder.getInsertionBlock()->getParentOp());
+  mlir::Operation *insertionParent = _builder.getInsertionBlock()->getParentOp();
+  auto enclosingFunc = mlir::dyn_cast<mlir::func::FuncOp>(insertionParent);
+  if (!enclosingFunc) {
+    enclosingFunc = insertionParent->getParentOfType<mlir::func::FuncOp>();
+  }
+  if (!enclosingFunc) {
+    throw std::runtime_error("return statement used outside of a function");
+  }
+  if (insertionParent != enclosingFunc.getOperation()) {
+    throw std::runtime_error(
+        "return statements inside if/for blocks are not yet supported; "
+        "'return' must be a top-level statement of the function body");
+  }
   if (returnValue && enclosingFunc.getName() == "main") {
     returnValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), returnValue, "main", "return value");
   }

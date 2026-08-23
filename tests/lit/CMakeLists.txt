@@ -52,6 +52,6 @@ if (LIT_EXECUTABLE)
             COMMENT "Running e2e lit tests"
             USES_TERMINAL
         )
-        add_dependencies(e2e picceler copy-lit-files)
+        add_dependencies(e2e picceler PiccelerRuntime copy-lit-files)
     endif()
 endif()

@@ -105,6 +105,7 @@ These are set with `-D<OPTION>=<ON|OFF>` at the `cmake ..` configure step, e.g.
 | Option | Default | What it does |
 | --- | --- | --- |
 | `ENABLE_TESTS` | `ON` | Adds the `tests/` subdirectory (unit tests + MLIR lit tests, see "Running tests" below). |
+| `ENABLE_E2E_TESTS` | `ON` | Adds the e2e lit suite (`tests/lit/e2e/`, the `e2e` build target). Set to `OFF` to skip building/copying it, e.g. if `lit` isn't available. |
 | `ENABLE_CLANG_TIDY` | `OFF` | Runs `clang-tidy` as part of the normal build (`-warnings-as-errors=*`), using the project's `.clang-tidy` config. Requires `clang-tidy` to be on your `PATH`. |
 | `ENABLE_DOCS` | `OFF` | Adds a `doc_doxygen` build target that generates the Doxygen API docs into `docs/html/` (requires Doxygen to be installed). Build it explicitly with `cmake --build . --target doc_doxygen`. |
 
