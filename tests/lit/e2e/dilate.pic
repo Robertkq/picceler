@@ -1,0 +1,25 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: dilated radius=3
+# CHECK: dilated radius=3
+# CHECK: dilate: ok
+
+def apply_dilate(img: image, radius: f64) -> image {
+    result = dilate(img, radius)
+    print("dilated radius={}\n", radius)
+    return result
+}
+
+def main() -> int64 {
+    cat = load_image("img/cat.png")
+    print("loaded image\n")
+
+    once = apply_dilate(cat, 3.0)
+    twice = apply_dilate(once, 3.0)
+
+    print("dilate: ok\n")
+    return 0
+}

@@ -2,6 +2,7 @@
 
 [![Unit Tests](https://github.com/Robertkq/picceler/actions/workflows/unit_tests.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/unit_tests.yaml)
 [![LIT MLIR Tests](https://github.com/Robertkq/picceler/actions/workflows/lit_mlir_tests.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/lit_mlir_tests.yaml)
+[![E2E Tests](https://github.com/Robertkq/picceler/actions/workflows/e2e_tests.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/e2e_tests.yaml)
 [![Publish Docs](https://github.com/Robertkq/picceler/actions/workflows/docs.yaml/badge.svg)](https://github.com/Robertkq/picceler/actions/workflows/docs.yaml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 

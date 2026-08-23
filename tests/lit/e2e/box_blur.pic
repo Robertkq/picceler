@@ -1,0 +1,30 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: applied small box_blur
+# CHECK: applied large box_blur
+# CHECK: box_blur: ok
+
+def apply_small(img: image) -> image {
+    result = box_blur(img, 3)
+    print("applied small box_blur\n")
+    return result
+}
+
+def apply_large(img: image) -> image {
+    result = box_blur(img, 9)
+    print("applied large box_blur\n")
+    return result
+}
+
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+    small = apply_small(img)
+    large = apply_large(img)
+
+    print("box_blur: ok\n")
+    return 0
+}

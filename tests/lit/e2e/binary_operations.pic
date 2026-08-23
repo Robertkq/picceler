@@ -1,0 +1,27 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: complex_calc = 18
+# CHECK: Binary operations passed successfully!
+# CHECK: binary_operations: ok
+
+def compute() -> f64 {
+    root_val = sqrt(25.0)
+    cubed = pow(2.0, 3.0)
+    return -1 + 2 * 3 + root_val + cubed
+}
+
+def main() -> int64 {
+    complex_calc = compute()
+    print("complex_calc = {}\n", complex_calc)
+
+    if (complex_calc == 18) {
+        for (i = 1 .. 5) {
+            print("Binary operations passed successfully! \n")
+        }
+    }
+
+    print("binary_operations: ok\n")
+    return 0
+}

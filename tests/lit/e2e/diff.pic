@@ -1,0 +1,26 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded images
+# CHECK: computed diff white-blue
+# CHECK: computed diff blue-white
+# CHECK: diff: ok
+
+def apply_diff(a: image, b: image) -> image {
+    return diff(a, b)
+}
+
+def main() -> int64 {
+    white = load_image("img/white.png")
+    blue = load_image("img/blue.png")
+    print("loaded images\n")
+
+    orange_1 = apply_diff(white, blue)
+    print("computed diff white-blue\n")
+    orange_2 = apply_diff(blue, white)
+    print("computed diff blue-white\n")
+
+    print("diff: ok\n")
+    return 0
+}

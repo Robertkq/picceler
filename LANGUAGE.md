@@ -24,6 +24,10 @@ A picceler source file is a sequence of top-level statements. Two shapes are acc
 Mixing the two — defining `main` explicitly **and** having other top-level statements outside of any
 function — is a compile error.
 
+`main`'s return value becomes the process exit code, so it's held to a stricter rule than other
+functions: declare `-> int64` and `return` a value, or declare no return type at all (in which case
+`return 0` is implicit) — any other declared return type is a compile error.
+
 ```
 # examples/language_tour.pic (excerpt) — explicit main, no implicit wrapping needed
 def classify(value: f64) {

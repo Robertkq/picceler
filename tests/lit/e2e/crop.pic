@@ -1,0 +1,25 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: cropped top-left
+# CHECK: cropped center
+# CHECK: crop: ok
+
+def apply_crop(img: image, x: f64, y: f64, width: f64, height: f64) -> image {
+    return crop(img, x, y, width, height)
+}
+
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    top_left = apply_crop(img, 0.0, 0.0, 100.0, 100.0)
+    print("cropped top-left\n")
+    center = apply_crop(img, 30.0, 135.0, 335.0, 240.0)
+    print("cropped center\n")
+
+    print("crop: ok\n")
+    return 0
+}

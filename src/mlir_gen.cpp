@@ -124,7 +124,12 @@ void MLIRGen::declareUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
       spdlog::debug("Declaring function: {}", funcNode->name());
       std::vector<mlir::Type> funcArgTypes = getFunctionArgTypes(funcNode);
       std::vector<mlir::Type> funcResultTypes;
-      if (funcNode->returnType()) {
+      if (funcNode->name() == "main") {
+        if (funcNode->returnType() && *funcNode->returnType() != "int64") {
+          throw std::runtime_error("main must return int64, got: " + *funcNode->returnType());
+        }
+        funcResultTypes.push_back(_builder.getI64Type());
+      } else if (funcNode->returnType()) {
         funcResultTypes.push_back(getMLIRType(*funcNode->returnType()));
       }
       auto funcType = _builder.getFunctionType(funcArgTypes, funcResultTypes);
@@ -195,7 +200,12 @@ void MLIRGen::defineUserFunctions(mlir::ModuleOp module, ModuleNode *root) {
 
       auto *insertionBlock = _builder.getInsertionBlock();
       if (insertionBlock->empty() || !insertionBlock->back().hasTrait<mlir::OpTrait::IsTerminator>()) {
-        _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
+        if (funcNode->name() == "main") {
+          auto zero = _builder.create<mlir::arith::ConstantIntOp>(_builder.getUnknownLoc(), 0, 64);
+          _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc(), mlir::ValueRange{zero});
+        } else {
+          _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc());
+        }
       }
     } else {
       spdlog::error("Unexpected statement type in AST: {} -- parsing only FunctionNodes to emit code",
@@ -237,6 +247,22 @@ void MLIRGen::emitReturn(ReturnNode *node) {
   mlir::Value returnValue;
   if (node->returnValue()) {
     returnValue = emitExpression(node->returnValue());
+  }
+  mlir::Operation *insertionParent = _builder.getInsertionBlock()->getParentOp();
+  auto enclosingFunc = mlir::dyn_cast<mlir::func::FuncOp>(insertionParent);
+  if (!enclosingFunc) {
+    enclosingFunc = insertionParent->getParentOfType<mlir::func::FuncOp>();
+  }
+  if (!enclosingFunc) {
+    throw std::runtime_error("return statement used outside of a function");
+  }
+  if (insertionParent != enclosingFunc.getOperation()) {
+    throw std::runtime_error(
+        "return statements inside if/for blocks are not yet supported; "
+        "'return' must be a top-level statement of the function body");
+  }
+  if (returnValue && enclosingFunc.getName() == "main") {
+    returnValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), returnValue, "main", "return value");
   }
   _builder.create<mlir::func::ReturnOp>(_builder.getUnknownLoc(), returnValue);
 }

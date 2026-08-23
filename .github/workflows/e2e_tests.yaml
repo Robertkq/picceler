@@ -1,11 +1,11 @@
-name: LIT MLIR Tests
+name: E2E Tests
 
 on:
   pull_request:
   workflow_dispatch:
 
 jobs:
-  build-and-test-mlir:
+  build-and-test-e2e:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/robertkq/picceler-ci:latest
@@ -20,5 +20,5 @@ jobs:
       - name: Build project
         run: cmake --build build --parallel
 
-      - name: Run mlir
-        run: cmake --build build --target mlir
+      - name: Run e2e
+        run: cmake --build build --target e2e

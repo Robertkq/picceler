@@ -1,0 +1,31 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: rotated to 90
+# CHECK: rotated to 180
+# CHECK: rotated to 270
+# CHECK: rotated to 360
+# CHECK: rotate: ok
+
+def rotate_90(img: image) -> image {
+    return rotate(img, 90)
+}
+
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    quarter = rotate_90(img)
+    print("rotated to 90\n")
+    half = rotate_90(quarter)
+    print("rotated to 180\n")
+    three_quarters = rotate_90(half)
+    print("rotated to 270\n")
+    full_circle = rotate_90(three_quarters)
+    print("rotated to 360\n")
+
+    print("rotate: ok\n")
+    return 0
+}

@@ -1,0 +1,22 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: applied emboss
+# CHECK: emboss: ok
+
+def apply_emboss(img: image) -> image {
+    result = emboss(img)
+    print("applied emboss\n")
+    return result
+}
+
+def main() {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    embossed = apply_emboss(img)
+
+    print("emboss: ok\n")
+}

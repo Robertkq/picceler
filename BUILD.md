@@ -105,6 +105,7 @@ These are set with `-D<OPTION>=<ON|OFF>` at the `cmake ..` configure step, e.g.
 | Option | Default | What it does |
 | --- | --- | --- |
 | `ENABLE_TESTS` | `ON` | Adds the `tests/` subdirectory (unit tests + MLIR lit tests, see "Running tests" below). |
+| `ENABLE_E2E_TESTS` | `ON` | Adds the e2e lit suite (`tests/lit/e2e/`, the `e2e` build target). Set to `OFF` to skip building/copying it, e.g. if `lit` isn't available. |
 | `ENABLE_CLANG_TIDY` | `OFF` | Runs `clang-tidy` as part of the normal build (`-warnings-as-errors=*`), using the project's `.clang-tidy` config. Requires `clang-tidy` to be on your `PATH`. |
 | `ENABLE_DOCS` | `OFF` | Adds a `doc_doxygen` build target that generates the Doxygen API docs into `docs/html/` (requires Doxygen to be installed). Build it explicitly with `cmake --build . --target doc_doxygen`. |
 
@@ -119,7 +120,8 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug
 
 ## Running tests
 
-With the default `ENABLE_TESTS=ON`, two independent test suites are built:
+With the defaults (`ENABLE_TESTS=ON`, `ENABLE_E2E_TESTS=ON`), three independent test suites are
+built — see [tests/README.md](tests/README.md) for what each one covers and how to add a case.
 
 **Unit tests** (GoogleTest, `tests/unit/`) — build and run the `unittests` binary:
 
@@ -128,16 +130,17 @@ cmake --build . --target unittests -j
 ./unittests
 ```
 
-**MLIR lit tests** (`tests/lit/`) — exercise the individual lowering passes (`picceler-opt`) against
-`.mlir` input/`CHECK` files. These need `lit` (the LLVM test runner) on your `PATH`:
+**MLIR lit tests** (`tests/lit/mlir/`) and **e2e tests** (`tests/lit/e2e/`) — both use `lit`/`FileCheck`
+(the LLVM test runner needs to be on your `PATH`), and both have a CMake target that builds
+whatever they need and runs `lit` in one step:
 
 ```bash
-cmake --build . -j
-lit -v ./mlir
+cmake --build . --target mlir
+cmake --build . --target e2e
 ```
 
-Both suites run in CI on every pull request (`.github/workflows/unit_tests.yaml` and
-`.github/workflows/lit_mlir_tests.yaml`).
+All three suites run in CI on every pull request (`.github/workflows/unit_tests.yaml`,
+`lit_mlir_tests.yaml`, `e2e_tests.yaml`).
 
 ## Install picceler on your system - WIP
 

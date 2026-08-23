@@ -1,0 +1,30 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: applied small gaussian_blur
+# CHECK: applied large gaussian_blur
+# CHECK: gaussian_blur: ok
+
+def apply_small(img: image) -> image {
+    result = gaussian_blur(img, 2)
+    print("applied small gaussian_blur\n")
+    return result
+}
+
+def apply_large(img: image) -> image {
+    result = gaussian_blur(img, 6)
+    print("applied large gaussian_blur\n")
+    return result
+}
+
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+    small = apply_small(img)
+    large = apply_large(img)
+
+    print("gaussian_blur: ok\n")
+    return 0
+}

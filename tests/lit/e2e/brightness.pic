@@ -1,0 +1,33 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: brightness delta=30
+# CHECK: brightness delta=0
+# CHECK: brightness delta=40
+# CHECK: brightness delta=-40
+# CHECK: brightness: ok
+
+def apply_brightness(img: image, amount: f64) -> image {
+    result = brightness(img, amount)
+    print("brightness delta={}\n", amount)
+    return result
+}
+
+def brighten_then_darken(img: image) -> image {
+    brightened = apply_brightness(img, 40.0)
+    return apply_brightness(brightened, 0.0 - 40.0)
+}
+
+def main() -> int64 {
+    img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    brighter = apply_brightness(img, 30.0)
+    unchanged = apply_brightness(img, 0.0)
+    round_trip = brighten_then_darken(img)
+
+    print("brightness: ok\n")
+    return 0
+}
