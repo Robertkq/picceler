@@ -297,7 +297,6 @@ bool Compiler::linkWithClang(const std::string &objFile, const std::string &runt
     clangArgs.push_back(token);
   }
   clangArgs.push_back("-lspdlog");
-  clangArgs.push_back("-lfmt");
   clangArgs.push_back("-lpthread");
 
   spdlog::info("Linking executable: {}", outputExe);
