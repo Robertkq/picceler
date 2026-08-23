@@ -133,17 +133,14 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
 
   // Parse parameters
   while (!check(Token::Type::R_PAREN) && !isAtEnd()) {
+
+    auto typeTok = consume(Token::Type::TYPE, "Expected type annotation for parameter");
+    if (!typeTok)
+      return std::unexpected(typeTok.error());
+
     auto paramTok = consume(Token::Type::IDENTIFIER, "Expected parameter name");
     if (!paramTok)
       return std::unexpected(paramTok.error());
-
-    if (auto colon = consume(Token::Type::COLON, "Expected ':' after parameter name"); !colon) {
-      return std::unexpected(colon.error());
-    }
-
-    auto typeTok = consume(Token::Type::TYPE, "Expected type after ':'");
-    if (!typeTok)
-      return std::unexpected(typeTok.error());
 
     funcNode->addParameter(paramTok->value(), typeTok->value());
 

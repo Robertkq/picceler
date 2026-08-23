@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <unordered_map>
 
 #include "llvm/ADT/APFloat.h"
 
@@ -157,14 +158,15 @@ std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
 }
 
 mlir::Type MLIRGen::getMLIRType(const std::string &typeName) {
-  if (typeName == "image") {
-    return _builder.getType<ImageType>();
-  } else if (typeName == "string") {
-    return _builder.getType<StringType>();
-  } else if (typeName == "f64") {
-    return _builder.getF64Type();
-  } else if (typeName == "int64") {
-    return _builder.getI64Type();
+  std::unordered_map<std::string, mlir::Type> typeMap = {
+      {"image", _builder.getType<ImageType>()},
+      {"string", _builder.getType<StringType>()},
+      {"float64", _builder.getF64Type()},
+      {"int64", _builder.getI64Type()},
+  };
+  auto it = typeMap.find(typeName);
+  if (it != typeMap.end()) {
+    return it->second;
   }
   throw std::runtime_error("Unsupported type: " + typeName);
 }
@@ -257,9 +259,8 @@ void MLIRGen::emitReturn(ReturnNode *node) {
     throw std::runtime_error("return statement used outside of a function");
   }
   if (insertionParent != enclosingFunc.getOperation()) {
-    throw std::runtime_error(
-        "return statements inside if/for blocks are not yet supported; "
-        "'return' must be a top-level statement of the function body");
+    throw std::runtime_error("return statements inside if/for blocks are not yet supported; "
+                             "'return' must be a top-level statement of the function body");
   }
   if (returnValue && enclosingFunc.getName() == "main") {
     returnValue = coerceValueToInt64(_builder, _builder.getUnknownLoc(), returnValue, "main", "return value");

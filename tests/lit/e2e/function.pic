@@ -5,19 +5,19 @@
 # CHECK: loaded and dilated img/cat.png
 # CHECK: function: ok
 
-def load_and_dilate(path: string) -> image {
-    img = load_image(path)
-    dilated = dilate(img, 3)
+def load_and_dilate(string path) -> image {
+    image img = load_image(path)
+    image dilated = dilate(img, 3)
     print("loaded and dilated {}\n", path)
     return dilated
 }
 
-def unused_helper(path: string) {
-    img = load_image(path)
+def unused_helper(string path) {
+    image img = load_image(path)
 }
 
 def main() -> int64 {
-    dilated = load_and_dilate("img/cat.png")
+    image dilated = load_and_dilate("img/cat.png")
 
     print("function: ok\n")
     return 0
