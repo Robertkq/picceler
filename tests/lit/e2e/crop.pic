@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: crop: ok
+
+img = load_image("img/cat.png")
+crop_img = crop(img, 30, 135, 335, 240)
+
+print("crop: ok\n")

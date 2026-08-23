@@ -1,11 +1,13 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: diff: ok
+
 white = load_image("img/white.png")
 blue = load_image("img/blue.png")
 
 orange_1 = diff(white, blue)
 orange_2 = diff(blue, white)
 
-show_image(white)
-show_image(blue)
-
-show_image(orange_1)
-show_image(orange_2)
+print("diff: ok\n")

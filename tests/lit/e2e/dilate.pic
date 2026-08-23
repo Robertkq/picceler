@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: dilate: ok
+
+cat = load_image("img/cat.png")
+dilated_cat = dilate(cat, 3)
+
+print("dilate: ok\n")

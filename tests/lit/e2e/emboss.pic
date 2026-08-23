@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: emboss: ok
+
+img = load_image("img/cat.png")
+emboss_img = emboss(img)
+
+print("emboss: ok\n")

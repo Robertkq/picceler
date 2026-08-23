@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: box_blur: ok
+
+img = load_image("img/cat.png")
+box_blur_img = box_blur(img, 7)
+
+print("box_blur: ok\n")

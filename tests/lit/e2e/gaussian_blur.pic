@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: gaussian_blur: ok
+
+img = load_image("img/cat.png")
+gaussian_blur_img = gaussian_blur(img, 7)
+
+print("gaussian_blur: ok\n")

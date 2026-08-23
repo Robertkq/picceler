@@ -1,3 +1,9 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: blend: ok
+
 white = load_image("img/white.png")
 blue = load_image("img/blue.png")
 
@@ -5,6 +11,4 @@ more_white = blend(white, blue, 0.7)
 more_blue = blend(white, blue, 0.3)
 more_blue_2 = blend(blue, white, 0.7)
 
-show_image(more_white)
-show_image(more_blue)
-show_image(more_blue_2)
+print("blend: ok\n")

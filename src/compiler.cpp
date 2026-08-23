@@ -135,6 +135,8 @@ ProcessResult runCommand(const std::vector<std::string> &args) {
   return result;
 }
 
+std::filesystem::path getExecutableDirectory() { return std::filesystem::canonical("/proc/self/exe").parent_path(); }
+
 } // namespace
 
 namespace picceler {
@@ -213,14 +215,16 @@ bool Compiler::run() {
   }
 
   spdlog::debug("Emitting object file");
-  auto success = emitObjectFile(llvmModule.get(), "picceler.o");
+  std::string objFile = outputFile + ".o";
+  auto success = emitObjectFile(llvmModule.get(), objFile);
   if (!success) {
     spdlog::error("Failed to emit an object file");
     return false;
   }
 
   spdlog::debug("Linking with Clang");
-  success = linkWithClang("picceler.o", "lib/libPiccelerRuntime.a", outputFile);
+  std::string runtimeLib = (getExecutableDirectory() / "lib" / "libPiccelerRuntime.a").string();
+  success = linkWithClang(objFile, runtimeLib, outputFile);
   if (!success) {
     spdlog::error("Failed to link an executable");
     return false;
@@ -273,16 +277,9 @@ bool Compiler::linkWithClang(const std::string &objFile, const std::string &runt
     return false;
   }
 
-  std::string runtimeLibPath = runtimeLib;
-  if (!std::filesystem::exists(runtimeLibPath)) {
-    const std::filesystem::path fallback = std::filesystem::path("build") / runtimeLibPath;
-    if (std::filesystem::exists(fallback)) {
-      spdlog::warn("Runtime library not found at '{}', using '{}' instead", runtimeLibPath, fallback.string());
-      runtimeLibPath = fallback.string();
-    } else {
-      spdlog::error("Runtime library not found for linking: {}", runtimeLibPath);
-      return false;
-    }
+  if (!std::filesystem::exists(runtimeLib)) {
+    spdlog::error("Runtime library not found for linking: {}", runtimeLib);
+    return false;
   }
 
   spdlog::info("Querying pkg-config for opencv4...");
@@ -295,7 +292,7 @@ bool Compiler::linkWithClang(const std::string &objFile, const std::string &runt
     return false;
   }
 
-  std::vector<std::string> clangArgs = {"clang++", objFile, runtimeLibPath, "-o", outputExe, "-no-pie"};
+  std::vector<std::string> clangArgs = {"clang++", objFile, runtimeLib, "-o", outputExe, "-no-pie"};
   for (const auto &token : splitWhitespace(pkgResult.stdOut)) {
     clangArgs.push_back(token);
   }

@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: erode: ok
+
+cat = load_image("img/cat.png")
+eroded_cat = erode(cat, 3)
+
+print("erode: ok\n")

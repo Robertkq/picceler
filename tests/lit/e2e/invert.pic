@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: invert: ok
+
+img = load_image("img/cat.png")
+inverted = invert(img)
+
+print("invert: ok\n")

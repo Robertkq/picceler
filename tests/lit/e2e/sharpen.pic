@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: sharpen: ok
+
+img = load_image("img/cat.png")
+sharpen_img = sharpen(img, 50)
+
+print("sharpen: ok\n")

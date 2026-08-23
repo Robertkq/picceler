@@ -1,0 +1,10 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: edge_detect: ok
+
+img = load_image("img/cat.png")
+edge_detect_img = edge_detect(img)
+
+print("edge_detect: ok\n")

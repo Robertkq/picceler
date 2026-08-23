@@ -1,15 +1,19 @@
+
+# RUN: %picceler -o %t %s
+# RUN: %t | FileCheck %s
+
+# CHECK: function: ok
+
 def f() {
     pathx = "img/cat.png"
     img = load_image(pathx)
-    show_image(img)
     dilated = dilate(img, 3)
-    show_image(dilated)
 }
 
 def g(path : string)
 {
     img = load_image("img/cat.png")
-    show_image(img)
 }
 
 f()
+print("function: ok\n")
