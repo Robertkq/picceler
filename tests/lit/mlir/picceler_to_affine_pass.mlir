@@ -33,8 +33,8 @@ func.func @DiffImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> mem
 // -----
 
 func.func @BlendImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
-    %weight = "arith.constant"() {value = 0.5 : float64} : () -> float64
-    %0 = "picceler.blend" (%arg0, %arg1, %weight) : (memref<?x?x4xi8>, memref<?x?x4xi8>, float64) -> memref<?x?x4xi8>
+    %weight = "arith.constant"() {value = 0.5 : f64} : () -> f64
+    %0 = "picceler.blend" (%arg0, %arg1, %weight) : (memref<?x?x4xi8>, memref<?x?x4xi8>, f64) -> memref<?x?x4xi8>
     return %0 : memref<?x?x4xi8>
 }
 
@@ -83,13 +83,13 @@ func.func @ErodeImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 func.func @ConvolutionImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
     %c0 = "arith.constant"() {value = 0 : index} : () -> index
     %c1 = "arith.constant"() {value = 1 : index} : () -> index
-    %c0f = "arith.constant"() {value = 0.0 : float64} : () -> float64
-    %kernel = memref.alloca() : memref<3x3xfloat64>
-    memref.store %c0f, %kernel[%c0, %c0] : memref<3x3xfloat64>
-    memref.store %c0f, %kernel[%c0, %c1] : memref<3x3xfloat64>
-    memref.store %c0f, %kernel[%c1, %c0] : memref<3x3xfloat64>
-    memref.store %c0f, %kernel[%c1, %c1] : memref<3x3xfloat64>
-    %0 = "picceler.convolution" (%arg0, %kernel) : (memref<?x?x4xi8>, memref<3x3xfloat64>) -> memref<?x?x4xi8>
+    %c0f = "arith.constant"() {value = 0.0 : f64} : () -> f64
+    %kernel = memref.alloca() : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c0, %c0] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c0, %c1] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c1, %c0] : memref<3x3xf64>
+    memref.store %c0f, %kernel[%c1, %c1] : memref<3x3xf64>
+    %0 = "picceler.convolution" (%arg0, %kernel) : (memref<?x?x4xi8>, memref<3x3xf64>) -> memref<?x?x4xi8>
     return %0 : memref<?x?x4xi8>
 }
 

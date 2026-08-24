@@ -119,19 +119,19 @@ func.func @EdgeDetectBypassSingleUseInvert(%arg0 : !picceler.image) -> !picceler
 // -----
 
 func.func @EdgeDetectBypassMultipleUseInvert(%arg0 : !picceler.image) -> !picceler.image {
-    %alpha = arith.constant 0.5 : float64
+    %alpha = arith.constant 0.5 : f64
     %0 = "picceler.invert" (%arg0) : (!picceler.image) -> !picceler.image
     %1 = "picceler.edge_detect" (%0) : (!picceler.image) -> !picceler.image
-    %2 = "picceler.blend" (%0, %1, %alpha) : (!picceler.image, !picceler.image, float64) -> !picceler.image
+    %2 = "picceler.blend" (%0, %1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
     return %2 : !picceler.image
 }
 
 // CHECK-LABEL: func.func @EdgeDetectBypassMultipleUseInvert
 // CHECK-SAME: (%[[INPUT:.*]]: !picceler.image) -> !picceler.image
-// CHECK-DAG: %[[ALPHA:.*]] = arith.constant 5.000000e-01 : float64
+// CHECK-DAG: %[[ALPHA:.*]] = arith.constant 5.000000e-01 : f64
 // CHECK-DAG: %[[INVERT:.*]] = "picceler.invert"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
 // CHECK-DAG: %[[EDGE:.*]] = "picceler.edge_detect"(%[[INPUT]]) : (!picceler.image) -> !picceler.image
-// CHECK: %[[BLEND:.*]] = "picceler.blend"(%[[INVERT]], %[[EDGE]], %[[ALPHA]]) : (!picceler.image, !picceler.image, float64) -> !picceler.image
+// CHECK: %[[BLEND:.*]] = "picceler.blend"(%[[INVERT]], %[[EDGE]], %[[ALPHA]]) : (!picceler.image, !picceler.image, f64) -> !picceler.image
 // CHECK-NEXT: return %[[BLEND]] : !picceler.image
 
 // -----
@@ -166,7 +166,7 @@ func.func @ChainedRotatesFolding(%arg0 : !picceler.image) -> !picceler.image {
 
 func.func @FoldIdentityConvolution(%arg0 : !picceler.image) -> !picceler.image {
     %kernel = "picceler.kernel.const"() <{values = dense<[[0.000000e+00, 0.000000e+00, 0.000000e+00],
-     [0.000000e+00, 1.000000e+00, 0.000000e+00], [0.000000e+00, 0.000000e+00, 0.000000e+00]]> : tensor<3x3xfloat64>}> : () -> !picceler.kernel<3 x 3>
+     [0.000000e+00, 1.000000e+00, 0.000000e+00], [0.000000e+00, 0.000000e+00, 0.000000e+00]]> : tensor<3x3xf64>}> : () -> !picceler.kernel<3 x 3>
     %0 = "picceler.convolution" (%arg0, %kernel) : (!picceler.image, !picceler.kernel<3 x 3>) -> !picceler.image
     return %0 : !picceler.image
 }
@@ -178,7 +178,7 @@ func.func @FoldIdentityConvolution(%arg0 : !picceler.image) -> !picceler.image {
 // -----
 
  func.func @FoldUnusedKernel(%arg0 : i64) -> i64 {
-    %0 = "picceler.kernel.const"() <{values = dense<1.000000e+00> : tensor<1x1xfloat64>}> : () -> !picceler.kernel<1 x 1>
+    %0 = "picceler.kernel.const"() <{values = dense<1.000000e+00> : tensor<1x1xf64>}> : () -> !picceler.kernel<1 x 1>
     return %arg0 : i64
  }
 
@@ -213,8 +213,8 @@ func.func @FoldErodeOnZero(%arg0 : !picceler.image) -> !picceler.image {
 // -----
 
 func.func @FoldBlendWithSameInput(%arg0 : !picceler.image) -> !picceler.image {
-    %alpha = arith.constant 0.5 : float64
-    %0 = "picceler.blend" (%arg0, %arg0, %alpha) : (!picceler.image, !picceler.image, float64) -> !picceler.image
+    %alpha = arith.constant 0.5 : f64
+    %0 = "picceler.blend" (%arg0, %arg0, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
     return %0 : !picceler.image
 }
 
@@ -225,8 +225,8 @@ func.func @FoldBlendWithSameInput(%arg0 : !picceler.image) -> !picceler.image {
 // -----
 
 func.func @FoldBlendWithAlphaZero(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
-    %alpha = arith.constant 0.0 : float64
-    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, float64) -> !picceler.image
+    %alpha = arith.constant 0.0 : f64
+    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
     return %0 : !picceler.image
 }
 
@@ -237,8 +237,8 @@ func.func @FoldBlendWithAlphaZero(%arg0 : !picceler.image, %arg1 : !picceler.ima
 // -----
 
 func.func @FoldBlendWithAlphaOne(%arg0 : !picceler.image, %arg1 : !picceler.image) -> !picceler.image {
-    %alpha = arith.constant 1.0 : float64
-    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, float64) -> !picceler.image
+    %alpha = arith.constant 1.0 : f64
+    %0 = "picceler.blend" (%arg0, %arg1, %alpha) : (!picceler.image, !picceler.image, f64) -> !picceler.image
     return %0 : !picceler.image
 }
 
