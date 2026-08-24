@@ -7,17 +7,17 @@
 # CHECK: inverted twice
 # CHECK: invert: ok
 
-def apply_invert(img: image) -> image {
+def apply_invert(image img) -> image {
     return invert(img)
 }
 
 def main() -> int64 {
-    img = load_image("img/cat.png")
+    image img = load_image("img/cat.png")
     print("loaded image\n")
 
-    inverted = apply_invert(img)
+    image inverted = apply_invert(img)
     print("inverted once\n")
-    restored = apply_invert(inverted)
+    image restored = apply_invert(inverted)
     print("inverted twice\n")
 
     print("invert: ok\n")

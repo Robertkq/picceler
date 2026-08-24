@@ -7,17 +7,17 @@
 # CHECK: cropped center
 # CHECK: crop: ok
 
-def apply_crop(img: image, x: f64, y: f64, width: f64, height: f64) -> image {
+def apply_crop(image img, float64 x, float64 y, float64 width, float64 height) -> image {
     return crop(img, x, y, width, height)
 }
 
 def main() -> int64 {
-    img = load_image("img/cat.png")
+    image img = load_image("img/cat.png")
     print("loaded image\n")
 
-    top_left = apply_crop(img, 0.0, 0.0, 100.0, 100.0)
+    image top_left = apply_crop(img, 0.0, 0.0, 100.0, 100.0)
     print("cropped top-left\n")
-    center = apply_crop(img, 30.0, 135.0, 335.0, 240.0)
+    image center = apply_crop(img, 30.0, 135.0, 335.0, 240.0)
     print("cropped center\n")
 
     print("crop: ok\n")

@@ -6,17 +6,18 @@
 # CHECK: applied emboss
 # CHECK: emboss: ok
 
-def apply_emboss(img: image) -> image {
-    result = emboss(img)
+def apply_emboss(image img) -> image {
+    image result = emboss(img)
     print("applied emboss\n")
     return result
 }
 
-def main() {
-    img = load_image("img/cat.png")
+def main() -> int64 {
+    image img = load_image("img/cat.png")
     print("loaded image\n")
 
-    embossed = apply_emboss(img)
+    image embossed = apply_emboss(img)
 
     print("emboss: ok\n")
+    return 0
 }

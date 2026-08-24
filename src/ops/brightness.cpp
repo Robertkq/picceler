@@ -21,8 +21,8 @@ mlir::LogicalResult BrightnessOp::verify() {
 
 mlir::Value BrightnessOp::transformPixel(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value inputPixel) {
   mlir::Value offsetVal = getValue();
-  auto offsetF64 = builder.create<mlir::arith::SIToFPOp>(loc, builder.getF64Type(), offsetVal);
-  return builder.create<mlir::arith::AddFOp>(loc, inputPixel, offsetF64);
+  auto offsetfloat64 = builder.create<mlir::arith::SIToFPOp>(loc, builder.getF64Type(), offsetVal);
+  return builder.create<mlir::arith::AddFOp>(loc, inputPixel, offsetfloat64);
 }
 
 struct ChainedBrightnessPattern : public mlir::OpRewritePattern<BrightnessOp> {

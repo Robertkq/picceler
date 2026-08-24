@@ -55,6 +55,14 @@ private:
 
   Result<Token> consume(Token::Type type, std::string_view errorMessage);
 
+  /**
+   * @brief Consumes a type annotation token, additionally parsing a `<rows,cols>`
+   * dimension suffix for the "kernel" type (e.g. `kernel<4,4>`).
+   * @param errorMessage Error message used if no type token is found.
+   * @return A TYPE token whose value encodes the dimensions for kernel types (e.g. "kernel<4,4>").
+   */
+  Result<Token> parseTypeToken(std::string_view errorMessage);
+
   bool isAtEnd() const;
 
   /**

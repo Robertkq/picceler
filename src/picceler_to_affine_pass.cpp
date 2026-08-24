@@ -171,7 +171,7 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
 
     auto indexType = rewriter.getIndexType();
     auto i8Type = rewriter.getI8Type();
-    auto f64Type = rewriter.getF64Type();
+    auto float64Type = rewriter.getF64Type();
 
     mlir::Value inputHeight = rewriter.create<mlir::memref::DimOp>(loc, input, 0);
     mlir::Value inputWidth = rewriter.create<mlir::memref::DimOp>(loc, input, 1);
@@ -208,9 +208,9 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     auto coordMap = mlir::AffineMap::get(
         2, 1, rewriter.getAffineDimExpr(0) + rewriter.getAffineDimExpr(1) - rewriter.getAffineSymbolExpr(0));
 
-    auto kernelLoop =
-        createAffineParallel(rewriter, loc, {neighborhoodRowsIdx, neighborhoodColsIdx},
-                             mlir::TypeRange{f64Type, f64Type, f64Type}, {reductionKind, reductionKind, reductionKind});
+    auto kernelLoop = createAffineParallel(rewriter, loc, {neighborhoodRowsIdx, neighborhoodColsIdx},
+                                           mlir::TypeRange{float64Type, float64Type, float64Type},
+                                           {reductionKind, reductionKind, reductionKind});
     rewriter.setInsertionPointToStart(kernelLoop.getBody());
 
     mlir::Value kRowIndex = kernelLoop.getIVs()[0];
@@ -233,11 +233,12 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     // Both branches must yield a per-channel contribution: the real sample
     // when in-bounds, or the reduction identity (a no-op for the reduce)
     // when the tap falls outside the image.
-    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, mlir::TypeRange{f64Type, f64Type, f64Type}, isValid.getResult(),
+    auto ifOp = rewriter.create<mlir::scf::IfOp>(loc, mlir::TypeRange{float64Type, float64Type, float64Type},
+                                                 isValid.getResult(),
                                                  /*withElseRegion=*/true);
     rewriter.setInsertionPointToStart(ifOp.thenBlock());
 
-    mlir::Value kernelWeight = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(1.0));
+    mlir::Value kernelWeight = rewriter.create<mlir::arith::ConstantFloatOp>(loc, float64Type, llvm::APFloat(1.0));
     if (kernelOperand && mlir::isa<mlir::MemRefType>(kernelOperand.getType())) {
       kernelWeight = rewriter.create<mlir::memref::LoadOp>(loc, kernelOperand, mlir::ValueRange{kRowIndex, kColIndex});
     }
@@ -246,8 +247,8 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
       auto pixelByte =
           rewriter.create<mlir::memref::LoadOp>(loc, input, mlir::ValueRange{sampleRow, sampleCol, cOffset});
-      auto pixelAsF64 = rewriter.create<mlir::arith::UIToFPOp>(loc, f64Type, pixelByte);
-      return op.accumulate(rewriter, loc, identity, pixelAsF64, kernelWeight);
+      auto pixelAsfloat64 = rewriter.create<mlir::arith::UIToFPOp>(loc, float64Type, pixelByte);
+      return op.accumulate(rewriter, loc, identity, pixelAsfloat64, kernelWeight);
     };
 
     mlir::Value contribR = sampleChannel(Channel::R);
@@ -266,10 +267,10 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
     auto finalizeChannel = [&](Channel ch, mlir::Value channelSum) {
       auto finalizedAcc = op.finalizeAccumulator(rewriter, loc, channelSum);
 
-      auto c0F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(0.0));
-      auto c255F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, llvm::APFloat(255.0));
-      auto clampedLow = rewriter.create<mlir::arith::MaximumFOp>(loc, finalizedAcc, c0F64);
-      auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255F64);
+      auto c0float64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, float64Type, llvm::APFloat(0.0));
+      auto c255float64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, float64Type, llvm::APFloat(255.0));
+      auto clampedLow = rewriter.create<mlir::arith::MaximumFOp>(loc, finalizedAcc, c0float64);
+      auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255float64);
       auto byteVal = rewriter.create<mlir::arith::FPToUIOp>(loc, i8Type, clampedHigh);
 
       auto cOffset = rewriter.create<mlir::arith::ConstantIndexOp>(loc, static_cast<int>(ch));
@@ -411,14 +412,15 @@ struct ElementWiseUnaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementWi
 
       mlir::Value finalValue;
       if (ch != Channel::A) {
-        // Convert to F64 for the interface's transformPixel computation, then cast back to i8
-        auto inputF64 = rewriter.create<mlir::arith::UIToFPOp>(loc, rewriter.getF64Type(), inputByte);
-        mlir::Value transformedF64 = op.transformPixel(rewriter, loc, inputF64);
+        // Convert to float64 for the interface's transformPixel computation, then cast back to i8
+        auto inputfloat64 = rewriter.create<mlir::arith::UIToFPOp>(loc, rewriter.getF64Type(), inputByte);
+        mlir::Value transformedfloat64 = op.transformPixel(rewriter, loc, inputfloat64);
 
-        auto c0F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(0.0));
-        auto c255F64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(255.0));
-        auto clampedLow = rewriter.create<mlir::arith::MaximumFOp>(loc, transformedF64, c0F64);
-        auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255F64);
+        auto c0float64 = rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(0.0));
+        auto c255float64 =
+            rewriter.create<mlir::arith::ConstantFloatOp>(loc, rewriter.getF64Type(), llvm::APFloat(255.0));
+        auto clampedLow = rewriter.create<mlir::arith::MaximumFOp>(loc, transformedfloat64, c0float64);
+        auto clampedHigh = rewriter.create<mlir::arith::MinimumFOp>(loc, clampedLow, c255float64);
         finalValue = rewriter.create<mlir::arith::FPToUIOp>(loc, i8Type, clampedHigh);
       } else {
         finalValue = inputByte;

@@ -218,7 +218,7 @@ Result<Token::Type> Lexer::isKeyword(const std::string &value) const {
 }
 
 Result<Token::Type> Lexer::isType(const std::string &value) const {
-  static const std::vector<std::string> typeNames = {"int64", "float64", "string", "image"};
+  static const std::vector<std::string> typeNames = {"int64", "float64", "string", "image", "kernel"};
   auto it = std::find(typeNames.begin(), typeNames.end(), value);
   if (it != typeNames.end()) {
     return Token::Type::TYPE;
@@ -238,8 +238,7 @@ Result<Token> Lexer::readIdentifierOrKeywordOrType(std::pair<size_t, size_t> sta
   }
   result = isType(value);
   if (result) {
-    Token::Type typeType = *result;
-    return Token{typeType, value, Location{start}};
+    return Token{Token::Type::TYPE, value, Location{start}};
   }
   return Token{Token::Type::IDENTIFIER, value, Location{start}};
 }

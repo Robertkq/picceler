@@ -205,9 +205,9 @@ struct ReadNumberToCall : public mlir::OpConversionPattern<ReadNumberOp> {
     auto loc = op.getLoc();
 
     auto stringType = StringType::get(ctx);
-    auto f64Type = rewriter.getF64Type();
+    auto float64Type = rewriter.getF64Type();
 
-    auto func = ensureRuntimeFunc(module, "piccelerReadNumber", {stringType}, {f64Type}, rewriter, loc);
+    auto func = ensureRuntimeFunc(module, "piccelerReadNumber", {stringType}, {float64Type}, rewriter, loc);
     llvm::SmallVector<mlir::Value, 2> args;
     args.push_back(adaptor.getPrompt());
 

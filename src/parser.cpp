@@ -1,5 +1,6 @@
 #include "parser.h"
 
+#include <cmath>
 #include <format>
 #include <stdexcept>
 #include <vector>
@@ -75,6 +76,47 @@ Result<Token> Parser::consume(Token::Type type, std::string_view errorMessage) {
   return std::unexpected(CompileError{std::string(errorMessage), peek().location()});
 }
 
+Result<Token> Parser::parseTypeToken(std::string_view errorMessage) {
+  spdlog::trace("Parsing type token at line {}, column {}", peek().line(), peek().column());
+  auto typeTok = consume(Token::Type::TYPE, errorMessage);
+  if (!typeTok)
+    return std::unexpected(typeTok.error());
+
+  if (typeTok->value() != "kernel")
+    return *typeTok;
+
+  spdlog::trace("Parsing kernel type dimensions at line {}, column {}", peek().line(), peek().column());
+
+  if (!check(Token::Type::LT))
+    return std::unexpected(CompileError{"kernel type requires dimensions, e.g. kernel<4,4>", typeTok->location()});
+
+  advance(); // consume '<'
+
+  auto parseDim = [this]() -> Result<int64_t> {
+    auto numTok = consume(Token::Type::NUMBER, "Expected a positive integer kernel dimension");
+    if (!numTok)
+      return std::unexpected(numTok.error());
+    double value = std::stod(numTok->value());
+    if (value <= 0 || std::trunc(value) != value) {
+      return std::unexpected(CompileError{"Kernel dimensions must be positive integers", numTok->location()});
+    }
+    return static_cast<int64_t>(value);
+  };
+
+  auto rows = parseDim();
+  if (!rows)
+    return std::unexpected(rows.error());
+  if (auto comma = consume(Token::Type::COMMA, "Expected ',' between kernel dimensions"); !comma)
+    return std::unexpected(comma.error());
+  auto cols = parseDim();
+  if (!cols)
+    return std::unexpected(cols.error());
+  if (auto gt = consume(Token::Type::GT, "Expected '>' to close kernel type"); !gt)
+    return std::unexpected(gt.error());
+
+  return Token{Token::Type::TYPE, std::format("kernel<{},{}>", *rows, *cols), typeTok->location()};
+}
+
 Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
   spdlog::trace("Parsing statement at line {}, column {}", peek().line(), peek().column());
   if (match(Token::Type::KW_DEF)) {
@@ -98,10 +140,12 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
                 static_cast<int>(token.type()));
 
   if (check(Token::Type::TYPE)) {
-    const auto &type = advance();
+    auto typeTok = parseTypeToken("Expected type annotation");
+    if (!typeTok)
+      return std::unexpected(typeTok.error());
     if (check(Token::Type::IDENTIFIER)) {
       auto identifier = advance();
-      return parseAssignment(type, identifier);
+      return parseAssignment(*typeTok, identifier);
     }
   }
 
@@ -134,7 +178,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
   // Parse parameters
   while (!check(Token::Type::R_PAREN) && !isAtEnd()) {
 
-    auto typeTok = consume(Token::Type::TYPE, "Expected type annotation for parameter");
+    auto typeTok = parseTypeToken("Expected type annotation for parameter");
     if (!typeTok)
       return std::unexpected(typeTok.error());
 
@@ -154,7 +198,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
   }
 
   if (match(Token::Type::ARROW)) {
-    auto returnTypeTok = consume(Token::Type::TYPE, "Expected return type after '->'");
+    auto returnTypeTok = parseTypeToken("Expected return type after '->'");
     if (!returnTypeTok)
       return std::unexpected(returnTypeTok.error());
     funcNode->setReturnType(returnTypeTok->value());

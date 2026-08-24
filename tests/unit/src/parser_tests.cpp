@@ -465,7 +465,7 @@ TEST_F(ParserTest, ReturnWithBinaryExpressionParses) {
 
 TEST_F(ParserTest, ReturnNumberLiteralParses) {
   auto ast = parseSuccessfully(R"(
-    def foo() -> f64 {
+    def foo() -> float64 {
       return 42
     }
   )");
@@ -485,7 +485,7 @@ TEST_F(ParserTest, ReturnNumberLiteralParses) {
 
 TEST_F(ParserTest, MultipleFunctionsWithMixedReturnTypesParse) {
   auto ast = parseSuccessfully(R"(
-    def helper(x : f64) -> f64 {
+    def helper(x : float64) -> float64 {
       return x
     }
     def main() {
@@ -498,7 +498,7 @@ TEST_F(ParserTest, MultipleFunctionsWithMixedReturnTypesParse) {
   const auto *helperNode = as<FunctionNode>(ast->statements()[0]);
   ASSERT_NE(helperNode, nullptr);
   ASSERT_TRUE(helperNode->returnType().has_value());
-  EXPECT_EQ(*helperNode->returnType(), "f64");
+  EXPECT_EQ(*helperNode->returnType(), "float64");
 
   const auto *mainNode = as<FunctionNode>(ast->statements()[1]);
   ASSERT_NE(mainNode, nullptr);

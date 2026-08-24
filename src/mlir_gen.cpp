@@ -158,6 +158,17 @@ std::vector<mlir::Type> MLIRGen::getFunctionArgTypes(FunctionNode *funcNode) {
 }
 
 mlir::Type MLIRGen::getMLIRType(const std::string &typeName) {
+  static const std::string kernelPrefix = "kernel<";
+  if (typeName.starts_with(kernelPrefix) && typeName.ends_with('>')) {
+    std::string dims = typeName.substr(kernelPrefix.size(), typeName.size() - kernelPrefix.size() - 1);
+    auto commaPos = dims.find(',');
+    if (commaPos != std::string::npos) {
+      int rows = std::stoi(dims.substr(0, commaPos));
+      int cols = std::stoi(dims.substr(commaPos + 1));
+      return _builder.getType<KernelType>(rows, cols);
+    }
+  }
+
   std::unordered_map<std::string, mlir::Type> typeMap = {
       {"image", _builder.getType<ImageType>()},
       {"string", _builder.getType<StringType>()},
@@ -668,9 +679,9 @@ void MLIRGen::emitFor(ForNode *node) {
 
   mlir::Value ivIndex = forOp.getInductionVar();
   auto ivI64 = _builder.create<mlir::arith::IndexCastOp>(loc, _builder.getI64Type(), ivIndex);
-  mlir::Value ivF64 = _builder.create<mlir::arith::SIToFPOp>(loc, _builder.getF64Type(), ivI64);
+  mlir::Value ivfloat64 = _builder.create<mlir::arith::SIToFPOp>(loc, _builder.getF64Type(), ivI64);
 
-  declareVariable(node->varName(), ivF64);
+  declareVariable(node->varName(), ivfloat64);
 
   for (const auto &stmt : node->body()) {
     emitStatement(stmt.get());

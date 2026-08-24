@@ -7,30 +7,30 @@
 # CHECK: applied identity kernel
 # CHECK: convolution: ok
 
-def apply_edge_kernel(img: image) -> image {
-    kernel = [[-1, -1, -1],
-              [-1,  8, -1],
-              [-1, -1, -1]]
-    result = convolution(img, kernel)
+def apply_edge_kernel(image img) -> image {
+    kernel<3,3> k = [[-1, -1, -1],
+                    [-1,  8, -1],
+                    [-1, -1, -1]]
+    image result = convolution(img, k)
     print("applied edge kernel\n")
     return result
 }
 
-def apply_identity_kernel(img: image) -> image {
-    kernel = [[0, 0, 0],
-              [0, 1, 0],
-              [0, 0, 0]]
-    result = convolution(img, kernel)
+def apply_identity_kernel(image img) -> image {
+    kernel<3,3> k = [[0, 0, 0],
+                    [0, 1, 0],
+                    [0, 0, 0]]
+    image result = convolution(img, k)
     print("applied identity kernel\n")
     return result
 }
 
 def main() -> int64 {
-    img = load_image("img/cat.png")
+    image img = load_image("img/cat.png")
     print("loaded image\n")
 
-    edges = apply_edge_kernel(img)
-    identity = apply_identity_kernel(img)
+    image edges = apply_edge_kernel(img)
+    image identity = apply_identity_kernel(img)
 
     print("convolution: ok\n")
     return 0

@@ -22,7 +22,7 @@ struct KernelToMemref : public mlir::OpConversionPattern<KernelConstOp> {
   mlir::LogicalResult matchAndRewrite(KernelConstOp op, OpAdaptor adaptor,
                                       mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
-    auto f64Type = rewriter.getF64Type();
+    auto float64Type = rewriter.getF64Type();
 
     auto kernelType = mlir::dyn_cast<KernelType>(op.getResult().getType());
     if (!kernelType)
@@ -51,7 +51,7 @@ struct KernelToMemref : public mlir::OpConversionPattern<KernelConstOp> {
 
       auto cRow = rewriter.create<mlir::arith::ConstantIndexOp>(loc, r);
       auto cCol = rewriter.create<mlir::arith::ConstantIndexOp>(loc, c);
-      auto cVal = rewriter.create<mlir::arith::ConstantFloatOp>(loc, f64Type, val);
+      auto cVal = rewriter.create<mlir::arith::ConstantFloatOp>(loc, float64Type, val);
 
       rewriter.create<mlir::memref::StoreOp>(loc, cVal, kStack, mlir::ValueRange{cRow, cCol});
     }
