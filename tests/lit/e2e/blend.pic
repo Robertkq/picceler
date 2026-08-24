@@ -5,6 +5,7 @@
 # CHECK: loaded images
 # CHECK: blended mostly white
 # CHECK: blended mostly blue
+# CHECK: blended runtime weight=0.3
 # CHECK: blend: ok
 
 def blend_mostly_white(image a, image b) -> image {
@@ -19,6 +20,12 @@ def blend_mostly_blue(image a, image b) -> image {
     return result
 }
 
+def blend_runtime(image a, image b, float64 weight) -> image {
+    image result = blend(a, b, weight)
+    print("blended runtime weight={}\n", weight)
+    return result
+}
+
 def main() -> int64 {
     image white = load_image("img/white.png")
     image blue = load_image("img/blue.png")
@@ -26,6 +33,7 @@ def main() -> int64 {
 
     image mostly_white = blend_mostly_white(white, blue)
     image mostly_blue = blend_mostly_blue(white, blue)
+    image runtime = blend_runtime(white, blue, 0.3)
 
     print("blend: ok\n")
     return 0

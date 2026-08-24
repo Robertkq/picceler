@@ -15,6 +15,53 @@ func.func @RotateImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // -----
 
+// A non-constant (runtime) angle takes the same dimension-swap/select logic as the constant case
+// above, but normalizes the angle and validates it's a multiple of 90 with arith ops instead of
+// host-side, aborting at runtime rather than failing to compile on an invalid angle.
+func.func @RotateImageRuntimeAngle(%arg0 : memref<?x?x4xi8>, %angle : i64) -> memref<?x?x4xi8> {
+    %0 = "picceler.rotate" (%arg0, %angle) : (memref<?x?x4xi8>, i64) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @RotateImageRuntimeAngle
+// CHECK: arith.remsi
+// CHECK: arith.cmpi ne
+// CHECK: scf.if
+// CHECK: func.call @abort()
+// CHECK: arith.remsi
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.select
+// CHECK-NOT: "picceler.rotate"
+// CHECK: return
+
+// -----
+
+// picceler.convolution already accepts a memref kernel operand (Picceler_AnyKernelType =
+// AnyTypeOf<[Picceler_KernelType, AnyMemRef]>), but a *dynamically*-shaped one (memref<?x?xf64>,
+// as opposed to the fixed-size memref<RxCxf64> PiccelerKernelToMemrefPass produces for a constant
+// kernel) needs its neighborhood size read back with memref.dim at conversion time instead of the
+// compile-time kernel<RxC> shape -- see getKernelNeighborhoodSize in ops/convolution.cpp. This is
+// the same mechanism buildBoxBlurKernelDynamic/buildGaussianKernelDynamic
+// (picceler_filters_to_conv_pass.cpp) rely on for a runtime box_blur/gaussian_blur radius.
+func.func @ConvolutionDynamicKernel(%arg0 : memref<?x?x4xi8>, %kernel : memref<?x?xf64>) -> memref<?x?x4xi8> {
+    %0 = "picceler.convolution" (%arg0, %kernel) : (memref<?x?x4xi8>, memref<?x?xf64>) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @ConvolutionDynamicKernel
+// CHECK: memref.dim %arg1, %{{.*}}
+// CHECK: memref.dim %arg1, %{{.*}}
+// CHECK: memref.alloc
+// CHECK-COUNT-2: affine.parallel
+// CHECK: memref.load
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK-NOT: "picceler.convolution"
+// CHECK: return
+
+// -----
+
 func.func @DiffImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
     %0 = "picceler.diff" (%arg0, %arg1) : (memref<?x?x4xi8>, memref<?x?x4xi8>) -> memref<?x?x4xi8>
     return %0 : memref<?x?x4xi8>
@@ -39,6 +86,27 @@ func.func @BlendImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> me
 }
 
 // CHECK-LABEL: func.func @BlendImages
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.uitofp
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK: arith.fptoui
+// CHECK-NOT: "picceler.blend"
+// CHECK: return
+
+// -----
+
+// A non-constant weight (e.g. sourced from a function parameter) used to be rejected by
+// BlendOp::verify() outright; it now only range-checks a weight that happens to be constant,
+// mirroring DilateOp/ErodeOp's radius. transformPixels() itself never assumed a constant weight, so
+// lowering is otherwise identical to the constant-weight case above.
+func.func @BlendImagesRuntimeWeight(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>, %weight : f64) -> memref<?x?x4xi8> {
+    %0 = "picceler.blend" (%arg0, %arg1, %weight) : (memref<?x?x4xi8>, memref<?x?x4xi8>, f64) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @BlendImagesRuntimeWeight
 // CHECK: memref.alloc
 // CHECK: affine.parallel
 // CHECK: arith.uitofp
