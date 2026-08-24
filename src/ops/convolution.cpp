@@ -3,6 +3,7 @@
 #include <mlir/IR/Matchers.h>
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/MemRef/IR/MemRef.h>
 
 #include <spdlog/spdlog.h>
 
@@ -140,11 +141,31 @@ Result<std::pair<mlir::Value, mlir::Value>> getKernelNeighborhoodSize(mlir::OpBu
 
     auto rows = kernelMemRefType.getShape()[0];
     auto cols = kernelMemRefType.getShape()[1];
-    if (rows <= 0 || cols <= 0) {
-      return std::unexpected(CompileError("Invalid kernel dimensions"));
+
+    // A dynamic dimension (e.g. box_blur/gaussian_blur's runtime-sized kernel, see
+    // PiccelerFiltersToConvPass) isn't known until the memref itself exists, so read it back with
+    // memref.dim instead of the compile-time shape used for the static-kernel case below.
+    auto dimOrConstant = [&](int64_t staticDim, unsigned dimIndex) -> Result<mlir::Value> {
+      if (mlir::ShapedType::isDynamic(staticDim)) {
+        auto dimIndexValue = builder.create<mlir::memref::DimOp>(loc, kernelOperand, dimIndex);
+        return builder.create<mlir::arith::IndexCastOp>(loc, builder.getI64Type(), dimIndexValue).getResult();
+      }
+      if (staticDim <= 0) {
+        return std::unexpected(CompileError("Invalid kernel dimensions"));
+      }
+      return createIntConstant(builder, loc, staticDim);
+    };
+
+    auto rowsValue = dimOrConstant(rows, 0);
+    if (!rowsValue) {
+      return std::unexpected(rowsValue.error());
+    }
+    auto colsValue = dimOrConstant(cols, 1);
+    if (!colsValue) {
+      return std::unexpected(colsValue.error());
     }
 
-    return std::make_pair(createIntConstant(builder, loc, rows), createIntConstant(builder, loc, cols));
+    return std::make_pair(*rowsValue, *colsValue);
   }
 
   if (auto kernelTypeAttr = mlir::dyn_cast<KernelType>(kernelOperand.getType())) {

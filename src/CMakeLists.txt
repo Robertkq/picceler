@@ -57,6 +57,8 @@ target_link_libraries(PiccelerOps PUBLIC
     MLIRIR
     MLIRSupport
     MLIRParser
+    MLIRAffineDialect
+    MLIRMemRefDialect
 )
 
 add_dependencies(PiccelerOps
@@ -97,6 +99,7 @@ target_link_libraries(PiccelerTransforms PUBLIC
     MLIRMemRefDialect
     MLIRSCFDialect
     MLIRLLVMDialect
+    MLIRMathDialect
     PiccelerSupport
     PiccelerOps
 )
