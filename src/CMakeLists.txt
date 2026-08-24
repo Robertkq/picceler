@@ -131,6 +131,7 @@ target_link_libraries(PiccelerCore PUBLIC
     MLIRFuncToLLVM
     MLIRMemRefToLLVM
     MLIRArithToLLVM
+    MLIRMathToLLVM
     MLIRSCFToControlFlow
     MLIRReconcileUnrealizedCasts
     MLIRAffineToStandard

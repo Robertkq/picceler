@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -110,6 +111,10 @@ struct PiccelerToLLVMIRPass : public impl::PiccelerToLLVMIRBase<PiccelerToLLVMIR
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     target.addLegalDialect<mlir::arith::ArithDialect>();
     target.addLegalDialect<mlir::affine::AffineDialect>();
+    // math.exp (gaussian_blur's runtime kernel path, see PiccelerFiltersToConvPass) survives
+    // untouched through this pass; ConvertMathToLLVMPass lowers it later in
+    // addBackendLoweringPasses().
+    target.addLegalDialect<mlir::math::MathDialect>();
 
     target.addLegalOp<mlir::ModuleOp>();
     target.addLegalOp<mlir::UnrealizedConversionCastOp>();

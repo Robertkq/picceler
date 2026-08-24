@@ -19,6 +19,7 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
 namespace picceler {
 
@@ -68,6 +69,7 @@ void IRPassManager::addBackendLoweringPasses() {
   _passManager.addPass(mlir::createFinalizeMemRefToLLVMConversionPass());
   _passManager.addPass(mlir::createSCFToControlFlowPass());
   _passManager.addPass(mlir::createArithToLLVMConversionPass());
+  _passManager.addPass(mlir::createConvertMathToLLVMPass());
   _passManager.addPass(mlir::createConvertControlFlowToLLVMPass());
   _passManager.addPass(mlir::createConvertFuncToLLVMPass());
   _passManager.addPass(mlir::createReconcileUnrealizedCastsPass());
