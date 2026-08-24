@@ -5,7 +5,7 @@ This document summarizes the MLIR dialects that show up most often in Picceler, 
 The short version is:
 
 - Picceler defines the source-level image operations and custom types.
-- `arith`, `affine`, `func`, `memref`, `scf`, and `LLVM` are the main MLIR dialects used during lowering.
+- `arith`, `affine`, `func`, `memref`, `scf`, `math`, and `LLVM` are the main MLIR dialects used during lowering.
 - `builtin`/core IR is used for the module container and general MLIR plumbing.
 
 ## 1. Picceler Dialect
@@ -38,6 +38,14 @@ This is the custom dialect for the language. Most front-end code builds these op
 | `picceler.print` | Prints a value to the console | any single MLIR value | none |
 | `picceler.string.const` | Produces a constant string value | `StrAttr` value | `picceler.string` |
 | `picceler.kernel.const` | Produces a constant kernel value | `F64ElementsAttr` values | `picceler.kernel` |
+
+None of the numeric arguments above (`box_blur`/`gaussian_blur`'s radius, `sharpen`'s strength,
+`rotate`'s angle, `blend`'s weight, `dilate`/`erode`'s radius, `crop`'s x/y/width/height,
+`brightness`'s value) need to be compile-time constants — every one of them also accepts a
+runtime value, e.g. one that traces back to a function parameter. See
+[`compiler-internals.md`](compiler-internals.md#3-phase-1--high-level-optimization) for how
+`box_blur`/`gaussian_blur`/`sharpen`/`rotate` reach that without the kernel size or angle being
+known at compile time.
 
 ### Custom Picceler Types
 
@@ -91,8 +99,15 @@ This dialect is used for the image-processing lowerings that become nested loops
 | --- | --- | --- | --- |
 | `affine.for` | Compile-time affine loop | lower bound, upper bound, step | Iterate over image rows/cols and neighborhood windows |
 | `affine.apply` | Computes affine expressions on loop/index values | affine map + operands | Translate row/col coordinates into linear addresses |
+| `affine.parallel` | Parallel loop band, optionally a reduction | lower/upper bound maps + operands (bounds may be runtime SSA values, not just constants) | Pixel loops, neighborhood/kernel-fill loops (bounds can come from a runtime radius) |
 
-Important note: several neighborhood-based ops currently require a statically known neighborhood size. If a radius comes from runtime input, the current affine lowering may reject it or need a different lowering strategy.
+Neighborhood-based ops (`dilate`, `erode`, `convolution` — including how
+`box_blur`/`gaussian_blur`/`sharpen` reach `convolution`, see Phase 1 in
+[`compiler-internals.md`](compiler-internals.md#3-phase-1--high-level-optimization)) do **not**
+require a statically known neighborhood size: `affine.parallel`'s bounds can be ordinary runtime SSA
+values, so a radius/kernel-size that traces back to a function parameter works the same as a
+compile-time constant one, just with the loop trip count decided at run time instead of appearing
+as a literal in the IR.
 
 ## 5. `memref` Dialect
 
@@ -102,7 +117,9 @@ This dialect is used when data is materialized in stack or heap-like buffer form
 
 | Op | What it does | Expected inputs | Typical use here |
 | --- | --- | --- | --- |
-| `memref.alloca` | Allocates stack memory for a memref | memref type and optional sizes | Temporary kernel storage, accumulators |
+| `memref.alloca` | Allocates stack memory for a memref | memref type and optional sizes | Compile-time-sized kernel storage (`PiccelerKernelToMemrefPass`, `sharpen`'s always-3x3 runtime kernel) |
+| `memref.alloc` | Allocates heap-ish memory for a memref | memref type and optional sizes | Output image buffers; runtime-sized kernel storage for `box_blur`/`gaussian_blur` (size isn't bounded at compile time, so this avoids an unbounded stack allocation) |
+| `memref.dim` | Reads one dimension's runtime size | memref + dimension index | Image height/width; a dynamically-shaped kernel's row/col count (`getKernelNeighborhoodSize` in `ops/convolution.cpp`) |
 | `memref.load` | Loads from a memref | memref + indices | Read kernel weights |
 | `memref.store` | Stores to a memref | value + memref + indices | Write kernel data or intermediate values |
 
@@ -116,7 +133,24 @@ This is used for structured control flow that is easier to lower than explicit b
 | --- | --- | --- | --- |
 | `scf.if` | Conditional region-based branch | boolean condition | Guard out-of-bounds pixel samples |
 
-## 7. `LLVM` Dialect
+## 7. `math` Dialect
+
+File(s): `src/picceler_filters_to_conv_pass.cpp`, `src/mlir_gen.cpp`
+
+Holds transcendental/elementary math ops that don't belong in `arith`. `ConvertMathToLLVMPass`
+(added to `addBackendLoweringPasses()` in Phase 4, see
+[`compiler-internals.md`](compiler-internals.md#6-phase-4--backend-lowering)) lowers whatever
+`math` ops remain to LLVM; before that pass existed, any `math` op that survived past constant
+folding would fail translation to LLVM IR (this is why `sqrt()`/`pow()` used to require
+compile-time-constant arguments — see `LANGUAGE.md`).
+
+| Op | What it does | Expected inputs | Typical use here |
+| --- | --- | --- | --- |
+| `math.exp` | Computes e^x | float operand | `gaussian_blur`'s per-tap weight formula when the radius is a runtime value (`buildGaussianKernelDynamic`) |
+| `math.sqrt` | Square root | float operand | `sqrt()` builtin |
+| `math.powf` | Base raised to a float exponent | two float operands | `pow()` builtin |
+
+## 8. `LLVM` Dialect
 
 File(s): `src/picceler_to_llvm_ir_pass.cpp`, `src/picceler_to_affine_pass.cpp`, `src/image_access_helper.cpp`
 
@@ -131,14 +165,14 @@ This is the final low-level dialect used before emitting LLVM IR and object code
 | `llvm.store` | Stores to a pointer | value + typed pointer | Write pixels or struct fields |
 | `llvm.constant` | Produces a low-level constant | attribute value | Emit pointer offsets and integer constants |
 
-## 8. Practical Type Rules To Remember
+## 9. Practical Type Rules To Remember
 
 - `picceler.read_number` returns `float64`, so if a downstream op expects `i64`, the frontend must insert an explicit float-to-int cast.
 - `arith.index_cast` is only for `index` and integers; it is not a float cast.
 - For `float64 -> i64`, use `arith.fp_to_si` in the signed case.
-- Neighborhood-based ops like `dilate`, `erode`, and some blur/convolution paths still assume a radius or kernel size that the lowering can reason about.
+- Neighborhood-based ops (`dilate`, `erode`, `convolution`, and therefore `box_blur`/`gaussian_blur`/`sharpen`) accept a runtime radius/kernel size — see the `affine` dialect section above.
 
-## 9. Pipeline Snapshot
+## 10. Pipeline Snapshot
 
 For the full pass-by-pass breakdown of how `picceler` dialect IR reaches `LLVM` dialect IR — phase
 ordering, what each pass does, and why it's sequenced where it is — see
