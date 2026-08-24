@@ -5,6 +5,7 @@
 # CHECK: loaded image
 # CHECK: applied mild sharpen
 # CHECK: applied strong sharpen
+# CHECK: applied runtime sharpen strength=40
 # CHECK: sharpen: ok
 
 def apply_mild(img: image) -> image {
@@ -19,11 +20,20 @@ def apply_strong(img: image) -> image {
     return result
 }
 
+# strength comes from a typed function parameter (not a literal), so it can't be folded to a
+# compile-time constant -- sharpen used to require exactly that. See issue #117.
+def apply_runtime(img: image, strength: f64) -> image {
+    result = sharpen(img, strength)
+    print("applied runtime sharpen strength={}\n", strength)
+    return result
+}
+
 def main() -> int64 {
     img = load_image("img/cat.png")
     print("loaded image\n")
     mild = apply_mild(img)
     strong = apply_strong(img)
+    runtime = apply_runtime(img, 40.0)
 
     print("sharpen: ok\n")
     return 0

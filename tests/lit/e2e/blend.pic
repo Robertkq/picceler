@@ -5,6 +5,7 @@
 # CHECK: loaded images
 # CHECK: blended mostly white
 # CHECK: blended mostly blue
+# CHECK: blended runtime weight=0.3
 # CHECK: blend: ok
 
 def blend_mostly_white(a: image, b: image) -> image {
@@ -19,6 +20,14 @@ def blend_mostly_blue(a: image, b: image) -> image {
     return result
 }
 
+# weight comes from a typed function parameter (not a literal), so it can't be folded to a
+# compile-time constant -- blend used to require exactly that. See issue #117.
+def blend_runtime(a: image, b: image, weight: f64) -> image {
+    result = blend(a, b, weight)
+    print("blended runtime weight={}\n", weight)
+    return result
+}
+
 def main() -> int64 {
     white = load_image("img/white.png")
     blue = load_image("img/blue.png")
@@ -26,6 +35,7 @@ def main() -> int64 {
 
     mostly_white = blend_mostly_white(white, blue)
     mostly_blue = blend_mostly_blue(white, blue)
+    runtime = blend_runtime(white, blue, 0.3)
 
     print("blend: ok\n")
     return 0
