@@ -102,12 +102,6 @@ complex_calc = -1 + 2 * 3 + root_val + cubed
 * There is no unary negation operator for arbitrary expressions. `-1` is a negative *number
   literal* (the `-` must be directly followed by a digit), but `-x` or `-(a + b)` are not valid —
   write `0 - x` instead.
-* `sqrt()`/`pow()` only work when every argument is a compile-time-constant literal (as in the
-  snippet above). There is currently no lowering pass from the `math` dialect to LLVM, so the only
-  reason these calls compile at all is that the canonicalizer constant-folds them away entirely
-  before that becomes a problem — calling either with a variable, function parameter, or any other
-  runtime-computed value fails to compile with `missing LLVMTranslationDialectInterface registration
-  for dialect for op: math.sqrt` (or `math.powf`).
 
 ### Function definitions & calls
 
@@ -180,10 +174,8 @@ for (i = 1 .. 5) {
 * **read_string(string)** -> prompts with `string` and reads a string from the keyboard
 * **print(string, ...)** -> prints `string` to the console, substituting each `{}` placeholder in
   order with the remaining arguments, e.g. `print("x = {}, y = {}\n", x, y)`
-* **sqrt(f64)** -> square root of the argument. Argument must be a compile-time constant — see
-  "Operators & expression precedence" above.
-* **pow(f64, f64)** -> the first argument raised to the power of the second argument. Both
-  arguments must be compile-time constants — see "Operators & expression precedence" above.
+* **sqrt(f64)** -> square root of the argument.
+* **pow(f64, f64)** -> the first argument raised to the power of the second argument.
 
 ## Builtin Operations
 
