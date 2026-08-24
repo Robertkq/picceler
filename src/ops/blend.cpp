@@ -7,13 +7,17 @@
 namespace picceler {
 
 /**
- * @brief Verifies the BlendOp to ensure that the weight is a constant in the range [0.0, 1.0].
+ * @brief Verifies the BlendOp. When the weight is a compile-time constant, checks that it falls in
+ * the range [0.0, 1.0]. A runtime weight (e.g. sourced from a function parameter) can't be checked
+ * here, mirroring how DilateOp/ErodeOp only range-check their radius when it happens to be a
+ * constant.
  */
 mlir::LogicalResult BlendOp::verify() {
   auto weightValue = getWeight();
   auto constWeight = weightValue.getDefiningOp<mlir::arith::ConstantFloatOp>();
   if (!constWeight) {
-    return emitOpError("weight must be a compile-time constant");
+    // Weight is given as a runtime float, cannot verify this at compile time.
+    return mlir::success();
   }
 
   double weight = constWeight.value().convertToDouble();
