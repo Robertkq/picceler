@@ -1,5 +1,6 @@
 #include "parser.h"
 
+#include <cmath>
 #include <format>
 #include <stdexcept>
 #include <vector>
@@ -75,7 +76,49 @@ Result<Token> Parser::consume(Token::Type type, std::string_view errorMessage) {
   return std::unexpected(CompileError{std::string(errorMessage), peek().location()});
 }
 
+Result<Token> Parser::parseTypeToken(std::string_view errorMessage) {
+  spdlog::trace("Parsing type token at line {}, column {}", peek().line(), peek().column());
+  auto typeTok = consume(Token::Type::TYPE, errorMessage);
+  if (!typeTok)
+    return std::unexpected(typeTok.error());
+
+  if (typeTok->value() != "kernel")
+    return *typeTok;
+
+  spdlog::trace("Parsing kernel type dimensions at line {}, column {}", peek().line(), peek().column());
+
+  if (!check(Token::Type::LT))
+    return std::unexpected(CompileError{"kernel type requires dimensions, e.g. kernel<4,4>", typeTok->location()});
+
+  advance(); // consume '<'
+
+  auto parseDim = [this]() -> Result<int64_t> {
+    auto numTok = consume(Token::Type::NUMBER, "Expected a positive integer kernel dimension");
+    if (!numTok)
+      return std::unexpected(numTok.error());
+    double value = std::stod(numTok->value());
+    if (value <= 0 || std::trunc(value) != value) {
+      return std::unexpected(CompileError{"Kernel dimensions must be positive integers", numTok->location()});
+    }
+    return static_cast<int64_t>(value);
+  };
+
+  auto rows = parseDim();
+  if (!rows)
+    return std::unexpected(rows.error());
+  if (auto comma = consume(Token::Type::COMMA, "Expected ',' between kernel dimensions"); !comma)
+    return std::unexpected(comma.error());
+  auto cols = parseDim();
+  if (!cols)
+    return std::unexpected(cols.error());
+  if (auto gt = consume(Token::Type::GT, "Expected '>' to close kernel type"); !gt)
+    return std::unexpected(gt.error());
+
+  return Token{Token::Type::TYPE, std::format("kernel<{},{}>", *rows, *cols), typeTok->location()};
+}
+
 Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
+  spdlog::trace("Parsing statement at line {}, column {}", peek().line(), peek().column());
   if (match(Token::Type::KW_DEF)) {
     return parseFunctionDefinition();
   }
@@ -92,22 +135,36 @@ Result<std::unique_ptr<ASTNode>> Parser::parseStatement() {
     return parseReturnStatement();
   }
 
+  auto token = peek();
+  spdlog::trace("Parsing statement starting with token: {}, type: {}", token.toString(),
+                static_cast<int>(token.type()));
+
+  if (check(Token::Type::TYPE)) {
+    auto typeTok = parseTypeToken("Expected type annotation");
+    if (!typeTok)
+      return std::unexpected(typeTok.error());
+    if (check(Token::Type::IDENTIFIER)) {
+      auto identifier = advance();
+      return parseAssignment(*typeTok, identifier);
+    }
+  }
+
   if (check(Token::Type::IDENTIFIER)) {
     const auto &identifier = advance();
-    if (check(Token::Type::ASSIGN)) {
-      return parseAssignment(identifier);
-    }
+    spdlog::trace("Parsed identifier: {}", identifier.value());
     if (check(Token::Type::L_PAREN)) {
       return parseCall(identifier);
     }
-    return std::unexpected(
-        CompileError{std::format("Unexpected token '{}' after identifier", peek().value()), peek().location()});
+    return std::unexpected(CompileError{
+        std::format("Unexpected token '{}' after identifier, did you forget type annotation?", peek().value()),
+        peek().location()});
   }
 
   return std::unexpected(CompileError{std::format("Unexpected token '{}'", peek().value()), peek().location()});
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
+  spdlog::debug("Parsing function definition");
   auto nameTok = consume(Token::Type::IDENTIFIER, "Expected function name after 'def'");
   if (!nameTok)
     return std::unexpected(nameTok.error());
@@ -120,17 +177,14 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
 
   // Parse parameters
   while (!check(Token::Type::R_PAREN) && !isAtEnd()) {
+
+    auto typeTok = parseTypeToken("Expected type annotation for parameter");
+    if (!typeTok)
+      return std::unexpected(typeTok.error());
+
     auto paramTok = consume(Token::Type::IDENTIFIER, "Expected parameter name");
     if (!paramTok)
       return std::unexpected(paramTok.error());
-
-    if (auto colon = consume(Token::Type::COLON, "Expected ':' after parameter name"); !colon) {
-      return std::unexpected(colon.error());
-    }
-
-    auto typeTok = consume(Token::Type::TYPE, "Expected type after ':'");
-    if (!typeTok)
-      return std::unexpected(typeTok.error());
 
     funcNode->addParameter(paramTok->value(), typeTok->value());
 
@@ -144,7 +198,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
   }
 
   if (match(Token::Type::ARROW)) {
-    auto returnTypeTok = consume(Token::Type::TYPE, "Expected return type after '->'");
+    auto returnTypeTok = parseTypeToken("Expected return type after '->'");
     if (!returnTypeTok)
       return std::unexpected(returnTypeTok.error());
     funcNode->setReturnType(returnTypeTok->value());
@@ -169,8 +223,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseFunctionDefinition() {
   return funcNode;
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier) {
-  spdlog::debug("Parsing assignment for identifier '{}'", identifier.value());
+Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &type, const Token &identifier) {
+  spdlog::debug("Parsing assignment for type '{}'", type.value());
 
   if (auto eqTok = consume(Token::Type::ASSIGN, "Expected '=' after identifier"); !eqTok) {
     return std::unexpected(eqTok.error());
@@ -180,7 +234,8 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &identifier
   if (!exprResult)
     return std::unexpected(exprResult.error());
 
-  auto leftVarResult = parseVariable(identifier);
+  spdlog::info("Parsed assignment: {} {} = {}", type.value(), identifier.value(), (*exprResult)->toString());
+  auto leftVarResult = parseVariable(type, identifier);
   if (!leftVarResult)
     return std::unexpected(leftVarResult.error());
 
@@ -355,6 +410,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseExpression() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseRelational() {
+  spdlog::debug("Parsing relational expression");
   auto lhs = parseAdditive();
   if (!lhs)
     return lhs;
@@ -373,6 +429,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseRelational() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
+  spdlog::debug("Parsing additive expression");
   auto lhs = parseMultiplicative();
   if (!lhs)
     return lhs;
@@ -390,6 +447,7 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAdditive() {
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseMultiplicative() {
+  spdlog::debug("Parsing multiplicative expression");
   auto lhs = parsePrimary();
   if (!lhs)
     return lhs;
@@ -443,12 +501,17 @@ Result<std::unique_ptr<ASTNode>> Parser::parsePrimary() {
       CompileError{std::format("Unexpected token '{}' in expression", peek().value()), peek().location()});
 }
 
-Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
+Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &type, const Token &identifier) {
   spdlog::debug("Parsing variable");
-  return std::make_unique<VariableNode>(identifier.location(), identifier.value(), std::nullopt);
+  return std::make_unique<VariableNode>(identifier.location(), identifier.value(), type.value());
+}
+
+Result<std::unique_ptr<ASTNode>> Parser::parseVariable(const Token &identifier) {
+  return parseVariable(Token(Token::Type::TYPE, "", identifier.location()), identifier);
 }
 
 Result<std::unique_ptr<ASTNode>> Parser::parseKernel() {
+  spdlog::debug("Parsing kernel");
   auto lbracket = consume(Token::Type::L_BRACKET, "Expected '[' to open kernel");
   if (!lbracket)
     return std::unexpected(lbracket.error());

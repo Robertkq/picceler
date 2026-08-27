@@ -55,6 +55,14 @@ private:
 
   Result<Token> consume(Token::Type type, std::string_view errorMessage);
 
+  /**
+   * @brief Consumes a type annotation token, additionally parsing a `<rows,cols>`
+   * dimension suffix for the "kernel" type (e.g. `kernel<4,4>`).
+   * @param errorMessage Error message used if no type token is found.
+   * @return A TYPE token whose value encodes the dimensions for kernel types (e.g. "kernel<4,4>").
+   */
+  Result<Token> parseTypeToken(std::string_view errorMessage);
+
   bool isAtEnd() const;
 
   /**
@@ -64,9 +72,10 @@ private:
   Result<std::unique_ptr<ASTNode>> parseStatement();
   Result<std::unique_ptr<ASTNode>> parseExpression();
   Result<std::unique_ptr<ASTNode>> parseFunctionDefinition();
-  Result<std::unique_ptr<ASTNode>> parseAssignment(const Token &identifier);
+  Result<std::unique_ptr<ASTNode>> parseAssignment(const Token &type, const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseCall(const Token &identifier);
-  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &identifier = Token{Token::Type::UNKNOWN, "", {}});
+  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &type, const Token &identifier);
+  Result<std::unique_ptr<ASTNode>> parseVariable(const Token &identifier);
   Result<std::unique_ptr<ASTNode>> parseKernel();
   Result<std::unique_ptr<ASTNode>> parseString();
   Result<std::unique_ptr<ASTNode>> parseNumber();
@@ -83,7 +92,6 @@ private:
    */
 
 private:
-  // Lexer _lexer;
   std::vector<Token> _tokens;
   std::size_t _index;
 };

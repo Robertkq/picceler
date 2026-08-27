@@ -31,10 +31,10 @@ This is the custom dialect for the language. Most front-end code builds these op
 | `picceler.erode` | Erosion over a square neighborhood | `picceler.image`, `i64` radius | `picceler.image` |
 | `picceler.dilate` | Dilation over a square neighborhood | `picceler.image`, `i64` radius | `picceler.image` |
 | `picceler.diff` | Pixel-wise image difference | `picceler.image`, `picceler.image` | `picceler.image` |
-| `picceler.blend` | Blends two images with a weight | `picceler.image`, `picceler.image`, `f64` weight | `picceler.image` |
+| `picceler.blend` | Blends two images with a weight | `picceler.image`, `picceler.image`, `float64` weight | `picceler.image` |
 | `picceler.crop` | Crops a rectangular region | `picceler.image`, `i64 x`, `i64 y`, `i64 width`, `i64 height` | `picceler.image` |
 | `picceler.read_string` | Reads a string from the keyboard | `picceler.string` prompt | `picceler.string` |
-| `picceler.read_number` | Reads a number from the keyboard | `picceler.string` prompt | `f64` |
+| `picceler.read_number` | Reads a number from the keyboard | `picceler.string` prompt | `float64` |
 | `picceler.print` | Prints a value to the console | any single MLIR value | none |
 | `picceler.string.const` | Produces a constant string value | `StrAttr` value | `picceler.string` |
 | `picceler.kernel.const` | Produces a constant kernel value | `F64ElementsAttr` values | `picceler.kernel` |
@@ -59,9 +59,9 @@ This is the most common utility dialect in the project. It handles constants, ca
 | `arith.index_cast` | Casts between `index` and integer types | `index` or integer | Convert loop/index math to `i64` for LLVM GEPs |
 | `arith.extui` / `arith.extsi` | Extends a smaller integer to a larger one | integer input | Expand pixel bytes before arithmetic |
 | `arith.trunci` | Truncates a larger integer to a smaller one | integer input | Clamp back to `i8` or similar |
-| `arith.ui_to_fp` | Converts unsigned integer to floating point | integer input | Convert byte pixels to `f64` for filters |
+| `arith.ui_to_fp` | Converts unsigned integer to floating point | integer input | Convert byte pixels to `float64` for filters |
 | `arith.fp_to_ui` | Converts floating point to unsigned integer | floating-point input | Convert clamped pixel math back to `i8` |
-| `arith.fp_to_si` | Converts floating point to signed integer | floating-point input | Convert runtime `f64` values to `i64` when needed |
+| `arith.fp_to_si` | Converts floating point to signed integer | floating-point input | Convert runtime `float64` values to `i64` when needed |
 | `arith.addi` / `subi` / `muli` | Integer arithmetic | integer operands | Pixel offset math, neighborhood math |
 | `arith.addf` / `subf` / `mulf` | Floating-point arithmetic | floating-point operands | Blend/convolution/dilate accumulators |
 | `arith.cmpi` | Integer comparison | integer operands | Bounds checks and angle checks |
@@ -133,9 +133,9 @@ This is the final low-level dialect used before emitting LLVM IR and object code
 
 ## 8. Practical Type Rules To Remember
 
-- `picceler.read_number` returns `f64`, so if a downstream op expects `i64`, the frontend must insert an explicit float-to-int cast.
+- `picceler.read_number` returns `float64`, so if a downstream op expects `i64`, the frontend must insert an explicit float-to-int cast.
 - `arith.index_cast` is only for `index` and integers; it is not a float cast.
-- For `f64 -> i64`, use `arith.fp_to_si` in the signed case.
+- For `float64 -> i64`, use `arith.fp_to_si` in the signed case.
 - Neighborhood-based ops like `dilate`, `erode`, and some blur/convolution paths still assume a radius or kernel size that the lowering can reason about.
 
 ## 9. Pipeline Snapshot

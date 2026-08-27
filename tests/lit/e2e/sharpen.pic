@@ -7,23 +7,23 @@
 # CHECK: applied strong sharpen
 # CHECK: sharpen: ok
 
-def apply_mild(img: image) -> image {
-    result = sharpen(img, 20)
+def apply_mild(image img) -> image {
+    image result = sharpen(img, 20)
     print("applied mild sharpen\n")
     return result
 }
 
-def apply_strong(img: image) -> image {
-    result = sharpen(img, 80)
+def apply_strong(image img) -> image {
+    image result = sharpen(img, 80)
     print("applied strong sharpen\n")
     return result
 }
 
 def main() -> int64 {
-    img = load_image("img/cat.png")
+    image img = load_image("img/cat.png")
     print("loaded image\n")
-    mild = apply_mild(img)
-    strong = apply_strong(img)
+    image mild = apply_mild(img)
+    image strong = apply_strong(img)
 
     print("sharpen: ok\n")
     return 0

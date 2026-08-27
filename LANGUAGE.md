@@ -30,7 +30,7 @@ functions: declare `-> int64` and `return` a value, or declare no return type at
 
 ```
 # examples/language_tour.pic (excerpt) — explicit main, no implicit wrapping needed
-def classify(value: f64) {
+def classify(value: float64) {
     if (value < 10) {
         print("  {} is a small number\n", value)
     }
@@ -65,7 +65,7 @@ img = load_image(pathx)
 
 ### Literals
 
-* **Numbers** — `f64` floating point values, with an optional leading `-` directly against the
+* **Numbers** — `float64` floating point values, with an optional leading `-` directly against the
   first digit (e.g. `-1`, `3.14`, `-0.5`). There is currently no separate integer literal syntax.
 * **Strings** — double-quoted, e.g. `"cat.png"`. Recognized escape sequences: `\n` (newline),
   `\t` (tab), `\r` (carriage return), `\\` (backslash), `\0` (null byte), plus escaped single and
@@ -76,7 +76,7 @@ img = load_image(pathx)
 
 ### Type annotations
 
-`int64`, `f64`, `string`, and `image` are the recognized type names. They only appear in function
+`int64`, `float64`, `string`, and `image` are the recognized type names. They only appear in function
 parameter and return-type positions (see "Function definitions & calls" below) — variables
 themselves are never annotated.
 
@@ -124,7 +124,7 @@ returns nothing). Calling a function uses the familiar `name(arg1, arg2, ...)` s
 ```
 # examples/language_tour.pic (excerpt) — a function with a typed parameter,
 # and calling it
-def classify(value: f64) {
+def classify(value: float64) {
     if (value < 10) {
         print("  {} is a small number\n", value)
     } else if (value < 20) {
@@ -176,13 +176,13 @@ for (i = 1 .. 5) {
 * **load_image(string)** -> loads the image specified by `string` and assigns it to a variable
 * **save_image(img, string)** -> saves `img` to the path specified by `string`
 * **show_image(img)** -> opens a window to show `img`
-* **read_number(string)** -> prompts with `string` and reads a number (`f64`) from the keyboard
+* **read_number(string)** -> prompts with `string` and reads a number (`float64`) from the keyboard
 * **read_string(string)** -> prompts with `string` and reads a string from the keyboard
 * **print(string, ...)** -> prints `string` to the console, substituting each `{}` placeholder in
   order with the remaining arguments, e.g. `print("x = {}, y = {}\n", x, y)`
-* **sqrt(f64)** -> square root of the argument. Argument must be a compile-time constant — see
+* **sqrt(float64)** -> square root of the argument. Argument must be a compile-time constant — see
   "Operators & expression precedence" above.
-* **pow(f64, f64)** -> the first argument raised to the power of the second argument. Both
+* **pow(float64, float64)** -> the first argument raised to the power of the second argument. Both
   arguments must be compile-time constants — see "Operators & expression precedence" above.
 
 ## Builtin Operations

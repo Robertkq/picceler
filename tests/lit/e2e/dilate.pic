@@ -7,18 +7,18 @@
 # CHECK: dilated radius=3
 # CHECK: dilate: ok
 
-def apply_dilate(img: image, radius: f64) -> image {
-    result = dilate(img, radius)
+def apply_dilate(image img, float64 radius) -> image {
+    image result = dilate(img, radius)
     print("dilated radius={}\n", radius)
     return result
 }
 
 def main() -> int64 {
-    cat = load_image("img/cat.png")
+    image cat = load_image("img/cat.png")
     print("loaded image\n")
 
-    once = apply_dilate(cat, 3.0)
-    twice = apply_dilate(once, 3.0)
+    image once = apply_dilate(cat, 3.0)
+    image twice = apply_dilate(once, 3.0)
 
     print("dilate: ok\n")
     return 0

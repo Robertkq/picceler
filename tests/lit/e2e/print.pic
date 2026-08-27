@@ -6,15 +6,15 @@
 # CHECK: The number you entered is 42 and the image path is img/cat.png
 # CHECK: print: ok
 
-def describe(img_path: string, number: f64) {
+def describe(string img_path, float64 number) {
     print("The number you entered is {} and the image path is {}\n", number, img_path)
 }
 
 def main() -> int64 {
-    img_path = "img/cat.png"
+    string img_path = "img/cat.png"
     print("Loading image {}\n", img_path)
-    img = load_image(img_path)
-    number = read_number("Please input a number:")
+    image img = load_image(img_path)
+    float64 number = read_number("Please input a number:")
     describe(img_path, number)
 
     print("print: ok\n")

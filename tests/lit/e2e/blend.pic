@@ -7,25 +7,25 @@
 # CHECK: blended mostly blue
 # CHECK: blend: ok
 
-def blend_mostly_white(a: image, b: image) -> image {
-    result = blend(a, b, 0.75)
+def blend_mostly_white(image a, image b) -> image {
+    image result = blend(a, b, 0.75)
     print("blended mostly white\n")
     return result
 }
 
-def blend_mostly_blue(a: image, b: image) -> image {
-    result = blend(a, b, 0.25)
+def blend_mostly_blue(image a, image b) -> image {
+    image result = blend(a, b, 0.25)
     print("blended mostly blue\n")
     return result
 }
 
 def main() -> int64 {
-    white = load_image("img/white.png")
-    blue = load_image("img/blue.png")
+    image white = load_image("img/white.png")
+    image blue = load_image("img/blue.png")
     print("loaded images\n")
 
-    mostly_white = blend_mostly_white(white, blue)
-    mostly_blue = blend_mostly_blue(white, blue)
+    image mostly_white = blend_mostly_white(white, blue)
+    image mostly_blue = blend_mostly_blue(white, blue)
 
     print("blend: ok\n")
     return 0

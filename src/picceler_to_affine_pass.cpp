@@ -411,7 +411,7 @@ struct ElementWiseUnaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementWi
 
       mlir::Value finalValue;
       if (ch != Channel::A) {
-        // Convert to F64 for the interface's transformPixel computation, then cast back to i8
+        // Convert to float64 for the interface's transformPixel computation, then cast back to i8
         auto inputF64 = rewriter.create<mlir::arith::UIToFPOp>(loc, rewriter.getF64Type(), inputByte);
         mlir::Value transformedF64 = op.transformPixel(rewriter, loc, inputF64);
 

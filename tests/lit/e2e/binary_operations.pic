@@ -6,14 +6,14 @@
 # CHECK: Binary operations passed successfully!
 # CHECK: binary_operations: ok
 
-def compute() -> f64 {
-    root_val = sqrt(25.0)
-    cubed = pow(2.0, 3.0)
+def compute() -> float64 {
+    float64 root_val = sqrt(25.0)
+    float64 cubed = pow(2.0, 3.0)
     return -1 + 2 * 3 + root_val + cubed
 }
 
 def main() -> int64 {
-    complex_calc = compute()
+    float64 complex_calc = compute()
     print("complex_calc = {}\n", complex_calc)
 
     if (complex_calc == 18) {

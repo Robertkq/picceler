@@ -57,18 +57,19 @@ TEST_F(ParserTest, EmptyInput) {
 }
 
 TEST_F(ParserTest, BadKernelSyntaxFails) {
-  assertParseFails("k = [[1 2],[3,4]]");
-  assertParseFails("k = [[1,2],[3,4]");
+  assertParseFails("kernel<2,2> k = [[1 2],[3,4]]");
+  assertParseFails("kernel<2,2> k = [[1,2],[3,4]");
 }
 
 TEST_F(ParserTest, LoadImageStatement) {
-  auto ast = parseSuccessfully(R"(img = load_image("cat.jpg"))");
+  auto ast = parseSuccessfully(R"(image img = load_image("cat.jpg"))");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
   const auto *assign = as<AssignmentNode>(ast->statements()[0]);
   ASSERT_NE(assign, nullptr);
   EXPECT_EQ(assign->lhs()->name(), "img");
+  EXPECT_EQ(assign->lhs()->type(), "image");
 
   const auto *call = as<CallNode>(assign->rhs());
   ASSERT_NE(call, nullptr);
@@ -81,7 +82,7 @@ TEST_F(ParserTest, LoadImageStatement) {
 }
 
 TEST_F(ParserTest, RotateNegativeAngleParses) {
-  auto ast = parseSuccessfully("img = rotate(input, -90)");
+  auto ast = parseSuccessfully("image img = rotate(input, -90)");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
@@ -99,13 +100,14 @@ TEST_F(ParserTest, RotateNegativeAngleParses) {
 }
 
 TEST_F(ParserTest, NestedFunctionCalls) {
-  auto ast = parseSuccessfully(R"(out = blur(load_image("cat.jpg"), 5))");
+  auto ast = parseSuccessfully(R"(image out = blur(load_image("cat.jpg"), 5))");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
   const auto *assign = as<AssignmentNode>(ast->statements()[0]);
   ASSERT_NE(assign, nullptr);
   EXPECT_EQ(assign->lhs()->name(), "out");
+  EXPECT_EQ(assign->lhs()->type(), "image");
 
   const auto *outerCall = as<CallNode>(assign->rhs());
   ASSERT_NE(outerCall, nullptr);
@@ -124,8 +126,8 @@ TEST_F(ParserTest, NestedFunctionCalls) {
 
 TEST_F(ParserTest, MultipleStatements) {
   auto ast = parseSuccessfully(R"(
-      a = 1
-      b = a
+      float64 a = 1
+      float64 b = a
   )");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 2);
@@ -139,11 +141,11 @@ TEST_F(ParserTest, MultipleStatements) {
   EXPECT_EQ(stmt2->lhs()->name(), "b");
 }
 
-TEST_F(ParserTest, UnclosedParenFails) { assertParseFails(R"(img = load_image("cat.jpg")"); }
+TEST_F(ParserTest, UnclosedParenFails) { assertParseFails(R"(imageimg = load_image("cat.jpg")"); }
 
 TEST_F(ParserTest, ArithmeticPrecedenceAndBinaryOps) {
   // 2 + 3 * 4 should parse as 2 + (3 * 4) because multiplication has higher precedence
-  auto ast = parseSuccessfully("res = 2 + 3 * 4");
+  auto ast = parseSuccessfully("float64 res = 2 + 3 * 4");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
@@ -173,7 +175,7 @@ TEST_F(ParserTest, ArithmeticPrecedenceAndBinaryOps) {
 
 TEST_F(ParserTest, ParenthesesOverridePrecedence) {
   // (2 + 3) * 4 forces addition to happen first
-  auto ast = parseSuccessfully("res = (2 + 3) * 4");
+  auto ast = parseSuccessfully("float64 res = (2 + 3) * 4");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
@@ -191,9 +193,9 @@ TEST_F(ParserTest, ParenthesesOverridePrecedence) {
 TEST_F(ParserTest, IfElseParsesSuccessfully) {
   auto ast = parseSuccessfully(R"(
     if (a == 1) {
-      b = 10
+      int64 b = 10
     } else {
-      b = 20
+      int64 b = 20
     }
   )");
   ASSERT_NE(ast, nullptr);
@@ -226,11 +228,11 @@ TEST_F(ParserTest, IfElseParsesSuccessfully) {
 TEST_F(ParserTest, IfElseIfElseParsesSuccessfully) {
   auto ast = parseSuccessfully(R"(
     if (x == 1) {
-      res = 100
+      int64 res = 100
     } else if (x == 2) {
-      res = 200
+      int64 res = 200
     } else {
-      res = 300
+      int64 res = 300
     }
   )");
   ASSERT_NE(ast, nullptr);
@@ -267,17 +269,17 @@ TEST_F(ParserTest, InvalidElseSyntaxFails) {
   // Unclosed brace in else block
   assertParseFails(R"(
     if (a == 1) {
-      b = 10
+      print("a is 1")
     } else {
-      b = 20
+      print("a is not 1")
   )");
 }
 
 TEST_F(ParserTest, RelationalComparisonExpression) {
   // Testing a complete user scenario: var * car <= 50
   auto ast = parseSuccessfully(R"(
-    var = -1 + 2 * 3
-    car = 10
+    float64 var = -1 + 2 * 3
+    float64 car = 10
     if (var * car <= 50) {
       print("x is greater than 2 \n")
     }
@@ -289,7 +291,7 @@ TEST_F(ParserTest, RelationalComparisonExpression) {
 }
 
 TEST_F(ParserTest, SqrtFunctionParses) {
-  auto ast = parseSuccessfully("res = sqrt(16.0)");
+  auto ast = parseSuccessfully("float64 res = sqrt(16.0)");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
@@ -308,7 +310,7 @@ TEST_F(ParserTest, SqrtFunctionParses) {
 }
 
 TEST_F(ParserTest, PowFunctionParses) {
-  auto ast = parseSuccessfully("res = pow(2.0, 3.0)");
+  auto ast = parseSuccessfully("float64 res = pow(2.0, 3.0)");
   ASSERT_NE(ast, nullptr);
   ASSERT_EQ(ast->statements().size(), 1);
 
@@ -333,7 +335,7 @@ TEST_F(ParserTest, PowFunctionParses) {
 TEST_F(ParserTest, ForLoopParsesSuccessfully) {
   auto ast = parseSuccessfully(R"(
     for (i = 1 .. 10) {
-      a = i
+      float64 a = i
     }
   )");
   ASSERT_NE(ast, nullptr);
@@ -390,8 +392,8 @@ TEST_F(ParserTest, ForLoopWithStepParsesSuccessfully) {
 
 TEST_F(ParserTest, FunctionWithoutReturnTypeHasNoReturnType) {
   auto ast = parseSuccessfully(R"(
-    def foo(x : image) {
-      a = x
+    def foo(image x) {
+      image a = x
     }
   )");
   ASSERT_NE(ast, nullptr);
@@ -405,7 +407,7 @@ TEST_F(ParserTest, FunctionWithoutReturnTypeHasNoReturnType) {
 
 TEST_F(ParserTest, FunctionWithArrowReturnTypeParses) {
   auto ast = parseSuccessfully(R"(
-    def foo(x : image) -> image {
+    def foo(image x) -> image {
       return x
     }
   )");
@@ -434,7 +436,7 @@ TEST_F(ParserTest, FunctionWithArrowReturnTypeParses) {
 TEST_F(ParserTest, ReturnWithBinaryExpressionParses) {
   // Closes the loop on the arrow/return-type feature the ArrowVsMinusToken lexer test anticipated.
   auto ast = parseSuccessfully(R"(
-    def foo(a : int64, b : int64) -> int64 {
+    def foo(int64 a, int64 b) -> int64 {
       return a - b
     }
   )");
@@ -465,7 +467,7 @@ TEST_F(ParserTest, ReturnWithBinaryExpressionParses) {
 
 TEST_F(ParserTest, ReturnNumberLiteralParses) {
   auto ast = parseSuccessfully(R"(
-    def foo() -> f64 {
+    def foo() -> float64 {
       return 42
     }
   )");
@@ -485,11 +487,11 @@ TEST_F(ParserTest, ReturnNumberLiteralParses) {
 
 TEST_F(ParserTest, MultipleFunctionsWithMixedReturnTypesParse) {
   auto ast = parseSuccessfully(R"(
-    def helper(x : f64) -> f64 {
+    def helper(float64 x) -> float64 {
       return x
     }
     def main() {
-      y = helper(1.0)
+      float64 y = helper(1.0)
     }
   )");
   ASSERT_NE(ast, nullptr);
@@ -498,7 +500,7 @@ TEST_F(ParserTest, MultipleFunctionsWithMixedReturnTypesParse) {
   const auto *helperNode = as<FunctionNode>(ast->statements()[0]);
   ASSERT_NE(helperNode, nullptr);
   ASSERT_TRUE(helperNode->returnType().has_value());
-  EXPECT_EQ(*helperNode->returnType(), "f64");
+  EXPECT_EQ(*helperNode->returnType(), "float64");
 
   const auto *mainNode = as<FunctionNode>(ast->statements()[1]);
   ASSERT_NE(mainNode, nullptr);

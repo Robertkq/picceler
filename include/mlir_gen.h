@@ -66,7 +66,7 @@ private:
   std::vector<mlir::Type> getFunctionArgTypes(FunctionNode *funcNode);
 
   /**
-   * @brief Maps a picceler source-level type name (e.g. "image", "f64") to its MLIR type.
+   * @brief Maps a picceler source-level type name (e.g. "image", "float64") to its MLIR type.
    * @param typeName The source-level type name.
    * @return The corresponding MLIR type.
    */
