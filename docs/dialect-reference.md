@@ -37,7 +37,7 @@ This is the custom dialect for the language. Most front-end code builds these op
 | `picceler.read_number` | Reads a number from the keyboard | `picceler.string` prompt | `float64` |
 | `picceler.print` | Prints a value to the console | any single MLIR value | none |
 | `picceler.string.const` | Produces a constant string value | `StrAttr` value | `picceler.string` |
-| `picceler.kernel.const` | Produces a constant kernel value | `float64ElementsAttr` values | `picceler.kernel` |
+| `picceler.kernel.const` | Produces a constant kernel value | `F64ElementsAttr` values | `picceler.kernel` |
 
 ### Custom Picceler Types
 

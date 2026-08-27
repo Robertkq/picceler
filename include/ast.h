@@ -101,7 +101,7 @@ public:
 
 private:
   std::string _name;
-  std::string _type; // optional type annotation
+  std::string _type;
 };
 
 /**

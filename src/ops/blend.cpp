@@ -77,17 +77,17 @@ mlir::OpFoldResult BlendOp::fold(FoldAdaptor adaptor) {
 
 mlir::Value BlendOp::transformPixels(mlir::OpBuilder &builder, mlir::Location loc, mlir::Value lhsPixel,
                                      mlir::Value rhsPixel, Channel ch) {
-  auto float64Type = builder.getF64Type();
+  auto f64Type = builder.getF64Type();
   auto i8Type = builder.getI8Type();
 
-  mlir::Value lhsPixelAsfloat64 = builder.create<mlir::arith::UIToFPOp>(loc, float64Type, lhsPixel);
-  mlir::Value rhsPixelAsfloat64 = builder.create<mlir::arith::UIToFPOp>(loc, float64Type, rhsPixel);
+  mlir::Value lhsPixelAsF64 = builder.create<mlir::arith::UIToFPOp>(loc, f64Type, lhsPixel);
+  mlir::Value rhsPixelAsF64 = builder.create<mlir::arith::UIToFPOp>(loc, f64Type, rhsPixel);
   mlir::Value weightValue = getWeight();
   mlir::Value one = createFloatConstant(builder, loc, 1.0);
 
-  mlir::Value lhsPart = builder.create<mlir::arith::MulFOp>(loc, lhsPixelAsfloat64, weightValue);
+  mlir::Value lhsPart = builder.create<mlir::arith::MulFOp>(loc, lhsPixelAsF64, weightValue);
   mlir::Value oneMinusWeight = builder.create<mlir::arith::SubFOp>(loc, one, weightValue);
-  mlir::Value rhsPart = builder.create<mlir::arith::MulFOp>(loc, rhsPixelAsfloat64, oneMinusWeight);
+  mlir::Value rhsPart = builder.create<mlir::arith::MulFOp>(loc, rhsPixelAsF64, oneMinusWeight);
   mlir::Value blendedPixel = builder.create<mlir::arith::AddFOp>(loc, lhsPart, rhsPart);
 
   mlir::Value zero = createFloatConstant(builder, loc, 0.0);

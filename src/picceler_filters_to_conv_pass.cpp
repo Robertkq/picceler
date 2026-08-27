@@ -137,7 +137,7 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
                                       mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     mlir::Value input = adaptor.getInput();
-    auto float64Type = rewriter.getF64Type();
+    auto f64Type = rewriter.getF64Type();
 
     auto kernelRes = _kernelCalc(op, adaptor);
     if (!kernelRes) {
@@ -153,7 +153,7 @@ template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionP
       return mlir::failure();
     }
 
-    auto tensorType = mlir::RankedTensorType::get({kData.rows(), kData.cols()}, float64Type);
+    auto tensorType = mlir::RankedTensorType::get({kData.rows(), kData.cols()}, f64Type);
     auto dataAttr = mlir::DenseElementsAttr::get(tensorType, llvm::ArrayRef(kData.values()));
 
     auto kernelType = picceler::KernelType::get(op.getContext(), kData.rows(), kData.cols());
