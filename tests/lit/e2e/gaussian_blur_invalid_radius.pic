@@ -1,0 +1,13 @@
+
+# RUN: %picceler -o %t %s
+# RUN: ! %t
+
+def apply_runtime(image img, float64 radius) -> image {
+    return gaussian_blur(img, radius)
+}
+
+def main() -> int64 {
+    image img = load_image("img/cat.png")
+    image out = apply_runtime(img, 0.0 - 1.0)
+    return 0
+}

@@ -330,6 +330,21 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
 
     rewriter.setInsertionPointAfter(ifDimMismatch);
 
+    if (auto blendOp = mlir::dyn_cast<BlendOp>(rawOp)) {
+      mlir::Value weight = blendOp.getWeight();
+      if (!weight.getDefiningOp<mlir::arith::ConstantFloatOp>()) {
+        mlir::Value tooLow = rewriter.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLT, weight,
+                                                                   createFloatConstant(rewriter, loc, 0.0));
+        mlir::Value tooHigh = rewriter.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGT, weight,
+                                                                    createFloatConstant(rewriter, loc, 1.0));
+        mlir::Value outOfRange = rewriter.create<mlir::arith::OrIOp>(loc, tooLow, tooHigh);
+        auto ifOutOfRange = rewriter.create<mlir::scf::IfOp>(loc, outOfRange, /*withElseRegion=*/false);
+        rewriter.setInsertionPointToStart(ifOutOfRange.thenBlock());
+        rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
+        rewriter.setInsertionPointAfter(ifOutOfRange);
+      }
+    }
+
     auto kDynamic = mlir::ShapedType::kDynamic;
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{lhsHeight, lhsWidth});

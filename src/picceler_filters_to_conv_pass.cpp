@@ -2,8 +2,10 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
@@ -131,11 +133,25 @@ Result<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
   return KernelData{3, 3, {-2.0, -1.0, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0, 2.0}};
 }
 
+void emitRuntimeRadiusBoundsCheck(mlir::ConversionPatternRewriter &rewriter, mlir::Location loc, mlir::Value radius) {
+  mlir::Value tooSmall = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::slt, radius,
+                                                               createIntConstant(rewriter, loc, 1));
+  mlir::Value tooLarge = rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sgt, radius,
+                                                               createIntConstant(rewriter, loc, 500));
+  mlir::Value outOfRange = rewriter.create<mlir::arith::OrIOp>(loc, tooSmall, tooLarge);
+  auto ifOutOfRange = rewriter.create<mlir::scf::IfOp>(loc, outOfRange, /*withElseRegion=*/false);
+  rewriter.setInsertionPointToStart(ifOutOfRange.thenBlock());
+  rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
+  rewriter.setInsertionPointAfter(ifOutOfRange);
+}
+
 Result<mlir::Value> buildBoxBlurKernelDynamic(BoxBlurOp op, BoxBlurOpAdaptor adaptor,
                                               mlir::ConversionPatternRewriter &rewriter, mlir::Location loc) {
   mlir::Value radius = adaptor.getRadius();
   auto indexType = rewriter.getIndexType();
   auto f64Type = rewriter.getF64Type();
+
+  emitRuntimeRadiusBoundsCheck(rewriter, loc, radius);
 
   mlir::Value doubleRadius = rewriter.create<mlir::arith::AddIOp>(loc, radius, radius);
   mlir::Value sizeI64 = rewriter.create<mlir::arith::AddIOp>(loc, doubleRadius, createIntConstant(rewriter, loc, 1));
@@ -164,6 +180,8 @@ Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOp
   auto indexType = rewriter.getIndexType();
   auto i64Type = rewriter.getI64Type();
   auto f64Type = rewriter.getF64Type();
+
+  emitRuntimeRadiusBoundsCheck(rewriter, loc, radius);
 
   mlir::Value doubleRadius = rewriter.create<mlir::arith::AddIOp>(loc, radius, radius);
   mlir::Value sizeI64 = rewriter.create<mlir::arith::AddIOp>(loc, doubleRadius, createIntConstant(rewriter, loc, 1));
@@ -259,10 +277,10 @@ Result<mlir::Value> buildSharpenKernelDynamic(SharpenOp op, SharpenOpAdaptor ada
   return kernelMemref.getResult();
 }
 
-template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
+template <typename OpTy> struct FixedKernelFilterPattern : mlir::OpConversionPattern<OpTy> {
   using KernelCalculator = std::function<Result<KernelData>(OpTy, typename OpTy::Adaptor)>;
 
-  FilterToConvolutionPattern(mlir::MLIRContext *ctx, KernelCalculator calc)
+  FixedKernelFilterPattern(mlir::MLIRContext *ctx, KernelCalculator calc)
       : mlir::OpConversionPattern<OpTy>(ctx), _kernelCalc(std::move(calc)) {}
 
   mlir::LogicalResult matchAndRewrite(OpTy op, OpTy::Adaptor adaptor,
@@ -305,13 +323,13 @@ private:
  * box_blur/gaussian_blur's radius) into a convolution + kernel pair, using `staticCalc` when the
  * parameter is a compile-time constant and `dynamicBuilder` otherwise.
  */
-template <typename OpTy> struct FilterWithParamToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
+template <typename OpTy> struct ParameterizedFilterPattern : mlir::OpConversionPattern<OpTy> {
   using ParamExtractor = std::function<mlir::Value(typename OpTy::Adaptor &)>;
   using StaticKernelCalculator = std::function<Result<KernelData>(OpTy, typename OpTy::Adaptor)>;
   using DynamicKernelBuilder = std::function<Result<mlir::Value>(OpTy, typename OpTy::Adaptor,
                                                                   mlir::ConversionPatternRewriter &, mlir::Location)>;
 
-  FilterWithParamToConvolutionPattern(mlir::MLIRContext *ctx, ParamExtractor paramExtractor,
+  ParameterizedFilterPattern(mlir::MLIRContext *ctx, ParamExtractor paramExtractor,
                                       StaticKernelCalculator staticCalc, DynamicKernelBuilder dynamicBuilder)
       : mlir::OpConversionPattern<OpTy>(ctx), _paramExtractor(std::move(paramExtractor)),
         _staticCalc(std::move(staticCalc)), _dynamicBuilder(std::move(dynamicBuilder)) {}
@@ -378,18 +396,26 @@ struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<Piccel
     mlir::ModuleOp module = getOperation();
     mlir::MLIRContext *ctx = &getContext();
 
+    if (!module.lookupSymbol<mlir::func::FuncOp>("abort")) {
+      mlir::OpBuilder builder(&module.getBodyRegion());
+      auto func = builder.create<mlir::func::FuncOp>(module.getLoc(), "abort", builder.getFunctionType({}, {}));
+      func.setPrivate();
+    }
+
     mlir::RewritePatternSet patterns(ctx);
-    patterns.add<FilterWithParamToConvolutionPattern<SharpenOp>>(
+
+    patterns.add<ParameterizedFilterPattern<SharpenOp>>(
         ctx, [](SharpenOpAdaptor &adaptor) { return adaptor.getValue(); }, calculateSharpenKernel,
         buildSharpenKernelDynamic);
-    patterns.add<FilterWithParamToConvolutionPattern<BoxBlurOp>>(
+    patterns.add<ParameterizedFilterPattern<BoxBlurOp>>(
         ctx, [](BoxBlurOpAdaptor &adaptor) { return adaptor.getRadius(); }, calculateBoxBlurKernel,
         buildBoxBlurKernelDynamic);
-    patterns.add<FilterWithParamToConvolutionPattern<GaussianBlurOp>>(
+    patterns.add<ParameterizedFilterPattern<GaussianBlurOp>>(
         ctx, [](GaussianBlurOpAdaptor &adaptor) { return adaptor.getRadius(); }, calculateGaussianKernel,
         buildGaussianKernelDynamic);
-    patterns.add<FilterToConvolutionPattern<EdgeDetectOp>>(ctx, calculateEdgeDetectKernel);
-    patterns.add<FilterToConvolutionPattern<EmbossOp>>(ctx, calculateEmbossKernel);
+
+    patterns.add<FixedKernelFilterPattern<EdgeDetectOp>>(ctx, calculateEdgeDetectKernel);
+    patterns.add<FixedKernelFilterPattern<EmbossOp>>(ctx, calculateEmbossKernel);
 
     mlir::ConversionTarget target(*ctx);
     target.addIllegalOp<SharpenOp>();
@@ -400,7 +426,7 @@ struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<Piccel
     target.addLegalOp<ConvolutionOp>();
     target.addLegalOp<KernelConstOp>();
     target.addLegalDialect<mlir::arith::ArithDialect, mlir::memref::MemRefDialect, mlir::affine::AffineDialect,
-                           mlir::math::MathDialect>();
+                           mlir::math::MathDialect, mlir::scf::SCFDialect, mlir::func::FuncDialect>();
 
     if (mlir::failed(mlir::applyPartialConversion(module, target, std::move(patterns)))) {
       signalPassFailure();

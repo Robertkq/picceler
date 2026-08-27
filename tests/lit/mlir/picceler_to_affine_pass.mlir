@@ -93,6 +93,10 @@ func.func @BlendImagesRuntimeWeight(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?
 }
 
 // CHECK-LABEL: func.func @BlendImagesRuntimeWeight
+// CHECK: scf.if
+// CHECK: func.call @abort()
+// CHECK: scf.if
+// CHECK: func.call @abort()
 // CHECK: memref.alloc
 // CHECK: affine.parallel
 // CHECK: arith.uitofp

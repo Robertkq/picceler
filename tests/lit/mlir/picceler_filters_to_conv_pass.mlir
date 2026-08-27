@@ -95,6 +95,8 @@ func.func @BoxBlurImageRuntime(%arg0 : !picceler.image, %radiusF64 : f64) -> !pi
 
 // CHECK-LABEL: func.func @BoxBlurImageRuntime
 // CHECK-NOT: "picceler.kernel.const"
+// CHECK: scf.if
+// CHECK: func.call @abort()
 // CHECK: arith.addi
 // CHECK: memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf64>
 // CHECK: affine.parallel
@@ -112,6 +114,8 @@ func.func @GaussianBlurImageRuntime(%arg0 : !picceler.image, %radiusF64 : f64) -
 
 // CHECK-LABEL: func.func @GaussianBlurImageRuntime
 // CHECK-NOT: "picceler.kernel.const"
+// CHECK: scf.if
+// CHECK: func.call @abort()
 // CHECK: memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf64>
 // CHECK: affine.parallel{{.*}}reduce
 // CHECK: math.exp

@@ -18,7 +18,9 @@ def PiccelerFiltersToConv : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
     "mlir::arith::ArithDialect",
     "mlir::memref::MemRefDialect",
     "mlir::affine::AffineDialect",
-    "mlir::math::MathDialect"
+    "mlir::math::MathDialect",
+    "mlir::scf::SCFDialect",
+    "mlir::func::FuncDialect"
     ];
 }
 
