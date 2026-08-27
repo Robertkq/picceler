@@ -111,9 +111,7 @@ struct PiccelerToLLVMIRPass : public impl::PiccelerToLLVMIRBase<PiccelerToLLVMIR
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     target.addLegalDialect<mlir::arith::ArithDialect>();
     target.addLegalDialect<mlir::affine::AffineDialect>();
-    // math.exp (gaussian_blur's runtime kernel path, see PiccelerFiltersToConvPass) survives
-    // untouched through this pass; ConvertMathToLLVMPass lowers it later in
-    // addBackendLoweringPasses().
+    // Lowered later, by ConvertMathToLLVMPass.
     target.addLegalDialect<mlir::math::MathDialect>();
 
     target.addLegalOp<mlir::ModuleOp>();

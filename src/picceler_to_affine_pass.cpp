@@ -47,8 +47,6 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     mlir::Value normalizedAngle;
     mlir::APInt constantAngle;
     if (mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
-      // Fast path: angle is known at compile time, so validity and normalization can happen
-      // host-side, with a proper compile-time diagnostic on failure.
       int64_t constantAngleValue = constantAngle.getSExtValue();
       if ((constantAngleValue % 90) != 0) {
         return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
@@ -58,10 +56,7 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
       int64_t normalizedAngleValue = ((constantAngleValue % 360) + 360) % 360;
       normalizedAngle = rewriter.create<mlir::arith::ConstantIntOp>(loc, normalizedAngleValue, 64);
     } else {
-      // Runtime path: same validation/normalization, but performed with arith ops since the
-      // angle isn't known until the program runs. An invalid (non-multiple-of-90) angle aborts
-      // at runtime instead of failing to compile, mirroring how e.g. ElementWiseBinaryOpToAffine
-      // guards a runtime dimension mismatch below.
+      // An invalid (non-multiple-of-90) runtime angle aborts at runtime instead of failing to compile.
       auto c90I64ForCheck = rewriter.create<mlir::arith::ConstantIntOp>(loc, 90, 64);
       auto c360I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 360, 64);
       auto c0I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 0, 64);
@@ -74,8 +69,7 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
       rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
       rewriter.setInsertionPointAfter(ifInvalidAngle);
 
-      // Normalize signed angles into [0, 360), e.g. -90 -> 270: same ((a % 360) + 360) % 360
-      // idiom as the constant path, just built out of runtime arith ops.
+      // Normalize signed angles into [0, 360), e.g. -90 -> 270.
       mlir::Value remainder360 = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c360I64);
       mlir::Value shifted = rewriter.create<mlir::arith::AddIOp>(loc, remainder360, c360I64);
       normalizedAngle = rewriter.create<mlir::arith::RemSIOp>(loc, shifted, c360I64);

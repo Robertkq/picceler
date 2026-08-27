@@ -44,12 +44,9 @@ mlir::Value createIntConstant(mlir::OpBuilder &builder, mlir::Location loc, int6
 
 /**
  * @brief Builds an `affine.parallel` band with one induction variable per entry in `upperBounds`, lower bound 0 and
- * step 1. Upper bounds may be dynamic SSA values (e.g. a runtime-computed neighborhood/kernel size), not just
- * compile-time constants. Pass `resultTypes`/`reductions` to get a reduction band whose body must end with a matching
- * `affine.yield`; left empty, the trivial `affine.yield` terminator is inserted automatically.
- *
- * Shared between `PiccelerToAffinePass` (pixel/neighborhood loops) and `PiccelerFiltersToConvPass` (runtime kernel
- * fill loops for box_blur/gaussian_blur with a non-constant radius).
+ * step 1. Upper bounds may be dynamic SSA values, not just compile-time constants. Pass `resultTypes`/`reductions`
+ * to get a reduction band whose body must end with a matching `affine.yield`; left empty, the trivial `affine.yield`
+ * terminator is inserted automatically.
  *
  * @param rewriter The rewriter to use for creating the affine.parallel op and its bounds.
  * @param loc The location to associate with the created ops.

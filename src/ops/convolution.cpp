@@ -142,9 +142,7 @@ Result<std::pair<mlir::Value, mlir::Value>> getKernelNeighborhoodSize(mlir::OpBu
     auto rows = kernelMemRefType.getShape()[0];
     auto cols = kernelMemRefType.getShape()[1];
 
-    // A dynamic dimension (e.g. box_blur/gaussian_blur's runtime-sized kernel, see
-    // PiccelerFiltersToConvPass) isn't known until the memref itself exists, so read it back with
-    // memref.dim instead of the compile-time shape used for the static-kernel case below.
+    // A dynamic dimension isn't known until the memref exists, so read it with memref.dim.
     auto dimOrConstant = [&](int64_t staticDim, unsigned dimIndex) -> Result<mlir::Value> {
       if (mlir::ShapedType::isDynamic(staticDim)) {
         auto dimIndexValue = builder.create<mlir::memref::DimOp>(loc, kernelOperand, dimIndex);

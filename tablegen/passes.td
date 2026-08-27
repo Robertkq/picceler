@@ -13,6 +13,13 @@ include "mlir/Pass/PassBase.td"
 def PiccelerFiltersToConv : Pass<"picceler-filters-to-conv", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Filter Ops to Convolution Ops";
   let constructor = "picceler::createPiccelerFiltersToConvPass()";
+
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::memref::MemRefDialect",
+    "mlir::affine::AffineDialect",
+    "mlir::math::MathDialect"
+    ];
 }
 
 def PiccelerKernelToMemref : Pass<"picceler-kernel-to-memref", "mlir::ModuleOp"> {

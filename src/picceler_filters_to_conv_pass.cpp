@@ -131,16 +131,6 @@ Result<KernelData> calculateEmbossKernel(EmbossOp op, EmbossOpAdaptor adaptor) {
   return KernelData{3, 3, {-2.0, -1.0, 0.0, -1.0, 1.0, 1.0, 0.0, 1.0, 2.0}};
 }
 
-/**
- * @brief Builds a `memref<?x?xf64>` box blur kernel at runtime for a non-constant radius.
- *
- * Unlike calculateBoxBlurKernel (which needs the radius host-side because it determines the
- * resulting picceler.kernel<RxC>'s compile-time dimensions), this mirrors the same math
- * (size = 2*radius+1, uniform weight = 1/(size*size)) with arith/affine ops so the kernel's
- * *dimensions* can also be a runtime value: the result feeds picceler.convolution through the
- * AnyMemRef half of Picceler_AnyKernelType, the same dynamically-sized path convolution already
- * supports.
- */
 Result<mlir::Value> buildBoxBlurKernelDynamic(BoxBlurOp op, BoxBlurOpAdaptor adaptor,
                                               mlir::ConversionPatternRewriter &rewriter, mlir::Location loc) {
   mlir::Value radius = adaptor.getRadius();
@@ -168,14 +158,6 @@ Result<mlir::Value> buildBoxBlurKernelDynamic(BoxBlurOp op, BoxBlurOpAdaptor ada
   return kernelMemref.getResult();
 }
 
-/**
- * @brief Builds a `memref<?x?xf64>` gaussian blur kernel at runtime for a non-constant radius.
- *
- * Mirrors calculateGaussianKernel's two-pass approach (raw per-cell weight, then normalize by the
- * sum of all cells) but with the sum computed via an affine.parallel reduction (the same reduction
- * band shape NeighbourhoodOpsToAffine's kernelLoop uses) instead of a host-side accumulator, since
- * both the kernel size and its values now depend on a runtime radius.
- */
 Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOpAdaptor adaptor,
                                                mlir::ConversionPatternRewriter &rewriter, mlir::Location loc) {
   mlir::Value radius = adaptor.getRadius();
@@ -192,7 +174,6 @@ Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOp
   auto kernelMemref = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic}, f64Type),
                                                               mlir::ValueRange{sizeIndex, sizeIndex});
 
-  // sigma = max(radius / 2, 0.5), same clamp as the host-side calculator.
   mlir::Value radiusF64 = rewriter.create<mlir::arith::SIToFPOp>(loc, f64Type, radius);
   mlir::Value halvedRadius =
       rewriter.create<mlir::arith::DivFOp>(loc, radiusF64, createFloatConstant(rewriter, loc, 2.0));
@@ -203,7 +184,6 @@ Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOp
   mlir::Value normalizer = rewriter.create<mlir::arith::MulFOp>(
       loc, createFloatConstant(rewriter, loc, 2.0 * std::numbers::pi), sigmaSq);
 
-  // Pass 1: compute+store the raw (unnormalized) weight for every cell, reducing their sum.
   auto sumLoop = createAffineParallel(rewriter, loc, {sizeIndex, sizeIndex}, mlir::TypeRange{f64Type},
                                       {mlir::arith::AtomicRMWKind::addf});
   rewriter.setInsertionPointToStart(sumLoop.getBody());
@@ -231,7 +211,6 @@ Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOp
   rewriter.setInsertionPointAfter(sumLoop);
   mlir::Value sum = sumLoop.getResult(0);
 
-  // Pass 2: normalize every cell by the sum computed above.
   auto normalizeLoop = createAffineParallel(rewriter, loc, {sizeIndex, sizeIndex});
   rewriter.setInsertionPointToStart(normalizeLoop.getBody());
 
@@ -246,15 +225,6 @@ Result<mlir::Value> buildGaussianKernelDynamic(GaussianBlurOp op, GaussianBlurOp
   return kernelMemref.getResult();
 }
 
-/**
- * @brief Builds a `memref<3x3xf64>` sharpen kernel at runtime for a non-constant strength.
- *
- * Unlike box_blur/gaussian_blur, sharpen's kernel *dimensions* never depend on its parameter (it's
- * always a fixed 3x3 cross), only the center/neighbor *values* do -- so this needs no dynamic shape
- * or fill loop, just the same arithmetic as calculateSharpenKernel performed at runtime and stored
- * into a small stack buffer, mirroring how PiccelerKernelToMemrefPass materializes a constant
- * kernel into a memref.alloca.
- */
 Result<mlir::Value> buildSharpenKernelDynamic(SharpenOp op, SharpenOpAdaptor adaptor,
                                               mlir::ConversionPatternRewriter &rewriter, mlir::Location loc) {
   mlir::Value strength = adaptor.getValue();
@@ -289,10 +259,6 @@ Result<mlir::Value> buildSharpenKernelDynamic(SharpenOp op, SharpenOpAdaptor ada
   return kernelMemref.getResult();
 }
 
-/**
- * @brief Rewrites a filter op with no runtime parameter (edge_detect, emboss) into a
- * convolution + host-computed constant kernel pair.
- */
 template <typename OpTy> struct FilterToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
   using KernelCalculator = std::function<Result<KernelData>(OpTy, typename OpTy::Adaptor)>;
 
@@ -336,17 +302,8 @@ private:
 
 /**
  * @brief Rewrites a filter op whose kernel depends on a single I64 parameter (sharpen's strength,
- * box_blur/gaussian_blur's radius) into a convolution + kernel pair.
- *
- * When the parameter is a compile-time constant, this takes the same path as before: the kernel is
- * computed host-side into a `picceler.kernel<RxC>` (via `staticCalc`), later materialized into a
- * `memref.alloca` by PiccelerKernelToMemrefPass. When it isn't -- e.g. it traces back to a function
- * parameter -- `dynamicBuilder` builds IR that computes the kernel at runtime directly into a
- * memref, which picceler.convolution accepts natively (Picceler_AnyKernelType already allows
- * AnyMemRef, the same path convolution's own kernel operand supports today). This is why
- * box_blur/gaussian_blur/sharpen no longer share edge_detect/emboss's simpler
- * FilterToConvolutionPattern above: those two never take a value argument, so their kernel is
- * always host-computable.
+ * box_blur/gaussian_blur's radius) into a convolution + kernel pair, using `staticCalc` when the
+ * parameter is a compile-time constant and `dynamicBuilder` otherwise.
  */
 template <typename OpTy> struct FilterWithParamToConvolutionPattern : mlir::OpConversionPattern<OpTy> {
   using ParamExtractor = std::function<mlir::Value(typename OpTy::Adaptor &)>;
@@ -442,9 +399,6 @@ struct PiccelerFiltersToConvPass : public impl::PiccelerFiltersToConvBase<Piccel
     target.addIllegalOp<EmbossOp>();
     target.addLegalOp<ConvolutionOp>();
     target.addLegalOp<KernelConstOp>();
-    // Needed for the runtime-kernel path built by buildBoxBlurKernelDynamic/buildGaussianKernelDynamic/
-    // buildSharpenKernelDynamic above: arith/memref/affine build the kernel buffer and fill loops, math.exp is
-    // gaussian_blur's weight formula.
     target.addLegalDialect<mlir::arith::ArithDialect, mlir::memref::MemRefDialect, mlir::affine::AffineDialect,
                            mlir::math::MathDialect>();
 
