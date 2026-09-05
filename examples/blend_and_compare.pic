@@ -6,22 +6,22 @@
 #   ./picceler -o blend_and_compare ./examples/blend_and_compare.pic
 #   ./blend_and_compare
 
-blue = load_image("../img/blue.png")
-white = load_image("../img/white.png")
+image blue = load_image("../img/blue.png")
+image white = load_image("../img/white.png")
 show_image(blue)
 show_image(white)
 
 # blend(a, b, weight) mixes two same-sized images; weight is a's share of
 # the result.
-mostly_blue = blend(blue, white, 0.75)
-mostly_white = blend(blue, white, 0.25)
+image mostly_blue = blend(blue, white, 0.75)
+image mostly_white = blend(blue, white, 0.25)
 save_image(mostly_blue, "blend_and_compare_mostly_blue.png")
 save_image(mostly_white, "blend_and_compare_mostly_white.png")
 show_image(mostly_blue)
 show_image(mostly_white)
 
 # diff(a, b) highlights where two same-sized images disagree, pixel by pixel.
-difference = diff(blue, white)
+image difference = diff(blue, white)
 save_image(difference, "blend_and_compare_diff.png")
 show_image(difference)
 

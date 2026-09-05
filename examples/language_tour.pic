@@ -8,7 +8,7 @@
 #   ./picceler -o language_tour ./examples/language_tour.pic
 #   ./language_tour
 
-def classify(value: float64) {
+def classify(float64 value) {
     if (value < 10) {
         print("  {} is a small number\n", value)
     } else if (value < 20) {
@@ -23,9 +23,9 @@ def main() {
 
     # sqrt()/pow() currently only fold correctly with compile-time-constant
     # arguments -- both calls below are literal constants.
-    root_val = sqrt(25.0)
-    cubed = pow(2.0, 3.0)
-    total = root_val + cubed
+    float64 root_val = sqrt(25.0)
+    float64 cubed = pow(2.0, 3.0)
+    float64 total = root_val + cubed
     print("sqrt(25.0) + 2.0^3.0 = {}\n", total)
     classify(total)
     classify(3.0)

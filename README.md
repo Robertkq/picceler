@@ -17,7 +17,9 @@ The process of building and installing can be quite long, please refer to the [H
 
 # Language
 
-The picceler language currently follows a typeless, immutable, python-like syntax. Keeping things simple. 
+The picceler language is statically typed and immutable: every variable and function parameter
+carries an explicit type annotation (`int64`, `float64`, `string`, `image`, `kernel`), and once a
+name is declared it can't be reassigned. Keeping things simple.
 
 Please refer to the [Language](LANGUAGE.md) document for more precise information on syntax and builtin operations.
 
