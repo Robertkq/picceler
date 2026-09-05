@@ -23,9 +23,9 @@ name is declared it can't be reassigned. Keeping things simple.
 
 Please refer to the [Language](LANGUAGE.md) document for more precise information on syntax and builtin operations.
 
-An official [VS Code extension](editors/vscode-picceler) (vendored as a submodule) provides syntax
-highlighting plus hover/signature-help/completion for `.pic` files — see
-[docs/vscode-extension.md](docs/vscode-extension.md).
+An official VS Code extension is vendored as a submodule at
+[`editors/vscode-picceler`](editors/vscode-picceler) — see its
+[README](editors/vscode-picceler/README.md) for details.
 
 # Inner workings
 
