@@ -23,6 +23,10 @@ name is declared it can't be reassigned. Keeping things simple.
 
 Please refer to the [Language](LANGUAGE.md) document for more precise information on syntax and builtin operations.
 
+An official VS Code extension is vendored as a submodule at
+[`editors/vscode-picceler`](editors/vscode-picceler) — see its
+[README](editors/vscode-picceler/README.md) for details.
+
 # Inner workings
 
 Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `picceler` dialect, down through several lowering passes, to LLVM IR and finally native machine code.
