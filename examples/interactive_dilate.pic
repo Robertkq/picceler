@@ -8,11 +8,11 @@
 #   ./interactive_dilate
 # (try "../img/cat.png" and "3" when prompted)
 
-path = read_string("Path to the image you'd like to dilate: ")
-radius = read_number("Dilation radius (try 3): ")
+string path = read_string("Path to the image you'd like to dilate: ")
+float64 radius = read_number("Dilation radius (try 3): ")
 
-img = load_image(path)
-dilated = dilate(img, radius)
+image img = load_image(path)
+image dilated = dilate(img, radius)
 
 save_image(dilated, "interactive_dilate_output.png")
 show_image(dilated)

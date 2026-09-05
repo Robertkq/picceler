@@ -8,7 +8,7 @@ This document aims to provide information about the picceler language, more spec
 
 ```
 # This whole line is a comment
-img = load_image("~/Pictures/cat.png") # so is everything after this '#'
+image img = load_image("~/Pictures/cat.png") # so is everything after this '#'
 ```
 
 ### Program structure
@@ -29,8 +29,8 @@ functions: declare `-> int64` and `return` a value, or declare no return type at
 `return 0` is implicit) — any other declared return type is a compile error.
 
 ```
-# examples/language_tour.pic (excerpt) — explicit main, no implicit wrapping needed
-def classify(value: float64) {
+# explicit main, no implicit wrapping needed
+def classify(float64 value) {
     if (value < 10) {
         print("  {} is a small number\n", value)
     }
@@ -44,23 +44,25 @@ def main() {
 
 ```
 # examples/photo_pipeline.pic (excerpt) — no 'main' defined, gets implicitly wrapped
-photo = load_image("../img/cat.png")
+image photo = load_image("../img/cat.png")
 show_image(photo)
-brightened = brightness(photo, 15)
+image brightened = brightness(photo, 15)
 ```
 
 ### Variables & assignment
 
-Variables are dynamically typed and require no declaration keyword — an assignment is what
-introduces a name:
+Variables are statically typed: every assignment that introduces a name must be prefixed with an
+explicit type keyword (see "Type annotations" below). A name can only be declared once per scope —
+assigning to an already-declared name is a compile error, so variables are immutable once
+introduced.
 
 ```
-name = expr
+type name = expr
 ```
 
 ```
-pathx = "~/Pictures/cat.png"
-img = load_image(pathx)
+string pathx = "~/Pictures/cat.png"
+image img = load_image(pathx)
 ```
 
 ### Literals
@@ -76,9 +78,10 @@ img = load_image(pathx)
 
 ### Type annotations
 
-`int64`, `float64`, `string`, and `image` are the recognized type names. They only appear in function
-parameter and return-type positions (see "Function definitions & calls" below) — variables
-themselves are never annotated.
+`int64`, `float64`, `string`, `image`, and `kernel` are the recognized type names — `kernel` is
+always written with explicit dimensions, e.g. `kernel<3,3>`. Every variable declaration (see
+"Variables & assignment" above), function parameter, and function return type must carry one of
+these; there is no type inference.
 
 ### Operators & expression precedence
 
@@ -91,9 +94,9 @@ From lowest to highest precedence:
 Parentheses `( expr )` can be used to override precedence.
 
 ```
-root_val = sqrt(25.0)
-cubed = pow(2.0, 3.0)
-complex_calc = -1 + 2 * 3 + root_val + cubed
+float64 root_val = sqrt(25.0)
+float64 cubed = pow(2.0, 3.0)
+float64 complex_calc = -1 + 2 * 3 + root_val + cubed
 ```
 
 **Current limitations:**
@@ -106,7 +109,7 @@ complex_calc = -1 + 2 * 3 + root_val + cubed
 ### Function definitions & calls
 
 ```
-def name(param1: type1, param2: type2, ...) -> returnType {
+def name(type1 param1, type2 param2, ...) -> returnType {
     ...
     return expr
 }
@@ -116,9 +119,8 @@ The parameter list and `-> returnType` are both optional (a function with no dec
 returns nothing). Calling a function uses the familiar `name(arg1, arg2, ...)` syntax.
 
 ```
-# examples/language_tour.pic (excerpt) — a function with a typed parameter,
-# and calling it
-def classify(value: float64) {
+# a function with a typed parameter, and calling it
+def classify(float64 value) {
     if (value < 10) {
         print("  {} is a small number\n", value)
     } else if (value < 20) {
@@ -199,7 +201,7 @@ for (i = 1 .. 5) {
 ## Builtin Types
 
 * **string** -> Anything that is inside quotes e.g `"cat.png"`
-* **kernel** -> `N`x`M` matrices, e.g `kernel = [ [1,2,3], [4,5,6], [7,8,9] ]`
+* **kernel** -> `N`x`M` matrices, declared with explicit dimensions, e.g. `kernel<3,3> k = [ [1,2,3], [4,5,6], [7,8,9] ]`
 * **image** -> Image data types, translated to a struct `Image { i32, i32, ptr }`
 
 
