@@ -1,3 +1,6 @@
 [submodule "vendor/llvm-project"]
 	path = vendor/llvm-project
 	url = https://github.com/llvm/llvm-project.git
+[submodule "editors/vscode-picceler"]
+	path = editors/vscode-picceler
+	url = https://github.com/Robertkq/vscode-picceler.git

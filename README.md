@@ -23,6 +23,10 @@ name is declared it can't be reassigned. Keeping things simple.
 
 Please refer to the [Language](LANGUAGE.md) document for more precise information on syntax and builtin operations.
 
+An official [VS Code extension](editors/vscode-picceler) (vendored as a submodule) provides syntax
+highlighting plus hover/signature-help/completion for `.pic` files — see
+[docs/vscode-extension.md](docs/vscode-extension.md).
+
 # Inner workings
 
 Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `picceler` dialect, down through several lowering passes, to LLVM IR and finally native machine code.

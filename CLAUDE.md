@@ -6,6 +6,7 @@ Picceler is a compiled DSL for image processing, built to explore MLIR — see [
 - **Build, build options, running tests**: [BUILD.md](BUILD.md)
 - **MLIR pass pipeline (front end → passes → LLVM IR)**: [docs/compiler-internals.md](docs/compiler-internals.md)
 - **MLIR dialect/op/type reference**: [docs/dialect-reference.md](docs/dialect-reference.md)
+- **VS Code extension (submodule, syntax highlighting/hover/completion)**: [docs/vscode-extension.md](docs/vscode-extension.md)
 
 Don't restate content from these docs here — update them instead, and keep this file to things an
 agent needs on every task.
