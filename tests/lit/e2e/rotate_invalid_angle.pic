@@ -1,0 +1,13 @@
+
+# RUN: %picceler -o %t %s
+# RUN: ! %t
+
+def rotate_runtime(image img, float64 angle) -> image {
+    return rotate(img, angle)
+}
+
+def main() -> int64 {
+    image img = load_image("img/cat.png")
+    image out = rotate_runtime(img, 45.0)
+    return 0
+}

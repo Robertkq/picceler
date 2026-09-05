@@ -5,6 +5,7 @@
 # CHECK: loaded image
 # CHECK: applied mild sharpen
 # CHECK: applied strong sharpen
+# CHECK: applied runtime sharpen strength=40
 # CHECK: sharpen: ok
 
 def apply_mild(image img) -> image {
@@ -19,11 +20,18 @@ def apply_strong(image img) -> image {
     return result
 }
 
+def apply_runtime(image img, float64 strength) -> image {
+    image result = sharpen(img, strength)
+    print("applied runtime sharpen strength={}\n", strength)
+    return result
+}
+
 def main() -> int64 {
     image img = load_image("img/cat.png")
     print("loaded image\n")
     image mild = apply_mild(img)
     image strong = apply_strong(img)
+    image runtime = apply_runtime(img, 40.0)
 
     print("sharpen: ok\n")
     return 0

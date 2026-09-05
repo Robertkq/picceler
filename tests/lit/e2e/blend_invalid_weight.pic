@@ -1,0 +1,14 @@
+
+# RUN: %picceler -o %t %s
+# RUN: ! %t
+
+def apply_runtime(image a, image b, float64 weight) -> image {
+    return blend(a, b, weight)
+}
+
+def main() -> int64 {
+    image white = load_image("img/white.png")
+    image blue = load_image("img/blue.png")
+    image out = apply_runtime(white, blue, 5.0)
+    return 0
+}

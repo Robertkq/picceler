@@ -7,6 +7,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
@@ -19,28 +20,6 @@
 #include "dialect.h"
 
 namespace picceler {
-
-/// Builds an `affine.parallel` band with one induction variable per entry in
-/// `upperBounds`, lower bound 0 and step 1. Pass `resultTypes`/`reductions` to
-/// get a reduction band whose body must end with a matching `affine.yield`;
-/// left empty, the trivial `affine.yield` terminator is inserted automatically.
-static mlir::affine::AffineParallelOp createAffineParallel(mlir::ConversionPatternRewriter &rewriter,
-                                                           mlir::Location loc, mlir::ValueRange upperBounds,
-                                                           mlir::TypeRange resultTypes = {},
-                                                           llvm::ArrayRef<mlir::arith::AtomicRMWKind> reductions = {}) {
-  mlir::MLIRContext *ctx = rewriter.getContext();
-  unsigned n = upperBounds.size();
-
-  llvm::SmallVector<mlir::AffineMap, 4> lbMaps(n, rewriter.getConstantAffineMap(0));
-  llvm::SmallVector<mlir::AffineMap, 4> ubMaps;
-  for (unsigned i = 0; i < n; ++i) {
-    ubMaps.push_back(mlir::AffineMap::get(n, 0, rewriter.getAffineDimExpr(i), ctx));
-  }
-  llvm::SmallVector<int64_t, 4> steps(n, 1);
-
-  return rewriter.create<mlir::affine::AffineParallelOp>(loc, resultTypes, reductions, lbMaps, mlir::ValueRange{},
-                                                         ubMaps, upperBounds, steps);
-}
 
 struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -65,18 +44,36 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
     auto c270I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 270, 64);
 
     mlir::Value angle = adaptor.getAngle();
+    mlir::Value normalizedAngle;
     mlir::APInt constantAngle;
-    if (!mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
-      return op.emitOpError("picceler.rotate requires angle to be a compile-time constant"), mlir::failure();
-    }
-    int64_t constantAngleValue = constantAngle.getSExtValue();
-    if ((constantAngleValue % 90) != 0) {
-      return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
-    }
+    if (mlir::matchPattern(angle, mlir::m_ConstantInt(&constantAngle))) {
+      int64_t constantAngleValue = constantAngle.getSExtValue();
+      if ((constantAngleValue % 90) != 0) {
+        return op.emitOpError("angle must be a multiple of 90 degrees"), mlir::failure();
+      }
 
-    // Normalize signed angles into [0, 360), e.g. -90 -> 270.
-    int64_t normalizedAngleValue = ((constantAngleValue % 360) + 360) % 360;
-    mlir::Value normalizedAngle = rewriter.create<mlir::arith::ConstantIntOp>(loc, normalizedAngleValue, 64);
+      // Normalize signed angles into [0, 360), e.g. -90 -> 270.
+      int64_t normalizedAngleValue = ((constantAngleValue % 360) + 360) % 360;
+      normalizedAngle = rewriter.create<mlir::arith::ConstantIntOp>(loc, normalizedAngleValue, 64);
+    } else {
+      // An invalid (non-multiple-of-90) runtime angle aborts at runtime instead of failing to compile.
+      auto c90I64ForCheck = rewriter.create<mlir::arith::ConstantIntOp>(loc, 90, 64);
+      auto c360I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 360, 64);
+      auto c0I64 = rewriter.create<mlir::arith::ConstantIntOp>(loc, 0, 64);
+
+      mlir::Value remainder90 = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c90I64ForCheck);
+      mlir::Value isInvalidAngle =
+          rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::ne, remainder90, c0I64);
+      auto ifInvalidAngle = rewriter.create<mlir::scf::IfOp>(loc, isInvalidAngle, /*withElseRegion=*/false);
+      rewriter.setInsertionPointToStart(ifInvalidAngle.thenBlock());
+      rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
+      rewriter.setInsertionPointAfter(ifInvalidAngle);
+
+      // Normalize signed angles into [0, 360), e.g. -90 -> 270.
+      mlir::Value remainder360 = rewriter.create<mlir::arith::RemSIOp>(loc, angle, c360I64);
+      mlir::Value shifted = rewriter.create<mlir::arith::AddIOp>(loc, remainder360, c360I64);
+      normalizedAngle = rewriter.create<mlir::arith::RemSIOp>(loc, shifted, c360I64);
+    }
 
     mlir::Value is90 =
         rewriter.create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq, normalizedAngle, c90I64);
@@ -333,6 +330,21 @@ struct ElementWiseBinaryOpToAffine : mlir::OpInterfaceConversionPattern<ElementW
 
     rewriter.setInsertionPointAfter(ifDimMismatch);
 
+    if (auto blendOp = mlir::dyn_cast<BlendOp>(rawOp)) {
+      mlir::Value weight = blendOp.getWeight();
+      if (!weight.getDefiningOp<mlir::arith::ConstantFloatOp>()) {
+        mlir::Value tooLow = rewriter.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OLT, weight,
+                                                                   createFloatConstant(rewriter, loc, 0.0));
+        mlir::Value tooHigh = rewriter.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::OGT, weight,
+                                                                    createFloatConstant(rewriter, loc, 1.0));
+        mlir::Value outOfRange = rewriter.create<mlir::arith::OrIOp>(loc, tooLow, tooHigh);
+        auto ifOutOfRange = rewriter.create<mlir::scf::IfOp>(loc, outOfRange, /*withElseRegion=*/false);
+        rewriter.setInsertionPointToStart(ifOutOfRange.thenBlock());
+        rewriter.create<mlir::func::CallOp>(loc, "abort", mlir::TypeRange{}, mlir::ValueRange{});
+        rewriter.setInsertionPointAfter(ifOutOfRange);
+      }
+    }
+
     auto kDynamic = mlir::ShapedType::kDynamic;
     auto output = rewriter.create<mlir::memref::AllocOp>(loc, mlir::MemRefType::get({kDynamic, kDynamic, 4}, i8Type),
                                                          mlir::ValueRange{lhsHeight, lhsWidth});
@@ -549,7 +561,8 @@ struct PiccelerToAffinePass : public impl::PiccelerToAffineBase<PiccelerToAffine
 
     mlir::ConversionTarget target(*ctx);
     target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect, mlir::LLVM::LLVMDialect,
-                           mlir::func::FuncDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect>();
+                           mlir::func::FuncDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect,
+                           mlir::math::MathDialect>();
 
     target.addLegalOp<mlir::UnrealizedConversionCastOp, StringConstOp>();
     target.addIllegalDialect<PiccelerDialect>();

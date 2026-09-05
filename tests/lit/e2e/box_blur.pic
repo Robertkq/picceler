@@ -5,6 +5,7 @@
 # CHECK: loaded image
 # CHECK: applied small box_blur
 # CHECK: applied large box_blur
+# CHECK: applied runtime box_blur radius=4
 # CHECK: box_blur: ok
 
 def apply_small(image img) -> image {
@@ -19,11 +20,18 @@ def apply_large(image img) -> image {
     return result
 }
 
+def apply_runtime(image img, float64 radius) -> image {
+    image result = box_blur(img, radius)
+    print("applied runtime box_blur radius={}\n", radius)
+    return result
+}
+
 def main() -> int64 {
     image img = load_image("img/cat.png")
     print("loaded image\n")
     image small = apply_small(img)
     image large = apply_large(img)
+    image runtime = apply_runtime(img, 4.0)
 
     print("box_blur: ok\n")
     return 0

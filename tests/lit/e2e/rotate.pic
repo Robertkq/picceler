@@ -7,10 +7,17 @@
 # CHECK: rotated to 180
 # CHECK: rotated to 270
 # CHECK: rotated to 360
+# CHECK: rotated runtime angle=90
 # CHECK: rotate: ok
 
 def rotate_90(image img) -> image {
     return rotate(img, 90)
+}
+
+def rotate_runtime(image img, float64 angle) -> image {
+    image result = rotate(img, angle)
+    print("rotated runtime angle={}\n", angle)
+    return result
 }
 
 def main() -> int64 {
@@ -25,6 +32,8 @@ def main() -> int64 {
     print("rotated to 270\n")
     image full_circle = rotate_90(three_quarters)
     print("rotated to 360\n")
+
+    image runtime = rotate_runtime(img, 90.0)
 
     print("rotate: ok\n")
     return 0

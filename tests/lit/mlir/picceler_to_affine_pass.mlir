@@ -15,6 +15,43 @@ func.func @RotateImage(%arg0 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
 
 // -----
 
+func.func @RotateImageRuntimeAngle(%arg0 : memref<?x?x4xi8>, %angle : i64) -> memref<?x?x4xi8> {
+    %0 = "picceler.rotate" (%arg0, %angle) : (memref<?x?x4xi8>, i64) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @RotateImageRuntimeAngle
+// CHECK: arith.remsi
+// CHECK: arith.cmpi ne
+// CHECK: scf.if
+// CHECK: func.call @abort()
+// CHECK: arith.remsi
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.select
+// CHECK-NOT: "picceler.rotate"
+// CHECK: return
+
+// -----
+
+func.func @ConvolutionDynamicKernel(%arg0 : memref<?x?x4xi8>, %kernel : memref<?x?xf64>) -> memref<?x?x4xi8> {
+    %0 = "picceler.convolution" (%arg0, %kernel) : (memref<?x?x4xi8>, memref<?x?xf64>) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @ConvolutionDynamicKernel
+// CHECK: memref.dim %arg1, %{{.*}}
+// CHECK: memref.dim %arg1, %{{.*}}
+// CHECK: memref.alloc
+// CHECK-COUNT-2: affine.parallel
+// CHECK: memref.load
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK-NOT: "picceler.convolution"
+// CHECK: return
+
+// -----
+
 func.func @DiffImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> memref<?x?x4xi8> {
     %0 = "picceler.diff" (%arg0, %arg1) : (memref<?x?x4xi8>, memref<?x?x4xi8>) -> memref<?x?x4xi8>
     return %0 : memref<?x?x4xi8>
@@ -39,6 +76,27 @@ func.func @BlendImages(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>) -> me
 }
 
 // CHECK-LABEL: func.func @BlendImages
+// CHECK: memref.alloc
+// CHECK: affine.parallel
+// CHECK: arith.uitofp
+// CHECK: arith.mulf
+// CHECK: arith.addf
+// CHECK: arith.fptoui
+// CHECK-NOT: "picceler.blend"
+// CHECK: return
+
+// -----
+
+func.func @BlendImagesRuntimeWeight(%arg0 : memref<?x?x4xi8>, %arg1 : memref<?x?x4xi8>, %weight : f64) -> memref<?x?x4xi8> {
+    %0 = "picceler.blend" (%arg0, %arg1, %weight) : (memref<?x?x4xi8>, memref<?x?x4xi8>, f64) -> memref<?x?x4xi8>
+    return %0 : memref<?x?x4xi8>
+}
+
+// CHECK-LABEL: func.func @BlendImagesRuntimeWeight
+// CHECK: scf.if
+// CHECK: func.call @abort()
+// CHECK: scf.if
+// CHECK: func.call @abort()
 // CHECK: memref.alloc
 // CHECK: affine.parallel
 // CHECK: arith.uitofp

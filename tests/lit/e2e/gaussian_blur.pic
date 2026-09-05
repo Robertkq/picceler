@@ -5,6 +5,7 @@
 # CHECK: loaded image
 # CHECK: applied small gaussian_blur
 # CHECK: applied large gaussian_blur
+# CHECK: applied runtime gaussian_blur radius=3
 # CHECK: gaussian_blur: ok
 
 def apply_small(image img) -> image {
@@ -19,11 +20,18 @@ def apply_large(image img) -> image {
     return result
 }
 
+def apply_runtime(image img, float64 radius) -> image {
+    image result = gaussian_blur(img, radius)
+    print("applied runtime gaussian_blur radius={}\n", radius)
+    return result
+}
+
 def main() -> int64 {
     image img = load_image("img/cat.png")
     print("loaded image\n")
     image small = apply_small(img)
     image large = apply_large(img)
+    image runtime = apply_runtime(img, 3.0)
 
     print("gaussian_blur: ok\n")
     return 0

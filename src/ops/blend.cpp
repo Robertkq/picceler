@@ -7,13 +7,14 @@
 namespace picceler {
 
 /**
- * @brief Verifies the BlendOp to ensure that the weight is a constant in the range [0.0, 1.0].
+ * @brief Verifies that a compile-time-constant weight falls in the range [0.0, 1.0]. A runtime
+ * weight can't be checked here.
  */
 mlir::LogicalResult BlendOp::verify() {
   auto weightValue = getWeight();
   auto constWeight = weightValue.getDefiningOp<mlir::arith::ConstantFloatOp>();
   if (!constWeight) {
-    return emitOpError("weight must be a compile-time constant");
+    return mlir::success();
   }
 
   double weight = constWeight.value().convertToDouble();
