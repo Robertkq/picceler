@@ -1,10 +1,9 @@
 #include "trace.h"
 
-#include "spdlog/spdlog.h"
-
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <iostream>
 
 namespace picceler {
 
@@ -63,7 +62,7 @@ void TraceSession::flushEvents(const std::string &filename) {
 
   std::ofstream file(filename, std::ios::binary);
   if (!file) {
-    spdlog::error("Failed to open trace file for writing: {}", filename);
+    std::cerr << "Failed to open trace file for writing: " << filename << "\n";
     return;
   }
 
@@ -115,7 +114,7 @@ void TraceSession::flushEvents(const std::string &filename) {
     writeRaw(file, event._pad);
   }
 
-  spdlog::info("Wrote {} trace events to {}", _events.size(), filename);
+  std::cerr << "Wrote " << _events.size() << " trace events to " << filename << "\n";
 }
 
 } // namespace picceler
