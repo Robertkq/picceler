@@ -3,8 +3,8 @@
 #include "spdlog/spdlog.h"
 
 #include <chrono>
-#include <cstdio>
 #include <cstdlib>
+#include <fstream>
 
 namespace picceler {
 
@@ -25,6 +25,10 @@ struct TraceFileHeader {
 uint64_t nowNs() {
   const auto since = std::chrono::steady_clock::now().time_since_epoch();
   return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(since).count());
+}
+
+template <typename T> void writeRaw(std::ofstream &file, const T &value) {
+  file.write(reinterpret_cast<const char *>(&value), sizeof(value));
 }
 
 } // namespace
@@ -57,8 +61,8 @@ void TraceSession::flushEvents(const std::string &filename) {
     return;
   }
 
-  std::FILE *file = std::fopen(filename.c_str(), "wb");
-  if (file == nullptr) {
+  std::ofstream file(filename, std::ios::binary);
+  if (!file) {
     spdlog::error("Failed to open trace file for writing: {}", filename);
     return;
   }
@@ -88,11 +92,11 @@ void TraceSession::flushEvents(const std::string &filename) {
 
   const TraceFileHeader header{traceMagic, traceVersion, static_cast<uint64_t>(_events.size()),
                                static_cast<uint64_t>(sizeof(TraceEvent))};
-  std::fwrite(&header, sizeof(header), 1, file);
+  writeRaw(file, header);
 
   const uint64_t tableSize = stringTable.size();
-  std::fwrite(&tableSize, sizeof(tableSize), 1, file);
-  std::fwrite(stringTable.data(), 1, stringTable.size(), file);
+  writeRaw(file, tableSize);
+  file.write(stringTable.data(), static_cast<std::streamsize>(stringTable.size()));
 
   for (const TraceEvent &event : _events) {
     uint64_t offset = 0;
@@ -103,15 +107,14 @@ void TraceSession::flushEvents(const std::string &filename) {
       }
     }
 
-    std::fwrite(&event._timestampNs, sizeof(event._timestampNs), 1, file);
-    std::fwrite(&offset, sizeof(offset), 1, file);
-    std::fwrite(&event._opIndex, sizeof(event._opIndex), 1, file);
-    std::fwrite(&event._trackId, sizeof(event._trackId), 1, file);
-    std::fwrite(&event._phase, sizeof(event._phase), 1, file);
-    std::fwrite(&event._pad, sizeof(event._pad), 1, file);
+    writeRaw(file, event._timestampNs);
+    writeRaw(file, offset);
+    writeRaw(file, event._opIndex);
+    writeRaw(file, event._trackId);
+    writeRaw(file, event._phase);
+    writeRaw(file, event._pad);
   }
 
-  std::fclose(file);
   spdlog::debug("Wrote {} trace events to {}", _events.size(), filename);
 }
 
