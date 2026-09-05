@@ -115,7 +115,7 @@ void TraceSession::flushEvents(const std::string &filename) {
     writeRaw(file, event._pad);
   }
 
-  spdlog::debug("Wrote {} trace events to {}", _events.size(), filename);
+  spdlog::info("Wrote {} trace events to {}", _events.size(), filename);
 }
 
 } // namespace picceler
