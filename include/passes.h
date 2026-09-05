@@ -33,6 +33,7 @@ std::unique_ptr<mlir::Pass> createPiccelerOpsToFuncCallsPass();
 std::unique_ptr<mlir::Pass> createPiccelerToAffinePass();
 std::unique_ptr<mlir::Pass> createPiccelerToLLVMIRPass();
 std::unique_ptr<mlir::Pass> createPiccelerFiltersToConvPass();
+std::unique_ptr<mlir::Pass> createPiccelerAddProfilingPass();
 
 /** @} */
 

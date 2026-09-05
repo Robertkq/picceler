@@ -80,7 +80,12 @@ run in this order.
 | # | Pass | Summary |
 | --- | --- | --- |
 | 1 | `mlir::createCanonicalizerPass()` | Cleans up the IR fresh out of `mlir_gen.cpp` before the pattern-matching pass below runs on it. |
+| 1.5 | `PiccelerAddProfilingPass` (`src/picceler_add_profiling_pass.cpp`) — **only when `--profile` is passed** | Wraps every `picceler`-dialect op with `piccelerTraceBegin`/`piccelerTraceEnd` runtime calls, so the compiled binary emits a Perfetto-viewable trace at exit. See [`docs/profiling.md`](profiling.md). |
 | 2 | `PiccelerFiltersToConvPass` (`src/picceler_filters_to_conv_pass.cpp`) | Rewrites `sharpen` / `box_blur` / `gaussian_blur` / `edge_detect` / `emboss` into a canonical `picceler.convolution` + kernel pair. Collapses five op-specific lowerings into one, so every later pass only has to know how to lower `convolution`. |
+
+`PiccelerAddProfilingPass` must run in this exact spot: after the canonicalizer (so dead/folded ops
+never show up mislabeled in the trace) and before `PiccelerFiltersToConvPass` (so a `gaussian_blur`
+in the trace reads "gaussian_blur", not the "convolution" it gets rewritten into one pass later).
 
 After this phase, the only "filter" op left in the IR is `picceler.convolution`.
 

@@ -18,6 +18,7 @@ class CLIOptions {
 public:
   std::string _inputFile;
   std::string _outputFile;
+  bool _profile = false;
 };
 
 /**

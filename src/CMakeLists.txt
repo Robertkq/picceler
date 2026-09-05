@@ -87,6 +87,7 @@ add_library(PiccelerTransforms STATIC
     picceler_to_affine_pass.cpp
     picceler_to_llvm_ir_pass.cpp
     picceler_filters_to_conv_pass.cpp
+    picceler_add_profiling_pass.cpp
 )
 
 target_link_libraries(PiccelerTransforms PUBLIC
@@ -150,3 +151,13 @@ set_target_properties(picceler PROPERTIES
 target_link_libraries(picceler
     PiccelerCore
 )
+
+add_custom_target(copy-img ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/img"
+        "${CMAKE_BINARY_DIR}/img"
+    COMMENT "Copying img/ to build directory"
+    VERBATIM
+)
+
+add_dependencies(picceler copy-img)

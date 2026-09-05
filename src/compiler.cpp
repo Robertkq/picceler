@@ -146,6 +146,12 @@ Compiler::Compiler()
       _passManager(&_context) {
   _cliApp.add_option("input_file", _cliOptions._inputFile, "Input source file")->required()->check(CLI::ExistingFile);
   _cliApp.add_option("-o,--output", _cliOptions._outputFile, "Output executable file")->default_val("a.out");
+  _cliApp.add_flag("--profile", _cliOptions._profile,
+                   "Instrument every compute op with profiling trace calls; the resulting binary "
+                   "writes a picceler_profiling_trace.bin at exit (convert it with "
+                   "tools/picceler-trace-to-json for Perfetto, see docs/profiling.md). This can affect "
+                   "optimization behavior, since instrumented ops must be kept from being hoisted, "
+                   "sunk, or CSE'd out from between their trace calls.");
 
   _context.loadAllAvailableDialects();
   spdlog::trace("Initialized MLIR Dialects:");
@@ -198,6 +204,7 @@ bool Compiler::run() {
   auto module = _mlirGen.generate(ast.get(), inputFile);
   spdlog::debug("Finished generating initial MLIR");
   spdlog::debug("Running pass manager");
+  _passManager.addPasses(_cliOptions._profile);
   bool result = _passManager.run(module);
   if (!result) {
     spdlog::error("Failed to run pass manager!");
