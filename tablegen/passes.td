@@ -64,3 +64,13 @@ def PiccelerToLLVMIR : Pass<"picceler-to-llvmir", "mlir::ModuleOp"> {
   let summary = "Lower Picceler Ops to LLVM IR";
   let constructor = "picceler::createPiccelerToLLVMIRPass()";
 }
+
+def PiccelerAddProfiling : Pass<"picceler-add-profiling", "mlir::ModuleOp"> {
+  let summary = "Wrap every Picceler op with piccelerTraceBegin/piccelerTraceEnd calls (only added when --profile is passed)";
+  let constructor = "picceler::createPiccelerAddProfilingPass()";
+
+  let dependentDialects = [
+    "mlir::arith::ArithDialect",
+    "mlir::func::FuncDialect"
+    ];
+}
