@@ -47,6 +47,9 @@ C++23, CMake, LLVM/MLIR (21.0), OpenCV (image I/O in the runtime), spdlog (loggi
   See "Adding a New Pass" in [docs/compiler-internals.md](docs/compiler-internals.md).
 - **Lit tests**: prefer structural `CHECK` assertions over exact full-IR snapshots for lowerings
   that are still likely to change.
+- **Comments**: don't add comments explaining what self-explanatory code already says. Only comment
+  where the code itself can't carry the reason — a non-obvious constraint, a subtle invariant, a
+  workaround for a specific bug.
 
 ## Things to double-check before trusting old context
 

@@ -234,7 +234,6 @@ Result<std::unique_ptr<ASTNode>> Parser::parseAssignment(const Token &type, cons
   if (!exprResult)
     return std::unexpected(exprResult.error());
 
-  spdlog::info("Parsed assignment: {} {} = {}", type.value(), identifier.value(), (*exprResult)->toString());
   auto leftVarResult = parseVariable(type, identifier);
   if (!leftVarResult)
     return std::unexpected(leftVarResult.error());

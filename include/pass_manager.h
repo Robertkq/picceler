@@ -41,6 +41,13 @@ public:
   IRPassManager(mlir::MLIRContext *context);
 
   /**
+   * @brief Adds the full set of compilation passes. Call once, after CLI options are parsed
+   * (this manager is constructed before CLI11 parses argv) and before run().
+   * @param profile Also inserts PiccelerAddProfilingPass; see docs/profiling.md.
+   */
+  void addPasses(bool profile);
+
+  /**
    * @brief Runs the pass manager on the given MLIR module.
    * @param module The MLIR module to run the passes on.
    * @return true if successful, false otherwise.
@@ -49,11 +56,6 @@ public:
 
 private:
   /**
-   * @brief This function adds all the passes to the pass manager.
-   */
-  void addPasses();
-
-  /**
    * @name The following functions describe the phases of compilation
    * and groups passes accordingly.
    * @{
@@ -61,9 +63,9 @@ private:
 
   /**
    *  @brief Add passes for the high-level optimization phase.
-   *
+   * @param profile Adds PiccelerAddProfilingPass when true; see docs/profiling.md.
    */
-  void addHighLevelOptimizationPasses();
+  void addHighLevelOptimizationPasses(bool profile);
 
   /**
    * @brief Add passes that lower the IR toward affine/loop forms.

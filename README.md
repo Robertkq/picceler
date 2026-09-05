@@ -29,6 +29,13 @@ Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `pic
 
 Refer to the [Compiler Internals](docs/compiler-internals.md) document for a full breakdown of the pass pipeline (phases, order, and rationale), and to the [Dialect Reference](docs/dialect-reference.md) for op/type-level detail on the MLIR dialects involved.
 
+# Profiling
+
+Compile with `--profile` to automatically instrument every image operation and get a
+Perfetto-viewable trace of where a program actually spends its time — no language changes
+required. See [Profiling](docs/profiling.md) for usage, the `.bin` format, and how to convert a
+trace for [ui.perfetto.dev](https://ui.perfetto.dev).
+
 # Documentation
 
 Generated API reference (Doxygen, rebuilt on every push to `main`): **[robertkq.github.io/picceler](https://robertkq.github.io/picceler/)**

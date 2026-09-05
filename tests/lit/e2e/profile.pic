@@ -1,0 +1,39 @@
+
+# RUN: rm -f picceler_profiling_trace.bin
+# RUN: %picceler --profile -o %t %s
+# RUN: %t | FileCheck %s
+# RUN: test -f picceler_profiling_trace.bin
+# RUN: rm -f picceler_profiling_trace.bin
+
+# CHECK: profile: ok
+
+def main() -> int64 {
+    image img = load_image("img/cat.png")
+
+    kernel<3,3> edge_k = [[-1, -1, -1],
+                         [-1,  8, -1],
+                         [-1, -1, -1]]
+    kernel<3,3> sharpen_k = [[0, -1, 0],
+                             [-1, 5, -1],
+                             [0, -1, 0]]
+
+    image edges = convolution(img, edge_k)
+    image sharpened_conv = convolution(img, sharpen_k)
+    image blended_kernels = blend(edges, sharpened_conv, 0.5)
+
+    image brightened = brightness(img, 20)
+    image blurred = box_blur(brightened, 3)
+    image gauss = gaussian_blur(blurred, 4)
+    image sharpened = sharpen(gauss, 30)
+    image edge_detected = edge_detect(sharpened)
+    image embossed = emboss(edge_detected)
+    image inverted = invert(embossed)
+    image dilated = dilate(inverted, 2)
+    image eroded = erode(dilated, 2)
+
+    image difference = diff(blended_kernels, eroded)
+
+    save_image(difference, "profile_out.png")
+    print("profile: ok\n")
+    return 0
+}

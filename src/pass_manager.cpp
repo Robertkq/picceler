@@ -36,13 +36,12 @@ IRPassManager::IRPassManager(mlir::MLIRContext *context) : _passManager(context)
                                 [](mlir::Pass *, mlir::Operation *) { return true; }, false, false, false, *_outStream);
   _passManager.enableIRPrintingToFileTree(nullptr, [](mlir::Pass *, mlir::Operation *) { return true; }, false, false);
   _passManager.addInstrumentation(std::make_unique<PassLogger>());
-  addPasses();
 };
 
 bool IRPassManager::run(mlir::ModuleOp module) { return !mlir::failed(_passManager.run(module)); }
 
-void IRPassManager::addPasses() {
-  addHighLevelOptimizationPasses();
+void IRPassManager::addPasses(bool profile) {
+  addHighLevelOptimizationPasses(profile);
   addRuntimeLoweringPasses();
   addAffineLoweringPasses();
   addBackendLoweringPasses();
@@ -50,8 +49,12 @@ void IRPassManager::addPasses() {
 
 void IRPassManager::addRuntimeLoweringPasses() { _passManager.addPass(createPiccelerOpsToFuncCallsPass()); }
 
-void IRPassManager::addHighLevelOptimizationPasses() {
+void IRPassManager::addHighLevelOptimizationPasses(bool profile) {
   _passManager.addPass(mlir::createCanonicalizerPass());
+  // Placement (after canonicalizer, before FiltersToConv) matters -- see docs/profiling.md.
+  if (profile) {
+    _passManager.addPass(createPiccelerAddProfilingPass());
+  }
   _passManager.addPass(createPiccelerFiltersToConvPass());
 }
 
