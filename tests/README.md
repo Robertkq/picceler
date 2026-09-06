@@ -6,7 +6,7 @@ Picceler has three independent test suites, each covering a different layer of t
 | --- | --- | --- | --- |
 | Unit tests | [`unit/`](unit/) | Lexer/parser/AST, in isolation | GoogleTest |
 | MLIR lit tests | [`lit/mlir/`](lit/mlir/) | Individual lowering passes, IR-to-IR | LLVM `lit` + `FileCheck` |
-| E2E tests | [`lit/e2e/`](lit/e2e/) | Full pipeline: compile a `.pic` file, run the resulting executable, check its output | LLVM `lit` + `FileCheck` |
+| E2E tests | [`lit/e2e/`](lit/e2e/) | Full pipeline: compile a `.pic` file, run the resulting executable, check its stdout | LLVM `lit` + `FileCheck` |
 
 All three are enabled by default (`ENABLE_TESTS=ON`, `ENABLE_E2E_TESTS=ON` — see [BUILD.md](../BUILD.md) for the full list of build options) and run in CI on every pull request (`.github/workflows/unit_tests.yaml`, `lit_mlir_tests.yaml`, `e2e_tests.yaml`).
 
@@ -38,6 +38,8 @@ Add a new case by dropping an `.mlir` file into `tests/lit/mlir/`, following the
 ## E2E tests (`tests/lit/e2e/`)
 
 Each case is a full `.pic` program with `RUN:`/`CHECK:` lines that (a) compile it with the built `picceler` binary, (b) run the resulting executable, and (c) check its stdout. This is the only suite that exercises the entire pipeline end-to-end, including the runtime library and actual generated machine code — the other two suites can't catch a case where the IR looks right at every intermediate stage but the compiled program itself crashes or misbehaves.
+
+This suite checks stdout text, not pixel output. See [lit/e2e/README.md](lit/e2e/README.md) for exactly what that does and does not cover.
 
 ```bash
 cmake --build . --target e2e

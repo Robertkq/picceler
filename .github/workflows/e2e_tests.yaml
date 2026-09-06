@@ -1,3 +1,5 @@
+# These tests check that programs compile, link, and run without crashing.
+# They do not check that image operations produce correct pixel output.
 name: E2E Tests
 
 on:
