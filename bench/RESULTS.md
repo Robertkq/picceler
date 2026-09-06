@@ -9,7 +9,7 @@ Generated locally by `bench/run_bench.py`, not in CI -- see bench/reference_benc
 
 | operation | picceler | naive C++ | OpenCV |
 | --- | --- | --- | --- |
-| invert | 18.4 ms | 3.1 ms | 1.6 ms |
-| brightness(+30) | 17.8 ms | 3.9 ms | 1.6 ms |
-| gaussian_blur(r=6) | 1412.1 ms | 1038.7 ms | 17.8 ms |
-| sharpen(3x3) | 92.5 ms | 74.8 ms | 23.3 ms |
+| invert | 18.4 ms | 6.8 ms | 4.9 ms |
+| brightness(+30) | 18.1 ms | 8.0 ms | 5.3 ms |
+| gaussian_blur(r=6) | 1415.7 ms | 1051.5 ms | 12.3 ms |
+| sharpen(3x3) | 93.4 ms | 79.4 ms | 15.4 ms |
