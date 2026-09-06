@@ -24,7 +24,16 @@ Without `--profile`, nothing changes: no buffer, no atexit handler, no file.
 
 ## What gets instrumented
 
-All `picceler` ops, after initial canonicalization, before any other optimisations otherwise
+Every `picceler` op, after initial canonicalization and before any other optimizations, except:
+
+* `show_image`, `read_number`, `read_string` -- these block on a window/stdin, so one call would
+  dwarf every real op's time on the timeline.
+* `print` -- times stdout buffering, not compute.
+* `kernel.const` -- sub-microsecond next to any real op; just adds a row.
+* `string.const` -- instrumentation itself creates these to hold each traced op's name.
+
+`load_image`/`save_image` are still instrumented: image decode/encode is genuinely part of the
+timeline, often the dominant cost in a short pipeline.
 
 ## The `.bin` format
 

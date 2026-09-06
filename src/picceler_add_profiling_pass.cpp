@@ -38,8 +38,11 @@ mlir::func::FuncOp ensureTraceFunc(mlir::ModuleOp module, mlir::OpBuilder &build
 #include "piccelerPasses.h.inc"
 
 /**
- * @brief A pass that wraps every Picceler op (except string.const) with piccelerTraceBegin/
- * piccelerTraceEnd runtime calls
+ * @brief A pass that wraps every Picceler compute/IO op with piccelerTraceBegin/piccelerTraceEnd
+ * runtime calls. Excludes StringConstOp (instrumentation itself creates these) and ShowImageOp/
+ * ReadNumberOp/ReadStringOp (block on a window/stdin, not compute -- one call would swallow every
+ * real op's time into invisibility on the timeline), PrintOp (times stdout buffering, not compute),
+ * and KernelConstOp (sub-microsecond next to any real op, just adds a row).
  */
 struct PiccelerAddProfilingPass : public impl::PiccelerAddProfilingBase<PiccelerAddProfilingPass> {
   void runOnOperation() override {
@@ -51,10 +54,10 @@ struct PiccelerAddProfilingPass : public impl::PiccelerAddProfilingBase<Picceler
     auto beginFunc = ensureTraceFunc(module, builder, "piccelerTraceBegin", stringType);
     auto endFunc = ensureTraceFunc(module, builder, "piccelerTraceEnd", stringType);
 
-    // collect all ops, as instrumentation creates additional string.const ops which we want to omit
     llvm::SmallVector<mlir::Operation *> targets;
     module.walk([&](mlir::Operation *op) {
-      if (op->getDialect() && llvm::isa<PiccelerDialect>(op->getDialect()) && !llvm::isa<StringConstOp>(op))
+      if (op->getDialect() && llvm::isa<PiccelerDialect>(op->getDialect()) &&
+          !llvm::isa<StringConstOp, ShowImageOp, ReadNumberOp, ReadStringOp, PrintOp, KernelConstOp>(op))
         targets.push_back(op);
     });
 
