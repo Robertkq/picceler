@@ -247,31 +247,28 @@ int main(int argc, char **argv) {
 
   std::vector<BenchResult> results;
 
+  // fresh `dst` per call, matching picceler's never-reused output allocation
   {
-    cv::Mat dst;
-    double naiveMs = timeMedianMs(iterations, [&] { naiveInvert(rgba, dst); });
-    double opencvMs = timeMedianMs(iterations, [&] { opencvInvert(rgba, dst); });
+    double naiveMs = timeMedianMs(iterations, [&] { cv::Mat dst; naiveInvert(rgba, dst); });
+    double opencvMs = timeMedianMs(iterations, [&] { cv::Mat dst; opencvInvert(rgba, dst); });
     results.push_back({"invert", "invert", naiveMs, opencvMs});
   }
   {
-    cv::Mat dst;
-    double naiveMs = timeMedianMs(iterations, [&] { naiveBrightness(rgba, dst, kBrightnessDelta); });
-    double opencvMs = timeMedianMs(iterations, [&] { opencvBrightness(rgba, dst, kBrightnessDelta); });
+    double naiveMs = timeMedianMs(iterations, [&] { cv::Mat dst; naiveBrightness(rgba, dst, kBrightnessDelta); });
+    double opencvMs = timeMedianMs(iterations, [&] { cv::Mat dst; opencvBrightness(rgba, dst, kBrightnessDelta); });
     results.push_back({"brightness", "brightness(+" + std::to_string(kBrightnessDelta) + ")", naiveMs, opencvMs});
   }
   {
-    cv::Mat dst;
     std::vector<double> kernel = buildGaussianKernel(kGaussianRadius);
     int size = 2 * kGaussianRadius + 1;
-    double naiveMs = timeMedianMs(iterations, [&] { naiveConvolveRGB(rgba, dst, kernel, size, size); });
-    double opencvMs = timeMedianMs(iterations, [&] { opencvGaussianBlur(rgba, dst, kGaussianRadius); });
+    double naiveMs = timeMedianMs(iterations, [&] { cv::Mat dst; naiveConvolveRGB(rgba, dst, kernel, size, size); });
+    double opencvMs = timeMedianMs(iterations, [&] { cv::Mat dst; opencvGaussianBlur(rgba, dst, kGaussianRadius); });
     results.push_back({"gaussian_blur", "gaussian_blur(r=" + std::to_string(kGaussianRadius) + ")", naiveMs, opencvMs});
   }
   {
-    cv::Mat dst;
     std::vector<double> kernel = buildSharpenKernel(kSharpenStrength);
-    double naiveMs = timeMedianMs(iterations, [&] { naiveConvolveRGB(rgba, dst, kernel, 3, 3); });
-    double opencvMs = timeMedianMs(iterations, [&] { opencvSharpen(rgba, dst, kSharpenStrength); });
+    double naiveMs = timeMedianMs(iterations, [&] { cv::Mat dst; naiveConvolveRGB(rgba, dst, kernel, 3, 3); });
+    double opencvMs = timeMedianMs(iterations, [&] { cv::Mat dst; opencvSharpen(rgba, dst, kSharpenStrength); });
     results.push_back({"sharpen", "sharpen(3x3)", naiveMs, opencvMs});
   }
 

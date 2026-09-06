@@ -2,7 +2,7 @@
 """POC driver: compiles+runs bench/pic/bench_*.pic with --profile for picceler's own numbers, runs
 reference_bench for the naive C++ / OpenCV columns, and merges both into bench/RESULTS.md.
 
-Usage: bench/run_bench.py [--build-dir build] [--image bench.jpg] [--iterations 10]
+Usage: bench/run_bench.py [--build-dir build] [--image bench.jpg] [--iterations 50]
 """
 import argparse
 import json
@@ -102,9 +102,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--build-dir", type=Path, default=REPO_ROOT / "build")
     parser.add_argument("--image", default="bench.jpg", help="filename under <build-dir>/img/")
-    parser.add_argument("--iterations", type=int, default=10,
+    parser.add_argument("--iterations", type=int, default=50,
                         help="reference_bench iterations; the .pic programs' own loop count is fixed at compile "
-                             "time (currently 10 too) -- change bench/pic/bench_*.pic to keep them in sync")
+                             "time (currently 50 too) -- change bench/pic/bench_*.pic to keep them in sync")
     parser.add_argument("-o", "--output", type=Path, default=REPO_ROOT / "bench" / "RESULTS.md")
     args = parser.parse_args()
 
