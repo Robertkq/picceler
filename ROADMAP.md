@@ -1,7 +1,6 @@
 # Roadmap
 
-Picceler is at a natural stopping point for now. The gaps below are left out
-on purpose, not signs the project was abandoned.
+Some features I'd like to add in the future:
 
 ## Buffer deallocation
 
