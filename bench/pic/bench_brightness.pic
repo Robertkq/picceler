@@ -1,0 +1,10 @@
+def main() -> int64 {
+    image img = load_image("img/bench.jpg")
+
+    for (i = 0 .. 10) {
+        image out = brightness(img, 30)
+        save_image(out, "bench_brightness_out.png")
+    }
+
+    return 0
+}
