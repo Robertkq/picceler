@@ -14,7 +14,7 @@ Running the binary writes `picceler_profiling_trace.bin` (cwd) on normal exit. C
 it in Perfetto:
 
 ```bash
-python3 tools/picceler-trace-to-json/picceler-trace-to-json.py picceler_profiling_trace.bin -o trace.json
+python3 tools/picceler-trace-to-json/pictrace.py picceler_profiling_trace.bin -o trace.json
 ```
 
 Open [ui.perfetto.dev](https://ui.perfetto.dev) and load `trace.json`. Each instrumented op is a
@@ -53,7 +53,7 @@ Each event (24 bytes):
 
 ## Converting to Chrome Trace Event JSON
 
-`tools/picceler-trace-to-json/picceler-trace-to-json.py` (stdlib only) validates magic/version,
+`tools/picceler-trace-to-json/pictrace.py` (stdlib only) validates magic/version,
 turns each B/E pair into two JSON events, normalizes timestamps to start at `ts: 0`, and converts
 nanoseconds to the microsecond float `ts` the format expects. `trackId` maps to `"tid"` as
 `trackId + 1`; `"pid"` is always `1`. An unmatched begin/end (see the `abort()` caveat below) prints

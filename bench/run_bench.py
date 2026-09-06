@@ -8,13 +8,15 @@ import argparse
 import json
 import platform
 import statistics
-import struct
 import subprocess
 import sys
 from datetime import date
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "tools" / "picceler-trace-to-json"))
+import pictrace  # noqa: E402 (needs sys.path set up first)
+
 OPERATIONS = ["invert", "brightness", "gaussian_blur", "sharpen"]
 LABELS = {
     "invert": "invert",
@@ -23,46 +25,18 @@ LABELS = {
     "sharpen": "sharpen(3x3)",
 }
 
-# Must match lib/src/trace.cpp / docs/profiling.md.
-TRACE_MAGIC = 0x50494354
-HEADER_FORMAT = "<IIQQ"
-EVENT_FORMAT = "<QQIHBB"
-EVENT_SIZE = 24
-
-
-def parse_trace_events(data: bytes):
-    header_size = struct.calcsize(HEADER_FORMAT)
-    magic, _version, event_count, event_size = struct.unpack(HEADER_FORMAT, data[:header_size])
-    assert magic == TRACE_MAGIC, f"bad trace magic {magic:#x}"
-    assert event_size == EVENT_SIZE, f"unexpected trace event size {event_size}"
-
-    offset = header_size
-    (table_size,) = struct.unpack("<Q", data[offset:offset + 8])
-    offset += 8
-    string_table = data[offset:offset + table_size]
-    offset += table_size
-
-    events = []
-    for _ in range(event_count):
-        ts, name_off, _op_index, track_id, phase, _pad = struct.unpack(EVENT_FORMAT, data[offset:offset + EVENT_SIZE])
-        offset += EVENT_SIZE
-        end = string_table.find(b"\x00", name_off)
-        events.append((ts, string_table[name_off:end].decode("utf-8"), track_id, chr(phase)))
-    return events
-
 
 def median_duration_ms(events, name):
     open_by_track = {}
     durations = []
-    for ts, ev_name, track_id, phase in events:
-        if phase == "B":
-            open_by_track.setdefault(track_id, []).append((ts, ev_name))
-        else:
-            stack = open_by_track.get(track_id, [])
-            if stack and stack[-1][1] == ev_name:
-                begin_ts, _ = stack.pop()
-                if ev_name == name:
-                    durations.append((ts - begin_ts) / 1e6)
+    for event in events:
+        stack = open_by_track.setdefault(event["track_id"], [])
+        if event["phase"] == "B":
+            stack.append(event)
+        elif stack and stack[-1]["name"] == event["name"]:
+            begin = stack.pop()
+            if event["name"] == name:
+                durations.append((event["timestamp_ns"] - begin["timestamp_ns"]) / 1e6)
     if not durations:
         raise RuntimeError(f"no trace events found for '{name}'")
     return statistics.median(durations)
@@ -77,7 +51,7 @@ def run_picceler_bench(picceler_bin, build_dir, pic_dir, work_dir, op):
     trace_path.unlink(missing_ok=True)
     subprocess.run([str(exe)], check=True, cwd=build_dir, stdout=subprocess.DEVNULL)
 
-    events = parse_trace_events(trace_path.read_bytes())
+    events = pictrace.parse_trace(trace_path.read_bytes())
     trace_path.unlink()
     return median_duration_ms(events, f"picceler.{op}")
 
