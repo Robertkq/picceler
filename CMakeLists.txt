@@ -8,6 +8,7 @@ option(ENABLE_TESTS "Enable testing" ON)
 option(ENABLE_E2E_TESTS "Enable end-to-end (compile-and-run) tests" ON)
 option(ENABLE_CLANG_TIDY "Enable clang-tidy" OFF)
 option(ENABLE_DOCS "Enable documentation generation" OFF)
+option(ENABLE_BENCH "Enable the reference_bench benchmark target" ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json" FORCE)
 
@@ -90,6 +91,10 @@ add_subdirectory(tools)
 
 if (ENABLE_TESTS)
   add_subdirectory(tests)
+endif()
+
+if (ENABLE_BENCH)
+  add_subdirectory(bench)
 endif()
 
 
