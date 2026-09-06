@@ -14,7 +14,7 @@ Running the binary writes `picceler_profiling_trace.bin` (cwd) on normal exit. C
 it in Perfetto:
 
 ```bash
-python3 tools/picceler-trace-to-json/picceler-trace-to-json.py picceler_profiling_trace.bin -o trace.json
+python3 tools/picceler-trace-to-json/pictrace.py picceler_profiling_trace.bin -o trace.json
 ```
 
 Open [ui.perfetto.dev](https://ui.perfetto.dev) and load `trace.json`. Each instrumented op is a
@@ -24,7 +24,16 @@ Without `--profile`, nothing changes: no buffer, no atexit handler, no file.
 
 ## What gets instrumented
 
-All `picceler` ops, after initial canonicalization, before any other optimisations otherwise
+Every `picceler` op, after initial canonicalization and before any other optimizations, except:
+
+* `show_image`, `read_number`, `read_string` -- these block on a window/stdin, so one call would
+  dwarf every real op's time on the timeline.
+* `print` -- times stdout buffering, not compute.
+* `kernel.const` -- sub-microsecond next to any real op; just adds a row.
+* `string.const` -- instrumentation itself creates these to hold each traced op's name.
+
+`load_image`/`save_image` are still instrumented: image decode/encode is genuinely part of the
+timeline, often the dominant cost in a short pipeline.
 
 ## The `.bin` format
 
@@ -53,7 +62,7 @@ Each event (24 bytes):
 
 ## Converting to Chrome Trace Event JSON
 
-`tools/picceler-trace-to-json/picceler-trace-to-json.py` (stdlib only) validates magic/version,
+`tools/picceler-trace-to-json/pictrace.py` (stdlib only) validates magic/version,
 turns each B/E pair into two JSON events, normalizes timestamps to start at `ts: 0`, and converts
 nanoseconds to the microsecond float `ts` the format expects. `trackId` maps to `"tid"` as
 `trackId + 1`; `"pid"` is always `1`. An unmatched begin/end (see the `abort()` caveat below) prints

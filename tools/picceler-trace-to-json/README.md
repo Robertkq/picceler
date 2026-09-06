@@ -6,5 +6,8 @@ loadable directly in [Perfetto](https://ui.perfetto.dev) or [chrome://tracing](c
 [`docs/profiling.md`](../../docs/profiling.md) for the full format spec and workflow.
 
 ```bash
-python3 picceler-trace-to-json.py picceler_profiling_trace.bin -o trace.json
+python3 pictrace.py picceler_profiling_trace.bin -o trace.json
 ```
+
+Also importable — `bench/run_bench.py` reuses its `parse_trace`/`TraceFormatError` for the same
+`.bin` format rather than re-parsing it independently.

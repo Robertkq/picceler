@@ -1,0 +1,10 @@
+def main() -> int64 {
+    image img = load_image("img/bench.jpg")
+
+    for (i = 0 .. 50) {
+        image out = invert(img)
+        save_image(out, "bench_invert_out.png")
+    }
+
+    return 0
+}

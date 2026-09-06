@@ -1,0 +1,39 @@
+
+# RUN: %picceler -o %t %s
+# RUN: printf "1\n" | %t | FileCheck %s
+
+# CHECK: loaded image
+# CHECK: gaussian_blur inside for-loop: ok
+# CHECK: sharpen inside if-block: ok
+# CHECK: neighbourhood_op_control_flow: ok
+
+def blur_repeatedly(image img) -> image {
+    for (i = 0 .. 3) {
+        image blurred = gaussian_blur(img, 4)
+        save_image(blurred, "loop_gaussian_blur_out.png")
+    }
+    print("gaussian_blur inside for-loop: ok\n")
+    return img
+}
+
+def sharpen_if_flagged(image img, float64 flag) -> image {
+    image result = img
+    if (flag == 1) {
+        image sharpened = sharpen(img, 40)
+        save_image(sharpened, "if_sharpen_out.png")
+    }
+    print("sharpen inside if-block: ok\n")
+    return result
+}
+
+def main() -> int64 {
+    image img = load_image("img/cat.png")
+    print("loaded image\n")
+
+    image after_loop = blur_repeatedly(img)
+    float64 flag = read_number("flag: ")
+    image after_if = sharpen_if_flagged(after_loop, flag)
+
+    print("neighbourhood_op_control_flow: ok\n")
+    return 0
+}
