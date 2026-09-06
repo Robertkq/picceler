@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -137,6 +138,44 @@ struct RotateToAffine : mlir::OpConversionPattern<RotateOp> {
   }
 };
 
+/**
+ * @brief Relocates `value`'s defining chain to `funcOp`'s top level, since MLIR requires an
+ * affine.parallel/affine.apply dim or symbol to be defined there. Only safe for a pure `arith`
+ * chain (a compile-time-constant kernel size); fails otherwise.
+ */
+mlir::FailureOr<mlir::Value> hoistArithChainToFunctionTop(mlir::ConversionPatternRewriter &rewriter,
+                                                          mlir::func::FuncOp funcOp, mlir::Operation *insertBefore,
+                                                          mlir::Value value) {
+  mlir::Region &topLevelRegion = funcOp.getBody();
+
+  mlir::Operation *defOp = value.getDefiningOp();
+  if (!defOp) {
+    auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value);
+    if (blockArg && blockArg.getOwner()->getParent() == &topLevelRegion)
+      return value;
+    return mlir::failure();
+  }
+  if (defOp->getParentRegion() == &topLevelRegion)
+    return value;
+
+  if (!defOp->getDialect() || !mlir::isa<mlir::arith::ArithDialect>(defOp->getDialect()))
+    return mlir::failure();
+
+  mlir::IRMapping mapping;
+  for (mlir::Value operand : defOp->getOperands()) {
+    auto hoistedOperand = hoistArithChainToFunctionTop(rewriter, funcOp, insertBefore, operand);
+    if (mlir::failed(hoistedOperand))
+      return mlir::failure();
+    mapping.map(operand, *hoistedOperand);
+  }
+
+  // Fixed anchor (not setInsertionPointToStart) keeps leaves ordered before their uses.
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(insertBefore);
+  mlir::Operation *cloned = rewriter.clone(*defOp, mapping);
+  return cloned->getResult(mlir::cast<mlir::OpResult>(value).getResultNumber());
+}
+
 struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<NeighbourhoodOpInterface> {
   using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
 
@@ -187,6 +226,19 @@ struct NeighbourhoodOpsToAffine : mlir::OpInterfaceConversionPattern<Neighbourho
         rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodRowRadius);
     mlir::Value neighborhoodColRadiusIdx =
         rewriter.create<mlir::arith::IndexCastOp>(loc, indexType, neighborhoodColRadius);
+
+    auto funcOp = rawOp->getParentOfType<mlir::func::FuncOp>();
+    mlir::Operation *hoistAnchor = &funcOp.getBody().front().front();
+    for (mlir::Value *dimValue :
+        {&neighborhoodRowsIdx, &neighborhoodColsIdx, &neighborhoodRowRadiusIdx, &neighborhoodColRadiusIdx}) {
+      auto hoisted = hoistArithChainToFunctionTop(rewriter, funcOp, hoistAnchor, *dimValue);
+      if (mlir::failed(hoisted)) {
+        rawOp->emitOpError("neighborhood size must be a compile-time constant computable at the function's top "
+                           "level; it cannot depend on a runtime value while nested inside a for/if block");
+        return mlir::failure();
+      }
+      *dimValue = *hoisted;
+    }
 
     mlir::Value zeroIndex = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
 
