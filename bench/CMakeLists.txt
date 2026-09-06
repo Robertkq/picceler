@@ -6,6 +6,7 @@ add_executable(reference_bench
 
 target_link_libraries(reference_bench PRIVATE
     ${OpenCV_LIBS}
+    CLI11::CLI11
 )
 
 set_target_properties(reference_bench PROPERTIES

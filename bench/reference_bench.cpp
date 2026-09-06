@@ -1,10 +1,10 @@
+#include <CLI/CLI.hpp>
 #include <opencv2/opencv.hpp>
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <numbers>
@@ -221,37 +221,18 @@ void printJson(const std::vector<BenchResult> &results, int iterations) {
 } // namespace
 
 int main(int argc, char **argv) {
-  std::vector<std::string> args(argv + 1, argv + argc);
+  CLI::App app{"Naive C++ vs OpenCV reference benchmark for picceler's builtin operations"};
 
   std::string imagePath;
-  bool haveImagePath = false;
+  app.add_option("image-path", imagePath, "Path to the input image")->required();
+
   int iterations = 20;
-  bool haveIterations = false;
+  app.add_option("iterations", iterations, "Timed iterations per operation")->check(CLI::PositiveNumber);
+
   bool jsonOutput = false;
+  app.add_flag("--json", jsonOutput, "Print results as JSON instead of a table");
 
-  for (const auto &arg : args) {
-    if (arg == "--json") {
-      jsonOutput = true;
-    } else if (!haveImagePath) {
-      imagePath = arg;
-      haveImagePath = true;
-    } else if (!haveIterations) {
-      iterations = std::atoi(arg.c_str());
-      haveIterations = true;
-    } else {
-      std::cerr << "reference_bench: unexpected argument '" << arg << "'\n";
-      return 1;
-    }
-  }
-
-  if (!haveImagePath) {
-    std::cerr << "usage: reference_bench <image-path> [iterations] [--json]\n";
-    return 1;
-  }
-  if (iterations < 1) {
-    std::cerr << "reference_bench: iterations must be >= 1\n";
-    return 1;
-  }
+  CLI11_PARSE(app, argc, argv);
 
   cv::Mat loaded = cv::imread(imagePath);
   if (loaded.empty()) {
