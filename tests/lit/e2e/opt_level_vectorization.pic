@@ -1,0 +1,18 @@
+
+# RUN: %picceler -O0 -o %t.o0 %s
+# RUN: llvm-objdump -d %t.o0.o | FileCheck %s --check-prefix=SCALAR
+# RUN: %picceler -O2 --native -o %t.o2 %s
+# RUN: llvm-objdump -d %t.o2.o | FileCheck %s --check-prefix=VECTOR
+
+# invert's clamp uses NaN-propagating min/max, which the generic baseline
+# target can't lower to a packed instruction -- native CPU features (AVX)
+# are what actually unlocks vmaxpd/vminpd here, not -O2 alone.
+# SCALAR-NOT: vmaxpd
+# VECTOR: vmaxpd
+
+def main() -> int64 {
+    image img = load_image("img/cat.png")
+    image out = invert(img)
+    save_image(out, "opt_level_vectorization_out.png")
+    return 0
+}

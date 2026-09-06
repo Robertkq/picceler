@@ -35,6 +35,18 @@ Every `picceler` op, after initial canonicalization and before any other optimiz
 `load_image`/`save_image` are still instrumented: image decode/encode is genuinely part of the
 timeline, often the dominant cost in a short pipeline.
 
+## `--profile` overhead at `-O2`
+
+`piccelerTraceBegin`/`piccelerTraceEnd` are opaque external calls, so LLVM must assume they clobber
+arbitrary memory -- they act as optimization barriers around every instrumented op, blocking
+cross-op LICM, loop fusion, and inlining across that boundary. They sit outside each op's own loop
+nest, though, so inner-loop vectorization is unaffected. Measured with `bench/pic/bench_gaussian_blur.pic`
+(50 iterations, `-O2`, plain wall clock, median of 3 runs): 64.38s without `--profile` vs. 62.80s
+with it -- no measurable overhead on a compute-dominated program, since instrumentation is one pair
+of calls per op invocation, not per pixel. Expect this to matter more on short/cheap ops or tight
+loops of many small ops, where the per-call trace cost is a bigger fraction of the work being
+measured.
+
 ## The `.bin` format
 
 Layout (host-endian, no cross-arch portability implied):

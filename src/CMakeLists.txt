@@ -124,6 +124,7 @@ target_link_libraries(PiccelerCore PUBLIC
     PiccelerIR
     PiccelerTransforms
     PiccelerSupport
+    MLIRAffineTransforms
     MLIROptLib
     MLIRTargetLLVMIRExport
     MLIRLLVMToLLVMIRTranslation

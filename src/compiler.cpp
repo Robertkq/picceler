@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/TargetSelect.h"
@@ -24,6 +25,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -137,6 +139,32 @@ ProcessResult runCommand(const std::vector<std::string> &args) {
 
 std::filesystem::path getExecutableDirectory() { return std::filesystem::canonical("/proc/self/exe").parent_path(); }
 
+llvm::OptimizationLevel toPipelineLevel(unsigned level) {
+  switch (level) {
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  default:
+    return llvm::OptimizationLevel::O2;
+  }
+}
+
+llvm::CodeGenOptLevel toCodegenLevel(unsigned level) {
+  switch (level) {
+  case 0:
+    return llvm::CodeGenOptLevel::None;
+  case 1:
+    return llvm::CodeGenOptLevel::Less;
+  case 3:
+    return llvm::CodeGenOptLevel::Aggressive;
+  default:
+    return llvm::CodeGenOptLevel::Default;
+  }
+}
+
 } // namespace
 
 namespace picceler {
@@ -152,6 +180,17 @@ Compiler::Compiler()
                    "tools/picceler-trace-to-json for Perfetto, see docs/profiling.md). This can affect "
                    "optimization behavior, since instrumented ops must be kept from being hoisted, "
                    "sunk, or CSE'd out from between their trace calls.");
+  _cliApp.allow_non_standard_option_names();
+  _cliApp.add_option("--opt-level", _cliOptions._optLevel, "LLVM optimization level (0-3)")
+      ->check(CLI::Range(0u, 3u))
+      ->default_val(2);
+  _cliApp.add_flag_callback("-O0", [this] { _cliOptions._optLevel = 0; }, "Alias for --opt-level 0");
+  _cliApp.add_flag_callback("-O1", [this] { _cliOptions._optLevel = 1; }, "Alias for --opt-level 1");
+  _cliApp.add_flag_callback("-O2", [this] { _cliOptions._optLevel = 2; }, "Alias for --opt-level 2");
+  _cliApp.add_flag_callback("-O3", [this] { _cliOptions._optLevel = 3; }, "Alias for --opt-level 3");
+  _cliApp.add_flag("--native", _cliOptions._nativeArch,
+                   "Compile for the host CPU (-march=native) instead of a generic baseline target. "
+                   "Produces a binary that may SIGILL on other machines.");
 
   _context.loadAllAvailableDialects();
   spdlog::trace("Initialized MLIR Dialects:");
@@ -252,13 +291,46 @@ bool Compiler::emitObjectFile(llvm::Module *llvmModule, const std::string &objFi
     return false;
   }
 
+  std::string cpu = "generic";
+  std::string features;
+  if (_cliOptions._nativeArch) {
+    cpu = llvm::sys::getHostCPUName().str();
+    llvm::SubtargetFeatures subtargetFeatures;
+    for (const auto &feature : llvm::sys::getHostCPUFeatures()) {
+      subtargetFeatures.AddFeature(feature.first(), feature.second);
+    }
+    features = subtargetFeatures.getString();
+  }
+
   llvm::TargetOptions opt;
-  std::unique_ptr<llvm::TargetMachine> targetMachine(
-      target->createTargetMachine(llvm::Triple(targetTriple), "generic", "", opt,
-                                  std::optional<llvm::Reloc::Model>(llvm::Reloc::Static)));
+  std::unique_ptr<llvm::TargetMachine> targetMachine(target->createTargetMachine(
+      llvm::Triple(targetTriple), cpu, features, opt, std::optional<llvm::Reloc::Model>(llvm::Reloc::Static),
+      std::nullopt, toCodegenLevel(_cliOptions._optLevel)));
 
   llvmModule->setDataLayout(targetMachine->createDataLayout());
   llvmModule->setTargetTriple(llvm::Triple(targetTriple));
+
+  llvm::PassBuilder passBuilder(targetMachine.get());
+
+  llvm::LoopAnalysisManager loopAnalysisManager;
+  llvm::FunctionAnalysisManager functionAnalysisManager;
+  llvm::CGSCCAnalysisManager cgsccAnalysisManager;
+  llvm::ModuleAnalysisManager moduleAnalysisManager;
+
+  passBuilder.registerModuleAnalyses(moduleAnalysisManager);
+  passBuilder.registerCGSCCAnalyses(cgsccAnalysisManager);
+  passBuilder.registerFunctionAnalyses(functionAnalysisManager);
+  passBuilder.registerLoopAnalyses(loopAnalysisManager);
+  passBuilder.crossRegisterProxies(loopAnalysisManager, functionAnalysisManager, cgsccAnalysisManager,
+                                   moduleAnalysisManager);
+
+  llvm::ModulePassManager modulePassManager;
+  if (_cliOptions._optLevel == 0) {
+    modulePassManager = passBuilder.buildO0DefaultPipeline(llvm::OptimizationLevel::O0);
+  } else {
+    modulePassManager = passBuilder.buildPerModuleDefaultPipeline(toPipelineLevel(_cliOptions._optLevel));
+  }
+  modulePassManager.run(*llvmModule, moduleAnalysisManager);
 
   std::error_code ec;
   llvm::raw_fd_ostream dest(objFilename, ec, llvm::sys::fs::OF_None);

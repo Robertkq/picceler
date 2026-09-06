@@ -192,6 +192,21 @@ non-constant `box_blur`/`gaussian_blur` radius (Phase 1) — both intentionally 
 instead, to avoid an unbounded stack allocation. These still never get an explicit `memref.dealloc`;
 the leak is a known, pre-existing limitation of this pipeline, not something introduced here.
 
+Once the module reaches the LLVM dialect, `mlir::translateModuleToLLVMIR` hands off to a plain
+`llvm::Module` and MLIR is out of the picture. `Compiler::emitObjectFile` (`src/compiler.cpp`) then
+runs LLVM's own middle-end optimization pipeline via `llvm::PassBuilder` — `buildO0DefaultPipeline`
+at `-O0`, `buildPerModuleDefaultPipeline` at `-O1`/`-O2`/`-O3` — before handing the module to
+`TargetMachine::addPassesToEmitFile` for instruction selection and object emission. `--opt-level`
+(0-3, or the clang-style `-O0`/`-O1`/`-O2`/`-O3` aliases) controls both which pipeline runs and the
+codegen optimization level passed to `createTargetMachine`; it defaults to 2. `--native`
+switches the target CPU/features from the `"generic"` baseline to the host's
+(`llvm::sys::getHostCPUName`/`getHostCPUFeatures`), which is required for the vectorizer to actually
+emit packed instructions in some cases (e.g. the NaN-propagating `arith.maximumf`/`minimumf` used by
+every op's clamp lowers to a packed compare-and-blend sequence only where AVX is available — the
+generic baseline can't express it and falls back to scalar code even when the loop vectorizer
+otherwise judged the loop profitable to vectorize). `--native` binaries are not portable to other
+CPUs and will `SIGILL` if run on a machine lacking the features they were built for.
+
 ## 7. Debugging the Pipeline
 
 `IRPassManager`'s constructor (`src/pass_manager.cpp`) wires up three pieces of built-in tooling
