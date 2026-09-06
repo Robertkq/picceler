@@ -47,24 +47,21 @@ OpenCV, on the same image:
 | gaussian_blur(r=6) | 1106.1 ms | 1039.5 ms | 12.1 ms |
 | sharpen(3x3) | 72.4 ms | 78.8 ms | 15.3 ms |
 
-The first run showed picceler 4 to 6 times slower than naive C++ on
-elementwise operations (invert, brightness), but only 1.2 to 1.4 times slower
-on convolutions. The cause: `emitObjectFile` called `addPassesToEmitFile`,
-which only adds codegen passes, so LLVM's middle-end optimizer never ran and
-the generated code got no loop vectorization. The naive C++ baseline was
-compiled with -O2 and did. Convolutions started closer because their bounds
-guarded neighbour reads block vectorization either way.
+Picceler started out 4 to 6 times slower than naive C++ on elementwise
+operations, and 1.2 to 1.4 times slower on convolutions. Enabling
+optimizations that were free to add brought that down: CSE, dead value
+elimination, and loop invariant code motion in the MLIR passes, plus a real
+LLVM optimization pipeline (`-O0` to `-O3`) and native CPU codegen
+(`--native`). Elementwise operations now land within 1.2 to 1.4x of naive
+C++, and sharpen is slightly faster than it.
 
-The fix: run `PassBuilder::buildPerModuleDefaultPipeline` before emitting the
-object file, about 30 lines of change. Elementwise operations now land within
-1.2 to 1.4x of naive C++, and sharpen is slightly faster than it.
-
-OpenCV is not a like for like comparison. It is vectorized, multithreaded,
-and its Gaussian blur uses a separable filter, O(k) per pixel instead of
-O(k^2). Losing to it by a wide margin is expected.
+Losing to OpenCV by a wide margin was always expected.
 
 See [bench/RESULTS.md](bench/RESULTS.md) for full numbers and [bench/](bench/)
 for how to reproduce them.
+
+> I found out that building a compiler is hard, and comparing its output to
+> production compilers and tech stacks is a harsh reality.
 
 # Profiling
 
