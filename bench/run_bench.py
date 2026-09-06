@@ -42,10 +42,13 @@ def median_duration_ms(events, name):
     return statistics.median(durations)
 
 
-def run_picceler_bench(picceler_bin, build_dir, pic_dir, work_dir, op):
+def run_picceler_bench(picceler_bin, build_dir, pic_dir, work_dir, op, native, opt_level):
     pic_file = pic_dir / f"bench_{op}.pic"
     exe = work_dir / f"bench_{op}_bin"
-    subprocess.run([str(picceler_bin), "--profile", "-o", str(exe), str(pic_file)], check=True, cwd=build_dir)
+    args = [str(picceler_bin), "--profile", "--opt-level", str(opt_level), "-o", str(exe), str(pic_file)]
+    if native:
+        args.append("--native")
+    subprocess.run(args, check=True, cwd=build_dir)
 
     trace_path = build_dir / "picceler_profiling_trace.bin"
     trace_path.unlink(missing_ok=True)
@@ -106,6 +109,11 @@ def main():
                         help="reference_bench iterations; the .pic programs' own loop count is fixed at compile "
                              "time (currently 50 too) -- change bench/pic/bench_*.pic to keep them in sync")
     parser.add_argument("-o", "--output", type=Path, default=REPO_ROOT / "bench" / "RESULTS.md")
+    parser.add_argument("--native", action="store_true",
+                        help="pass --native to picceler, targeting the host CPU instead of the "
+                             "generic baseline; the produced RESULTS.md is then only valid for this CPU")
+    parser.add_argument("--opt-level", type=int, choices=[0, 1, 2, 3], default=2,
+                        help="passed through as picceler's --opt-level (default 2, matching picceler's own default)")
     args = parser.parse_args()
 
     build_dir = args.build_dir.resolve()
@@ -126,7 +134,8 @@ def main():
     picceler_results = {}
     for op in OPERATIONS:
         print(f"Compiling and profiling picceler '{op}'...")
-        picceler_results[op] = run_picceler_bench(picceler_bin, build_dir, pic_dir, work_dir, op)
+        picceler_results[op] = run_picceler_bench(picceler_bin, build_dir, pic_dir, work_dir, op, args.native,
+                                                  args.opt_level)
 
     args.output.write_text(render_results_md(picceler_results, reference_results, args.iterations, image_path))
     print(f"Wrote {args.output}")

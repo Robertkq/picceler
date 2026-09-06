@@ -19,6 +19,8 @@ public:
   std::string _inputFile;
   std::string _outputFile;
   bool _profile = false;
+  unsigned _optLevel = 2;
+  bool _nativeArch = false;
 };
 
 /**

@@ -71,12 +71,13 @@ include(AddLLVM)
 include(TableGen)
 include(AddMLIR)
 
-llvm_map_components_to_libnames(NATIVE_HW_LLVM_LIBS 
-    X86 
-    Target 
-    Core 
-    Support 
+llvm_map_components_to_libnames(NATIVE_HW_LLVM_LIBS
+    X86
+    Target
+    Core
+    Support
     AsmPrinter
+    Passes
 )
 
 message(STATUS "Native hardware LLVM libs: ${NATIVE_HW_LLVM_LIBS}")

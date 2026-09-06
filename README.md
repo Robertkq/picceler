@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 
 *picceler* (Pixel Accelerator) is a compiled domain specific language for image processing.
-The language aims to simplify and fasten the development speed for image processing work (currently CPU-only, targeting the host's native architecture).
+The language aims to simplify and fasten the development speed for image processing work (currently CPU-only).
 
 Picceler doesn't aim to be a production language, rather it aims to provide a good example of what you can achieve with MLIR.
 
@@ -29,7 +29,9 @@ An official VS Code extension is vendored as a submodule at
 
 # Inner workings
 
-Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `picceler` dialect, down through several lowering passes, to LLVM IR and finally native machine code.
+Picceler uses MLIR to go from a parsed `.pic` source file, through a custom `picceler` dialect, down through several lowering passes, to LLVM IR and finally native machine code. LLVM's own middle-end
+optimization pipeline runs on the way to machine code; `-O0`-`-O3` (default `-O2`) controls it, and
+`--native` targets the host CPU instead of a portable generic baseline.
 
 Refer to the [Compiler Internals](docs/compiler-internals.md) document for a full breakdown of the pass pipeline (phases, order, and rationale), and to the [Dialect Reference](docs/dialect-reference.md) for op/type-level detail on the MLIR dialects involved.
 
