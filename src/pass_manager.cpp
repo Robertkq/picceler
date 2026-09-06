@@ -12,6 +12,8 @@
 
 #include "llvm/Support/FileSystem.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
@@ -61,6 +63,9 @@ void IRPassManager::addHighLevelOptimizationPasses(bool profile) {
 void IRPassManager::addAffineLoweringPasses() {
   _passManager.addPass(createPiccelerKernelToMemrefPass());
   _passManager.addPass(createPiccelerToAffinePass());
+  _passManager.addPass(mlir::createCSEPass());
+  _passManager.nest<mlir::func::FuncOp>().addPass(mlir::affine::createAffineLoopInvariantCodeMotionPass());
+  _passManager.addPass(mlir::createRemoveDeadValuesPass());
 }
 
 void IRPassManager::addBackendLoweringPasses() {
